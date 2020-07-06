@@ -151,24 +151,24 @@ tracing_events_num_str = {
     93: "UPCALL_CALL",
     94: "UPCALL_INVALID_ID",
     95: "UPCALL_INVALID_CB",
-    96: "TRACE_CLT_MACADDR_L",
-    97: "TRACE_CLT_MACADDR_H",
-    98: "TRACE_CLT_EPOCH_START_L",
-    99: "TRACE_CLT_EPOCH_START_H",
-    100: "TRACE_CLT_DESIRED_TXTIME_L",
-    101: "TRACE_CLT_DESIRED_TXTIME_H",
-    102: "TRACE_CLT_PEER_EPOCHLEN",
-    103: "TRACE_CLT_PEER_TIME_IN_EPOCH",
-    104: "TRACE_CLT_PEER_TIME_IN_SLOT",
-    105: "TRACE_CLT_DRIFT",
-    106: "TRACE_CLT_LWIN",
-    107: "TRACE_CLT_RWIN",
-    108: "TRACE_CLT_TARGET_SLOT",
-    109: "TRACE_CLT_CH",
-    110: "TRACE_CLT_TXDELAY",
-    111: "TRACE_CLT_PEER_CURSLOT",
-    112: "TRACE_CLT_RWIN_QUALTIME",
-    130: "TRACE_CLT_RESERVED",
+    96: "CLT_MACADDR_L",
+    97: "CLT_MACADDR_H",
+    98: "CLT_EPOCH_START_L",
+    99: "CLT_EPOCH_START_H",
+    100: "CLT_DESIRED_TXTIME_L",
+    101: "CLT_DESIRED_TXTIME_H",
+    102: "CLT_PEER_EPOCHLEN",
+    103: "CLT_PEER_TIME_IN_EPOCH",
+    104: "CLT_PEER_TIME_IN_SLOT",
+    105: "CLT_DRIFT",
+    106: "CLT_LWIN",
+    107: "CLT_RWIN",
+    108: "CLT_TARGET_SLOT",
+    109: "CLT_CH",
+    110: "CLT_TXDELAY",
+    111: "CLT_PEER_CURSLOT",
+    112: "CLT_RWIN_QUALTIME",
+    130: "CLT_RESERVED",
     131: "CL_NEW",
     132: "CL_END",
     133: "CL_OUT_REQ",
@@ -1033,6 +1033,7 @@ def signal_handler(sig, frame):
     glob["QUIT"] = True
     raise SystemExit
 
+
 def graph_it():
     try:
         import pandas as pd
@@ -1042,19 +1043,18 @@ def graph_it():
 
     except:
         print("installing dependecies...")
-        p1 = subprocess.Popen(['pip','install', 'pandas'],
-                                  stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
+        p1 = subprocess.Popen(['pip', 'install', 'pandas'],
+                              stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
         p1.communicate()
-        p1 = subprocess.Popen(['pip','install', 'numpy'],
-                                  stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
+        p1 = subprocess.Popen(['pip', 'install', 'numpy'],
+                              stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
         p1.communicate()
-        p1 = subprocess.Popen(['pip','install', 'mplcursors'],
-                                  stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
+        p1 = subprocess.Popen(['pip', 'install', 'mplcursors'],
+                              stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
         p1.communicate()
         import pandas as pd
         import numpy as np
         import matplotlib.pyplot as plt
-
 
         # import mplcursors
 
@@ -1063,91 +1063,110 @@ def graph_it():
     plt.style.use('seaborn-deep')
 
     graph_dic = {
-        0 : "All",
-        1 : "RTT Between CL DataGet Req/Cnf",
-        2 : "CL duration Histogram"
+        0: "All",
+        1: "RTT Between CL DataGet Req/Cnf",
+        2: "CL duration Histogram"
     }
 
-    for key,val in graph_dic.items():
-        print("\t{} : {}".format( key, val))
+    for key, val in graph_dic.items():
+        print("\t{} : {}".format(key, val))
     answer = input("Enter the number(use a single number or array like 1,2)")
     answer_list = answer.split(',')
 
     print("showing graph", answer_list)
 
-    csv_df = pd.read_csv(sep=',',skiprows=1, names=['Byte',"FRT_DEC",'FRT_HEX','TRACE_CODE', 'TRACE_INFO'],filepath_or_buffer='decoded.csv')
+    csv_df = pd.read_csv(sep=',', skiprows=1, names=[
+                         'Byte', "FRT_DEC", 'FRT_HEX', 'TRACE_CODE', 'TRACE_INFO'], filepath_or_buffer='decoded.csv')
     # csv_df[['TRACECODE_DEC','TRACECODE_HEX']] = df.Name.str.split(expand=True)
-    csv_df[['TRACECODE_DEC','TRACECODE_HEX']] = csv_df['TRACE_CODE'].str.split(expand=True)
+    csv_df[['TRACECODE_DEC', 'TRACECODE_HEX']
+           ] = csv_df['TRACE_CODE'].str.split(expand=True)
     csv_df.drop(columns=['TRACE_CODE'], inplace=True)
-    csv_df = csv_df.astype({'TRACECODE_DEC':int})
-    csv_df['cl_id'] = csv_df["TRACE_INFO"].apply(lambda x: x.split()[4] if "CL_OUT_CNF" in x or "CL_START" in x else "")
+    csv_df = csv_df.astype({'TRACECODE_DEC': int})
+    csv_df['cl_id'] = csv_df["TRACE_INFO"].apply(
+        lambda x: x.split()[4] if "CL_OUT_CNF" in x or "CL_START" in x else "")
     csv_df['cl_id'].ffill()
     csv_df = csv_df.replace("", np.nan).ffill()
 
-    traceCodeMap_df = pd.DataFrame(tracing_events_num_str.items(),columns=['TRACECODE_DEC','TRACE_STR'])
+    traceCodeMap_df = pd.DataFrame(tracing_events_num_str.items(), columns=[
+                                   'TRACECODE_DEC', 'TRACE_STR'])
 
-    stat_total=csv_df.groupby('TRACECODE_DEC').count().reset_index().astype({"TRACECODE_DEC":int})
-    stat_total = stat_total[['TRACECODE_DEC','Byte']]
-    stat_total = stat_total.merge(traceCodeMap_df,how='inner',on="TRACECODE_DEC").sort_values(by=['TRACECODE_DEC']).reset_index()
+    stat_total = csv_df.groupby('TRACECODE_DEC').count(
+    ).reset_index().astype({"TRACECODE_DEC": int})
+    stat_total = stat_total[['TRACECODE_DEC', 'Byte']]
+    stat_total = stat_total.merge(traceCodeMap_df, how='inner', on="TRACECODE_DEC").sort_values(
+        by=['TRACECODE_DEC']).reset_index()
 
-    cl_csv_df = csv_df[(csv_df['TRACECODE_DEC'] >=131) &(csv_df['TRACECODE_DEC'] <=151 ) ]
-    cl_csv_df.drop(columns=['TRACECODE_HEX','FRT_HEX'],inplace=True)
-    cl_csv_df['sts'] = cl_csv_df['TRACE_INFO'].apply(lambda x: "" if "STS" not in x else x.split()[1].split('(')[0])
-    cl_csv_df = cl_csv_df.merge(traceCodeMap_df,on="TRACECODE_DEC")
-    cl_csv_df.sort_values(by=['Byte'],inplace=True)
+    cl_csv_df = csv_df[(csv_df['TRACECODE_DEC'] >= 131) &
+                       (csv_df['TRACECODE_DEC'] <= 151)]
+    cl_csv_df.drop(columns=['TRACECODE_HEX', 'FRT_HEX'], inplace=True)
+    cl_csv_df['sts'] = cl_csv_df['TRACE_INFO'].apply(
+        lambda x: "" if "STS" not in x else x.split()[1].split('(')[0])
+    cl_csv_df = cl_csv_df.merge(traceCodeMap_df, on="TRACECODE_DEC")
+    cl_csv_df.sort_values(by=['Byte'], inplace=True)
 
-    cl_stats = cl_csv_df.groupby(['TRACECODE_DEC','TRACE_STR','sts',]).count()
+    cl_stats = cl_csv_df.groupby(
+        ['TRACECODE_DEC', 'TRACE_STR', 'sts', ]).count()
     cl_stats = cl_stats['Byte']
 
     # obtain fastlink df
     if '0' in answer_list or '1' in answer_list:
         fig = plt.figure()
 
-        fast_link_df = cl_csv_df[(cl_csv_df["TRACECODE_DEC"]==149) | (cl_csv_df["TRACECODE_DEC"]==148) ][['Byte','FRT_DEC','TRACECODE_DEC','sts','cl_id']]
-        fast_link_df['A_dif'] = fast_link_df['FRT_DEC'].diff()
-        fast_link_df['shifted_FRT'] = fast_link_df['FRT_DEC'].shift()
-        fast_link_df['prev_TRACE'] = fast_link_df['TRACECODE_DEC'].shift()
-        fast_link_df['diff']=fast_link_df.apply(lambda x: np.NaN if (x['TRACECODE_DEC'] == x['prev_TRACE'] or x['TRACECODE_DEC']==148 ) else x['A_dif'],axis=1)
-        fast_link_df.drop(columns=['A_dif','shifted_FRT','prev_TRACE'],inplace=True)
+        fast_link_df = cl_csv_df[(cl_csv_df["TRACECODE_DEC"] == 149) | (
+            cl_csv_df["TRACECODE_DEC"] == 148)][['Byte', 'FRT_DEC', 'TRACECODE_DEC', 'sts', 'cl_id']]
+        if not fast_link_df.empty:
+            fast_link_df['A_dif'] = fast_link_df['FRT_DEC'].diff()
+            fast_link_df['shifted_FRT'] = fast_link_df['FRT_DEC'].shift()
+            fast_link_df['prev_TRACE'] = fast_link_df['TRACECODE_DEC'].shift()
+            fast_link_df['diff'] = fast_link_df.apply(lambda x: np.NaN if (
+                x['TRACECODE_DEC'] == x['prev_TRACE'] or x['TRACECODE_DEC'] == 148) else x['A_dif'], axis=1)
+            fast_link_df.drop(
+                columns=['A_dif', 'shifted_FRT', 'prev_TRACE'], inplace=True)
 
-        # obtain rtt_df
-        rtt_df = fast_link_df[['Byte','diff']].dropna()
-        rtt_df = rtt_df.groupby('diff').agg('count').rename(columns={'Byte':'Freq'})
+            # obtain rtt_df
+            rtt_df = fast_link_df[['Byte', 'diff']].dropna()
+            rtt_df = rtt_df.groupby('diff').agg(
+                'count').rename(columns={'Byte': 'Freq'})
 
-        #PDF
-        rtt_df['pdf'] = rtt_df['Freq'] / sum(rtt_df['Freq'])
-        #CDF
-        rtt_df['cdf'] = rtt_df['pdf'].cumsum()
-        rtt_df= rtt_df.reset_index()
+            # PDF
+            rtt_df['pdf'] = rtt_df['Freq'] / sum(rtt_df['Freq'])
+            # CDF
+            rtt_df['cdf'] = rtt_df['pdf'].cumsum()
+            rtt_df = rtt_df.reset_index()
 
-        # Divide the figure into a 1x2 grid, and give me the first section
-        rtt_plt = fig.add_subplot(211)
+            # Divide the figure into a 1x2 grid, and give me the first section
+            rtt_plt = fig.add_subplot(211)
 
-        # Divide the figure into a 1x2 grid, and give me the second section
-        rtt_hist = fig.add_subplot(212)
-        rtt_df.plot(x = 'diff', y = ['pdf', 'cdf'], grid = True,title="RTT between clDataGet Req/Cnf",ax=rtt_plt)
+            # Divide the figure into a 1x2 grid, and give me the second section
+            rtt_hist = fig.add_subplot(212)
+            rtt_df.plot(x='diff', y=['pdf', 'cdf'], grid=True,
+                        title="RTT between clDataGet Req/Cnf", ax=rtt_plt)
 
-        rtt_df.plot(kind='bar',x = 'diff',y='Freq', title="Histogram of RTT",ax=rtt_hist)
-
-
+            rtt_df.plot(kind='bar', x='diff', y='Freq',
+                        title="Histogram of RTT", ax=rtt_hist)
 
     if '0' in answer_list or '2' in answer_list:
 
-        cl_dur_df = cl_csv_df[cl_csv_df['TRACECODE_DEC']==132][['Byte','sts','TRACE_INFO']]
-        cl_dur_df['dur_ms'] = cl_dur_df.apply(lambda x: x['TRACE_INFO'].split(' ')[3].split('msec')[0], axis=1)
-        cl_dur_df.drop(columns=['TRACE_INFO','sts'], inplace=True)
-        cl_dur_df['dur_ms'] = cl_dur_df['dur_ms'].astype(int)
-        # cl_dur_df = cl_dur_df.sort_values(by='dur_ms')
-        cl_dur_df = cl_dur_df.groupby('dur_ms').agg('count').rename(columns={'Byte':'Freq'}).reset_index()
-        #PDF
-        cl_dur_df['pdf'] = cl_dur_df['Freq'] / sum(cl_dur_df['Freq'])
-        #CDF
-        cl_dur_df['cdf'] = cl_dur_df['pdf'].cumsum()
-        cl_dur_df= cl_dur_df.reset_index()
-        # print(rtt_df)
-        # print(cl_dur_df)
+        cl_dur_df = cl_csv_df[cl_csv_df['TRACECODE_DEC']
+                              == 132][['Byte', 'sts', 'TRACE_INFO']]
+        if not cl_dur_df.empty:
+            cl_dur_df['dur_ms'] = cl_dur_df.apply(lambda x: x['TRACE_INFO'].split(' ')[
+                3].split('msec')[0], axis=1)
+            cl_dur_df.drop(columns=['TRACE_INFO', 'sts'], inplace=True)
+            cl_dur_df['dur_ms'] = cl_dur_df['dur_ms'].astype(int)
+            # cl_dur_df = cl_dur_df.sort_values(by='dur_ms')
+            cl_dur_df = cl_dur_df.groupby('dur_ms').agg(
+                'count').rename(columns={'Byte': 'Freq'}).reset_index()
+            # PDF
+            cl_dur_df['pdf'] = cl_dur_df['Freq'] / sum(cl_dur_df['Freq'])
+            # CDF
+            cl_dur_df['cdf'] = cl_dur_df['pdf'].cumsum()
+            cl_dur_df = cl_dur_df.reset_index()
+            # print(rtt_df)
+            # print(cl_dur_df)
 
-        cl_dur_df.plot(kind='line',x='dur_ms',y = ['pdf', 'cdf'], title="Frequency of Duration in msec")
+            cl_dur_df.plot(kind='line', x='dur_ms', y=[
+                'pdf', 'cdf'], title="Frequency of Duration in msec")
 
     print("clstats\n", cl_stats)
 
@@ -1304,8 +1323,6 @@ if __name__ == "__main__":
         print("")
         print(
             " - Decoded Traces are saved to {}\{}".format(get_current_path(), args.output))
-
-
 
         exit()
 
