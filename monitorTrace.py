@@ -1274,23 +1274,28 @@ if __name__ == "__main__":
 
     # check for -l option to just show the list of masks available for this version
     if args.listid != -1:
+        even = False
 
         if args.listid == ID_ALL or args.listid == ID_TRACE:
             print("\n~~~ TRACE IDs MAP ~~~")
             for key, val in tracing_events_num_str.items():
-                print("{:3d} 0x{:03X} {} ".format(key, key, val))
+                print("{:3d} 0x{:03X} {:50s} ".format(key, key, val),end='\n' if even==True else'\t')
+                even = not even
         if args.listid == ID_ALL or args.listid == ID_STS:
             print("\n~~~ STS IDs MAP ~~~")
             for key, val in sts_code_str.items():
-                print("{:3d} 0x{:03X} {} ".format(key, key, val))
+                print("{:3d} 0x{:03X} {:50s} ".format(key, key, val),end='\n' if even==True else'\t')
+                even = not even
         if args.listid == ID_ALL or args.listid == ID_PRIM:
             print("\n~~~ PRIM IDs MAP ~~~")
             for key, val in prim_code_str.items():
-                print("{:3d} 0x{:03X} {} ".format(key, key, val))
+                print("{:3d} 0x{:03X} {:50s} ".format(key, key, val),end='\n' if even==True else'\t')
+                even = not even
         if args.listid == ID_ALL or args.listid == ID_OWNERS:
             print("\n~~~ OWNERS IDs MAP ~~~")
             for key in range(len(owner_ids_arr)):
-                print("{:2d} 0x{:02X} {}".format(key, key, owner_ids_arr[key]))
+                print("{:2d} 0x{:02X} {:50s}".format(key, key, owner_ids_arr[key]),end='\n' if even==True else'\t')
+                even = not even
         if args.listid == ID_ALL or args.listid == ID_FLAG:
             print("\n~~~ FLAG IDs MAP ~~~")
             for key, val in pdll_flag_str.items():
