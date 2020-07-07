@@ -1049,16 +1049,12 @@ def graph_it():
         p1 = subprocess.Popen(['pip', 'install', 'numpy'],
                               stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
         p1.communicate()
-        p1 = subprocess.Popen(['pip', 'install', 'mplcursors'],
-                              stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
-        p1.communicate()
+        # p1 = subprocess.Popen(['pip', 'install', 'mplcursors'],
+        #                       stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
+        # p1.communicate()
         import pandas as pd
         import numpy as np
         import matplotlib.pyplot as plt
-
-        # import mplcursors
-
-        import numpy as np
 
     plt.style.use('seaborn-deep')
     plt.style.use('ggplot')
@@ -1072,7 +1068,7 @@ def graph_it():
 
     for key, val in graph_dic.items():
         print("\t{} : {}".format(key, val))
-    answer = input("Enter the number(use a single number or array like 1,2)")
+    answer = input("Enter the number(use a single number or array like 1,2) ")
     answer_list = answer.split(',')
 
     print("showing graph", answer_list)
@@ -1080,10 +1076,15 @@ def graph_it():
     csv_df = pd.read_csv(sep=',', skiprows=1, names=[
                          'byte', "frt_dec", 'frt_hex', 'trace_code', 'trace_info'], filepath_or_buffer=args.graph)
     # csv_df[['tracecode_dec','tracecode_hex']] = df.Name.str.split(expand=True)
+    csv_df = csv_df.assign(tracecode_dec=pd.Series(np.nan))
+    csv_df = csv_df.assign(tracecode_hex=pd.Series(np.nan))
+
     csv_df[['tracecode_dec', 'tracecode_hex']
            ] = csv_df['trace_code'].str.split(expand=True)
     csv_df.drop(columns=['trace_code'], inplace=True)
     csv_df = csv_df.astype({'tracecode_dec': int})
+    csv_df = csv_df.assign(cl_id=pd.Series(np.nan))
+
     csv_df['cl_id'] = csv_df["trace_info"].apply(
         lambda x: x.split()[4] if "CL_OUT_CNF" in x or "CL_START" in x else "")
     csv_df['cl_id'].ffill()
@@ -1098,10 +1099,12 @@ def graph_it():
     stat_total = stat_total.merge(traceCodeMap_df, how='inner', on="tracecode_dec").sort_values(
         by=['tracecode_dec']).reset_index()
 
-    cl_csv_df = csv_df[(csv_df['tracecode_dec'] >= 131) &
-                       (csv_df['tracecode_dec'] <= 151)]
-    cl_csv_df.drop(columns=['tracecode_hex', 'frt_hex'], inplace=True)
-    cl_csv_df['sts'] = cl_csv_df['trace_info'].apply(
+    cl_csv_df = csv_df.loc[(csv_df['tracecode_dec'] >= 131) &
+                       (csv_df['tracecode_dec'] <= 151) | (csv_df.tracecode_dec == 6)]
+    cl_csv_df = cl_csv_df.drop(columns=['tracecode_hex'])
+
+    # cl_csv_df = cl_csv_df.assign(sts=pd.Series(np.nan))
+    cl_csv_df['sts'] = cl_csv_df.trace_info.apply(
         lambda x: "" if "STS" not in x else x.split()[1].split('(')[0])
     cl_csv_df = cl_csv_df.merge(traceCodeMap_df, on="tracecode_dec")
     cl_csv_df.sort_values(by=['byte'], inplace=True)
@@ -1109,7 +1112,6 @@ def graph_it():
     cl_stats = cl_csv_df.groupby(
         ['tracecode_dec', 'trace_str', 'sts', ]).count()
     cl_stats = cl_stats['byte']
-
     # obtain fastlink df
     if '0' in answer_list or '1' in answer_list:
         fig = plt.figure()
@@ -1172,9 +1174,136 @@ def graph_it():
 
     if '0' in answer_list or '3' in answer_list:
         timings_df = pd.DataFrame()
-        timings_df = cl_csv_df[(cl_csv_df['tracecode_dec'] == 131) | (cl_csv_df['tracecode_dec'] == 151) | (
-            cl_csv_df['tracecode_dec'] == 141) | (cl_csv_df['tracecode_dec'] == 140) | (cl_csv_df['tracecode_dec'] == 6)]
-        print(timings_df)
+        timings_plot_df = pd.DataFrame()
+        filter_list = [6, 131, 151, 141, 140, 6]
+        timings_df = cl_csv_df[cl_csv_df.tracecode_dec.isin(filter_list)]
+
+        # aftertxcol
+        timings_df = timings_df.assign(aftertx_col=pd.Series(np.nan))
+        timings_df['aftertx_col'] = timings_df.apply(
+            lambda x: "afterTx" if x['tracecode_dec'] == 140 else np.nan, axis=1)
+        timings_df.afertx_col = np.zeros
+
+        # beforetxcol
+        timings_df['dummy'] = timings_df.aftertx_col.shift(-1)
+        timings_df = timings_df.assign(beforetx_col=pd.Series(np.nan))
+        timings_df.beforetx_col = timings_df.apply(
+            lambda x: "beforeTx" if x.tracecode_dec == 151 and x.dummy == 'afterTx' else np.nan, axis=1)
+        timings_df.drop(columns=['dummy'], inplace=True)
+
+        # dc
+        timings_df['dummy'] = timings_df.aftertx_col.shift(1)
+        timings_df = timings_df.assign(dc_col=pd.Series(np.nan))
+        timings_df.dc_col = timings_df.apply(
+            lambda x: "dc" if x.tracecode_dec == 6 and x.dummy == 'afterTx' else np.nan, axis=1)
+        timings_df.drop(columns=['dummy'], inplace=True)
+
+        # txend
+        timings_df['dummy'] = timings_df.dc_col.shift(2)
+        timings_df = timings_df.assign(txend_col=pd.Series(np.nan))
+        timings_df.txend_col = timings_df.apply(
+            lambda x: "txEnd" if x.tracecode_dec == 151 and x.dummy == 'dc' else np.nan, axis=1)
+        timings_df.drop(columns=['dummy'], inplace=True)
+
+        # afterRx
+        timings_df = timings_df.assign(afterrx_col=pd.Series(np.nan))
+        timings_df.afterrx_col = timings_df.apply(
+            lambda x: "afterRx" if x.tracecode_dec == 141 else np.nan, axis=1)
+
+        # beforeRx
+        timings_df['dummy'] = timings_df.afterrx_col.shift(-1)
+        timings_df = timings_df.assign(beforerx_col=pd.Series(np.nan))
+        timings_df.beforerx_col = timings_df.apply(
+            lambda x: "beforeRx" if x.tracecode_dec == 151 and x.dummy == 'afterRx' else np.nan, axis=1)
+        timings_df.drop(columns=['dummy'], inplace=True)
+
+        # rxend
+        timings_df['dummy'] = timings_df.afterrx_col.shift(1)
+        timings_df = timings_df.assign(rxend_col=pd.Series(np.nan))
+        timings_df.rxend_col = timings_df.apply(
+            lambda x: "rxEnd" if x.tracecode_dec == 151 and x.dummy == 'afterRx' else np.nan, axis=1)
+        timings_df.drop(columns=['dummy'], inplace=True)
+
+        # FRT32_trace_val
+        timings_df['frt32_val'] = timings_df.apply(lambda x: int(
+            x.trace_info[-9:-1], 16) if x.tracecode_dec == 151 else int(x.trace_info[-8:], 16) if x.tracecode_dec == 6 else np.nan, axis=1)
+
+        # FRT32_dec
+        timings_df['frt32_dec'] = timings_df.apply(
+            lambda x: int(x.frt_hex[-min(len(x)-2, 8):], 16), axis=1)
+
+        timings_df.drop(columns=['frt_hex'], inplace=True)
+
+        fig = plt.figure()
+
+        # target2txphr
+
+        timings_df['dummy'] = timings_df.dc_col.shift(-2)
+        timings_df['dummy_frt32'] = timings_df.frt32_val.shift(-2)
+        timings_df = timings_df.assign(target2txphr=pd.Series(np.nan))
+        timings_df.target2txphr = timings_df.apply(
+            lambda x: x.dummy_frt32-x.frt32_val if x.beforetx_col == 'beforeTx' and x.dummy == 'dc' else np.nan, axis=1)
+        timings_df.drop(columns=['dummy', 'dummy_frt32'], inplace=True)
+        target2txphr_plt = fig.add_subplot(421)
+
+        timings_plot_df['target2txphr']
+
+        # txend2rxstart
+        timings_df['dummy'] = timings_df.beforerx_col.shift(-1)
+        timings_df['dummy_frt32'] = timings_df.frt32_dec.shift(-1)
+        timings_df = timings_df.assign(txend2rxstart=pd.Series(np.nan))
+        timings_df.txend2rxstart = timings_df.apply(
+            lambda x: x.dummy_frt32-x.frt32_val if x.txend_col == 'txEnd' and x.dummy == 'beforeRx' else np.nan, axis=1)
+        timings_df.drop(columns=['dummy', 'dummy_frt32'], inplace=True)
+
+        # rxend2targettime
+        timings_df['dummy'] = timings_df.beforetx_col.shift(-1)
+        timings_df['dummy_frt32'] = timings_df.frt32_val.shift(-1)
+        timings_df = timings_df.assign(rxend2targettime=pd.Series(np.nan))
+        timings_df.rxend2targettime = timings_df.apply(
+            lambda x: x.dummy_frt32-x.frt32_val if x.rxend_col == 'rxEnd' and x.dummy == 'beforeTx' else np.nan, axis=1)
+        timings_df.drop(columns=['dummy', 'dummy_frt32'], inplace=True)
+
+        # rxend2txtime
+        timings_df['dummy'] = timings_df.dc_col.shift(-3)
+        timings_df['dummy_frt32'] = timings_df.frt32_val.shift(-3)
+        timings_df = timings_df.assign(rxend2txtime=pd.Series(np.nan))
+        timings_df.rxend2txtime = timings_df.apply(
+            lambda x: x.dummy_frt32-x.frt32_val if x.rxend_col == 'rxEnd' and x.dummy == 'dc' else np.nan, axis=1)
+        timings_df.drop(columns=['dummy', 'dummy_frt32'], inplace=True)
+
+        # txcall2targettime
+        timings_df = timings_df.assign(txcall2targettime=pd.Series(np.nan))
+        timings_df.txcall2targettime = timings_df.apply(
+            lambda x: x.frt32_val-x.frt32_dec if x.beforetx_col == 'beforeTx' else np.nan, axis=1)
+
+         # txcall2aftertx
+        timings_df['dummy'] = timings_df.aftertx_col.shift(-1)
+        timings_df['dummy_frt32'] = timings_df.frt32_dec.shift(-1)
+        timings_df = timings_df.assign(txcall2aftertx=pd.Series(np.nan))
+        timings_df.txcall2aftertx = timings_df.apply(
+            lambda x: x.dummy_frt32-x.frt32_dec if x.beforetx_col == 'beforeTx' and x.dummy == 'afterTx' else np.nan, axis=1)
+        timings_df.drop(columns=['dummy', 'dummy_frt32'], inplace=True)
+
+        # rxend2txcall
+        timings_df['dummy'] = timings_df.beforetx_col.shift(-1)
+        timings_df['dummy_frt32'] = timings_df.frt32_dec.shift(-1)
+        timings_df = timings_df.assign(rxend2txcall=pd.Series(np.nan))
+        timings_df.rxend2txcall = timings_df.apply(
+            lambda x: x.dummy_frt32-x.frt32_val if x.rxend_col == 'rxEnd' and x.dummy == 'beforeTx' else np.nan, axis=1)
+        timings_df.drop(columns=['dummy', 'dummy_frt32'], inplace=True)
+
+        # rxcall2afterrx
+        timings_df['dummy'] = timings_df.afterrx_col.shift(-1)
+        timings_df['dummy_frt32'] = timings_df.frt32_dec.shift(-1)
+        timings_df = timings_df.assign(rxcall2afterrx=pd.Series(np.nan))
+        timings_df.rxcall2afterrx = timings_df.apply(
+            lambda x: x.dummy_frt32-x.frt32_dec if x.beforerx_col == 'beforeRx' and x.dummy == 'afterRx' else np.nan, axis=1)
+        timings_df.drop(columns=['dummy', 'dummy_frt32'], inplace=True)
+
+        timings_df.plot(type=b)
+        print(timings_df.head(20))
+        # print(timings_df.info())
 
     # print("clstats\n", cl_stats)
 
