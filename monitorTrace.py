@@ -18,7 +18,7 @@ glob = {
 
 OS_POSIX = "posix"
 OS_WIN = "nt"
-__VERSION__ = "1.8"
+__VERSION__ = "1.9"
 APP_VERSION = __VERSION__ + " {OS: " + os.name + "}"
 OUTPUT_FILE_NAME = "lastdecodedTraces"
 OUTPUT_FILE_EXT = ".log"
@@ -860,13 +860,14 @@ def process_hexdump(hexdump, startLine=-1, showFirstLine=False):
     global cl_id
     output = ''
     nlines = startLine
-    firstLine = ' byteNUM:   frt_dec   (0xfrt_hexAD)  [TRACECODE]:       TRACE INFO '
+    firstLine = ' BYTENUM:   FRT_DEC   (0xFRT_HEXAD)  [TRACECODE]:       TRACE INFO '
+
 
     if showFirstLine:
         print(firstLine)
         outputList.extend(outputVer + "\n\n")
         outputList.extend(firstLine + "\n")
-        csvList.append(["byteNUM", "frt_dec", "frt_hex",
+        csvList.append(["BYTENUM", "FRT_DEC", "FRT_HEX",
                         "[TRACECODE]:", "TRACE INFO"])
 
     for line in hexdump.splitlines()[startLine:]:
@@ -1034,6 +1035,11 @@ def signal_handler(sig, frame):
 
 
 def graph_it():
+
+    if not os.path.isfile('decoded.csv'):
+        print("'decoded.csv' not found")
+        return
+
     try:
         import pandas as pd
         import numpy as np
@@ -1055,25 +1061,14 @@ def graph_it():
         import numpy as np
         import matplotlib.pyplot as plt
 
-    plt.style.use('seaborn-deep')
+    # plt.style.use('seaborn-deep')
     plt.style.use('ggplot')
 
-    graph_dic = {
-        0: "All",
-        1: "RTT Between CL DataGet Req/Cnf",
-        2: "CL Timing Histogram",
-        3: "CL Timing PDF/CDF",
-    }
+    print("showing graph", graph_ans_list)
 
-    for key, val in graph_dic.items():
-        print("\t{} : {}".format(key, val))
-    answer = input("Enter the number(use a single number or array like 1,2) ")
-    answer_list = answer.split(',')
+    # plt.show()
 
-    print("showing graph", answer_list)
-
-    csv_df = pd.read_csv(sep=',', skiprows=1, names=[
-                         'byte', "frt_dec", 'frt_hex', 'trace_code', 'trace_info'], filepath_or_buffer=args.graph)
+    csv_df = pd.read_csv(sep=',', skiprows=1, names=['byte', "frt_dec", 'frt_hex', 'trace_code', 'trace_info'], filepath_or_buffer=graph_file)
     # csv_df[['tracecode_dec','tracecode_hex']] = df.Name.str.split(expand=True)
     csv_df = csv_df.assign(tracecode_dec=pd.Series(np.nan))
     csv_df = csv_df.assign(tracecode_hex=pd.Series(np.nan))
@@ -1105,12 +1100,20 @@ def graph_it():
     cl_stats = cl_csv_df.groupby(
         ['tracecode_dec', 'trace_str', 'sts', ]).count()
     cl_stats = cl_stats['byte']
+
+    print(cl_stats)
+
     # obtain fastlink df
-    if '0' in answer_list or '1' in answer_list:
+    if '0' in graph_ans_list or '1' in graph_ans_list:
+        filter_list = [149, 148]
+
+        fast_link_df = cl_csv_df[(cl_csv_df.tracecode_dec.isin(filter_list))][['byte', 'frt_dec', 'tracecode_dec', 'sts', 'cl_id']]
+        trace_list = list(set(list(fast_link_df.tracecode_dec)))
+        if sorted(trace_list) != sorted(filter_list):
+            print("All required traces {} are not present {}. Cannot draw the graph".format(filter_list, trace_list))
+            return
         fig = plt.figure()
 
-        fast_link_df = cl_csv_df[(cl_csv_df["tracecode_dec"] == 149) | (
-            cl_csv_df["tracecode_dec"] == 148)][['byte', 'frt_dec', 'tracecode_dec', 'sts', 'cl_id']]
         if not fast_link_df.empty:
             fast_link_df['A_dif'] = fast_link_df['frt_dec'].diff()
             fast_link_df['shifted_frt'] = fast_link_df['frt_dec'].shift()
@@ -1128,6 +1131,7 @@ def graph_it():
             # CDF
             rtt_df['cdf'] = rtt_df['pdf'].cumsum()
             rtt_df = rtt_df.reset_index()
+            rtt_df = rtt_df.astype({'diff': int})
 
             # Divide the figure into a 1x2 grid, and give me the first section
             rtt_plt = fig.add_subplot(211)
@@ -1138,16 +1142,22 @@ def graph_it():
 
             rtt_df.plot(kind='bar', x='diff', y='freq', title="Histogram of RTT", ax=rtt_hist)
 
+            plt.subplots_adjust(hspace=1, left=0.05, right=0.95, top=0.95, wspace=0.1)
+
             # print(rtt_df)
             # print(cl_dur_df)
 
-            cl_dur_df.plot(kind='line', x='dur_ms', y=['pdf', 'cdf'], title="Frequency of Duration in msec")
+    if '0' in graph_ans_list or '3' in graph_ans_list or '2' in graph_ans_list:
 
-    if '0' in answer_list or '3' in answer_list or '2' in answer_list:
         timings_df = pd.DataFrame()
         timings_plot_df = pd.DataFrame()
-        filter_list = [6, 131, 151, 141, 140, 6]
+        filter_list = [6, 131, 151, 141, 140]
         timings_df = cl_csv_df[cl_csv_df.tracecode_dec.isin(filter_list)]
+
+        trace_list = list(set(list(timings_df.tracecode_dec)))
+        if sorted(trace_list) != sorted(filter_list):
+            print("All required traces {} are not present. Cannot draw the graph".format(filter_list))
+            return
 
         # aftertxcol
         timings_df = timings_df.assign(aftertx_col=pd.Series(np.nan))
@@ -1206,6 +1216,7 @@ def graph_it():
         timings_df.drop(columns=['dummy', 'dummy_frt32'], inplace=True)
         # freq
         target2txphr_df = timings_df[['byte', 'target2txphr']].groupby('target2txphr').agg('count').rename(columns={'byte': 'freq'}).reset_index()
+        target2txphr_df = target2txphr_df.astype({'target2txphr': int})
         # PDF
         target2txphr_df['pdf'] = target2txphr_df['freq'] / sum(target2txphr_df['freq'])
         # CDF
@@ -1221,6 +1232,7 @@ def graph_it():
         timings_df.drop(columns=['dummy', 'dummy_frt32'], inplace=True)
         # freq
         txend2rxstart_df = timings_df[['byte', 'txend2rxstart']].groupby('txend2rxstart').agg('count').rename(columns={'byte': 'freq'}).reset_index()
+        txend2rxstart_df = txend2rxstart_df.astype({'txend2rxstart': int})
         # PDF
         txend2rxstart_df['pdf'] = txend2rxstart_df['freq'] / sum(txend2rxstart_df['freq'])
         # CDF
@@ -1235,6 +1247,7 @@ def graph_it():
         timings_df.drop(columns=['dummy', 'dummy_frt32'], inplace=True)
         # freq
         rxend2targettime_df = timings_df[['byte', 'rxend2targettime']].groupby('rxend2targettime').agg('count').rename(columns={'byte': 'freq'}).reset_index()
+        rxend2targettime_df = rxend2targettime_df.astype({'rxend2targettime': int})
         # PDF
         rxend2targettime_df['pdf'] = rxend2targettime_df['freq'] / sum(rxend2targettime_df['freq'])
         # CDF
@@ -1249,6 +1262,7 @@ def graph_it():
         timings_df.drop(columns=['dummy', 'dummy_frt32'], inplace=True)
         # freq
         rxend2txtime_df = timings_df[['byte', 'rxend2txtime']].groupby('rxend2txtime').agg('count').rename(columns={'byte': 'freq'}).reset_index()
+        rxend2txtime_df = rxend2txtime_df.astype({'rxend2txtime': int})
         # PDF
         rxend2txtime_df['pdf'] = rxend2txtime_df['freq'] / sum(rxend2txtime_df['freq'])
         # CDF
@@ -1260,6 +1274,7 @@ def graph_it():
         timings_df.txcall2targettime = timings_df.apply(lambda x: x.frt32_val-x.frt32_dec if x.beforetx_col == 'beforeTx' else np.nan, axis=1)
         # freq
         txcall2targettime_df = timings_df[['byte', 'txcall2targettime']].groupby('txcall2targettime').agg('count').rename(columns={'byte': 'freq'}).reset_index()
+        txcall2targettime_df = txcall2targettime_df.astype({'txcall2targettime': int})
         # PDF
         txcall2targettime_df['pdf'] = txcall2targettime_df['freq'] / sum(txcall2targettime_df['freq'])
         # CDF
@@ -1273,6 +1288,7 @@ def graph_it():
         timings_df.drop(columns=['dummy', 'dummy_frt32'], inplace=True)
         # freq
         txcall2aftertx_df = timings_df[['byte', 'txcall2aftertx']].groupby('txcall2aftertx').agg('count').rename(columns={'byte': 'freq'}).reset_index()
+        txcall2aftertx_df = txcall2aftertx_df.astype({'txcall2aftertx': int})
         # PDF
         txcall2aftertx_df['pdf'] = txcall2aftertx_df['freq'] / sum(txcall2aftertx_df['freq'])
         # CDF
@@ -1287,6 +1303,7 @@ def graph_it():
         timings_df.drop(columns=['dummy', 'dummy_frt32'], inplace=True)
         # freq
         rxend2txcall_df = timings_df[['byte', 'rxend2txcall']].groupby('rxend2txcall').agg('count').rename(columns={'byte': 'freq'}).reset_index()
+        rxend2txcall_df = rxend2txcall_df.astype({'rxend2txcall': int})
         # PDF
         rxend2txcall_df['pdf'] = rxend2txcall_df['freq'] / sum(rxend2txcall_df['freq'])
         # CDF
@@ -1301,6 +1318,7 @@ def graph_it():
         timings_df.drop(columns=['dummy', 'dummy_frt32'], inplace=True)
         # freq
         rxcall2afterrx_df = timings_df[['byte', 'rxcall2afterrx']].groupby('rxcall2afterrx').agg('count').rename(columns={'byte': 'freq'}).reset_index()
+        rxcall2afterrx_df = rxcall2afterrx_df.astype({'rxcall2afterrx': int})
         # PDF
         rxcall2afterrx_df['pdf'] = rxcall2afterrx_df['freq'] / sum(rxcall2afterrx_df['freq'])
         # CDF
@@ -1321,8 +1339,174 @@ def graph_it():
             cl_dur_df['cdf'] = cl_dur_df['pdf'].cumsum()
             cl_dur_df = cl_dur_df.reset_index()
 
+        # PLOT THE TIMING DIAGRAM
+        # A list of Matplotlib releases and their dates
+        # Taken from https://api.github.com/repos/matplotlib/matplotlib/releases
+        names = ['WrapperCall1', 'WrapperReturn', 'TargetTx1', 'TxPHR1', 'EndTxTime', 'rxStart_beforeCall', 'rxStart_afterCall',
+                 'rxEnd', 'WrapperCall2', 'TargetTx2', 'TxPHR2', ]
+
+        names_label_dic = {
+            'WrapperCall1': "WrapperCall",
+            'WrapperReturn': "WrapperReturn",
+            'TargetTx1': "TargetTx",
+            'TxPHR1': "TxPHR",
+            'EndTxTime': "EndTxTime",
+            'rxStart_beforeCall': "rxStart\nbeforeCall",
+            'rxStart_afterCall': "rxStart\nafterCall",
+            'rxEnd': "rxEnd",
+            'WrapperCall2': "WrapperCall",
+            'TargetTx2': "TargetTx",
+            'TxPHR2': "TxPHR",
+        }
+
+        levels_dic = {
+            'WrapperCall1': 2,
+            'WrapperReturn': 2,
+            'TargetTx1': 1,
+            'TxPHR1': 2,
+            'EndTxTime': 1,
+            'rxStart_beforeCall': -1,
+            'rxStart_afterCall': -2,
+            'rxEnd': -1,
+            'WrapperCall2': 2,
+            'TargetTx2': 1,
+            'TxPHR2': 1,
+        }
+        colors_dic = {
+            'WrapperCall1': 'b',
+            'WrapperReturn': 'b',
+            'TargetTx1': 'r',
+            'TxPHR1': 'r',
+            'EndTxTime': 'r',
+            'rxStart_beforeCall': 'g',
+            'rxStart_afterCall': 'g',
+            'rxEnd': 'g',
+            'WrapperCall2': 'b',
+            'TargetTx2': 'r',
+            'TxPHR2': 'r',
+        }
+    #     'target2txphr', 'txend2rxstart', 'rxend2targettime', 'rxend2txtime',
+    #    'txcall2targettime', 'txcall2aftertx', 'rxend2txcall',
+    #    'rxcall2afterrx'
+        # print(timings_df.columns)
+
+        # exit(0)
+        print(timings_df.rxend2targettime.head(20))
+        diff_points_dic = {
+            'wrapperCall2Return1': int(timings_df.txcall2aftertx.mean()),
+            'wrapperCall2TargetTx1': int(timings_df.txcall2targettime.mean()),
+            'targetTx2TxPHR1': int(timings_df.target2txphr.mean()),
+            'endTxTime2rxStartbefore': int(timings_df.txend2rxstart.mean()),
+            'rxstartBefore2After': int(timings_df.rxcall2afterrx.mean()),
+            'rxEnd2wrapperCall': int(timings_df.rxend2txcall.mean()),
+            'wrapperCall2TargetTx2': int(timings_df.txcall2targettime.mean()),
+            'rxEnd2targetTx': int(timings_df.rxend2targettime.mean()),
+            'rxEnd2TxPHR': int(timings_df.rxend2txtime.mean()),
+            'targetTx2TxPHR2': int(timings_df.target2txphr.mean())
+        }
+        diff_points_arr = list(diff_points_dic.values())
+
+        points_dic = {}
+        points_dic['WrapperCall1'] = 1
+        points_dic['WrapperReturn'] = points_dic['WrapperCall1'] + diff_points_dic['wrapperCall2Return1']
+        points_dic['TargetTx1'] = points_dic['WrapperCall1'] + diff_points_dic['wrapperCall2TargetTx1']
+        points_dic['TxPHR1'] = points_dic['TargetTx1'] + diff_points_dic['targetTx2TxPHR1']
+        points_dic['EndTxTime'] = points_dic['TxPHR1'] + 1000
+        points_dic['rxStart_beforeCall'] = points_dic['EndTxTime'] + diff_points_dic['endTxTime2rxStartbefore']
+        points_dic['rxStart_afterCall'] = points_dic['rxStart_beforeCall'] + diff_points_dic['rxstartBefore2After']
+        points_dic['rxEnd'] = points_dic['rxStart_afterCall'] + 1000
+        points_dic['WrapperCall2'] = points_dic['rxEnd'] + diff_points_dic['rxEnd2wrapperCall']
+        points_dic['TargetTx2'] = points_dic['WrapperCall2'] + diff_points_dic['wrapperCall2TargetTx2']
+        points_dic['TxPHR2'] = points_dic['TargetTx2'] + diff_points_dic['targetTx2TxPHR2']
+
+        points = list(points_dic.values())
+
+        arrows_x = [
+            {'x1': points_dic['WrapperCall1'], 'x2':points_dic['WrapperReturn'], 'y': 1.5},
+            {'x1': points_dic['WrapperCall1'], 'x2':points_dic['TargetTx1'], 'y': 0.5},
+            {'x1': points_dic['TargetTx1'], 'x2':points_dic['TxPHR1'], 'y': 0.75},
+            {'x1': points_dic['EndTxTime'], 'x2': points_dic['rxStart_beforeCall'], 'y': -0.5},
+            {'x1': points_dic['rxStart_beforeCall'], 'x2':points_dic['rxStart_afterCall'], 'y': -0.75},
+            {'x1': points_dic['rxEnd'], 'x2':points_dic['WrapperCall2'], 'y': 0.5},
+            {'x1': points_dic['rxEnd'], 'x2':points_dic['TargetTx2'], 'y': -0.5},
+            {'x1': points_dic['rxEnd'], 'x2':points_dic['TxPHR2'], 'y': -0.75},
+            {'x1': points_dic['WrapperCall2'], 'x2':points_dic['TargetTx2'], 'y': 0.75},
+            {'x1': points_dic['TargetTx2'], 'x2':points_dic['TxPHR2'], 'y': 0.5},
+        ]
+        val_texts = [
+            str(int(timings_df.txcall2aftertx.min()))+'/'+str(int(timings_df.txcall2aftertx.max()))+'/'+str(int(timings_df.txcall2aftertx.mean())),
+            str(int(timings_df.txcall2targettime.min()))+'/'+str(int(timings_df.txcall2targettime.max()))+'/'+str(int(timings_df.txcall2targettime.mean())),
+            str(int(timings_df.target2txphr.min()))+'/'+str(int(timings_df.target2txphr.max()))+'/'+str(int(timings_df.target2txphr.mean())),
+            str(int(timings_df.txend2rxstart.min()))+'/'+str(int(timings_df.txend2rxstart.max()))+'/'+str(int(timings_df.txend2rxstart.mean())),
+            str(int(timings_df.rxcall2afterrx.min()))+'/'+str(int(timings_df.rxcall2afterrx.max()))+'/'+str(int(timings_df.rxcall2afterrx.mean())),
+            str(int(timings_df.rxend2txcall.min()))+'/'+str(int(timings_df.rxend2txcall.max()))+'/'+str(int(timings_df.rxend2txcall.mean())),
+            str(int(timings_df.rxend2targettime.min()))+'/'+str(int(timings_df.rxend2targettime.max()))+'/'+str(int(timings_df.rxend2targettime.mean())),
+            str(int(timings_df.rxend2txtime.min()))+'/'+str(int(timings_df.rxend2txtime.max()))+'/'+str(int(timings_df.rxend2txtime.mean())),
+            str(int(timings_df.txcall2targettime.min()))+'/'+str(int(timings_df.txcall2targettime.max()))+'/'+str(int(timings_df.txcall2targettime.mean())),
+            str(int(timings_df.target2txphr.min()))+'/'+str(int(timings_df.target2txphr.max()))+'/'+str(int(timings_df.target2txphr.mean())),
+        ]
+        print(val_texts)
+
+        fig, ax = plt.subplots(figsize=(8, 5))
+
+        # Create the base line
+        start = min(points)
+        stop = max(points)
+        ax.plot((start, stop), (0, 0), 'k', alpha=.5)
+
+        # Iterate through releases annotating each one
+        for ii, (iname, ipt) in enumerate(zip(names, points)):
+            level = levels_dic[iname]
+            vert = 'top' if level < 0 else 'bottom'
+
+            ax.scatter(ipt, 0, s=100, facecolor='w', edgecolor='k', zorder=9999)
+            # Plot a line up to the text
+            ax.plot((ipt, ipt), (0, level), c=colors_dic[iname], alpha=.7)
+            # Give the text a faint background and align it properly
+            ax.text(ipt, level, names_label_dic[iname],
+                    horizontalalignment='center', verticalalignment=vert, fontsize=10,
+                    backgroundcolor=(1., 1., 1., .3))
+
+        # draw the arrow lines
+        i = 0
+        for d in arrows_x:
+            x1, x2, y = d.values()
+            ax.annotate("", xy=(x1, y), xytext=(x2, y), arrowprops=dict(arrowstyle="<->", facecolor='orange', ec='orange'))
+            ax.text((x1+x2)/2, y+0.05, val_texts[i],
+                    horizontalalignment='center', verticalalignment=vert, fontsize=8,
+                    backgroundcolor=(1., 1., 1., .3))
+            i = i+1
+
+        # for key, val in diff_points_dic.items():
+        # temp = list(names)
+        # try:
+        #     res = temp[temp.index(iname) + 1]
+        # except (ValueError, IndexError):
+        #     res = None
+        # if res:
+        #     if(iname=="TxPHR1" and res=="EndTxTime"):
+        #         ax.plot((ipt, points_dic[res]),(0,0.5), c='green')
+        #     # ax.plot((ipt, points_dic[res]), (level/2-0.2,level/2-0.2),c='orange')
+        #     # ax.arrow(ipt, level/2-0.2, points_dic[res]-ipt, 0, head_width=0.05, head_length=0.1,  fc='k', ec='k')
+        #     ax.annotate("", xy=(ipt, level/2), xytext=(points_dic[res], level/2),arrowprops=dict(arrowstyle="<->",facecolor='orange',ec='orange'))
+        #     # ax.arrow(ipt, points_dic[res], level/2-0.2, level/2-0.2, head_width=0.05, head_length=0.1, fc='k', ec='k')
+        #     ax.text((ipt+points_dic[res])/2, level/2-0.2, diff_points_arr[ii],
+        #             horizontalalignment='center', verticalalignment=vert, fontsize=6,
+        #             backgroundcolor=(1., 1., 1., .3))
+        ax.set(title="Timing Report")
+        # Set the xticks formatting
+        # format xaxis with 3 month intervals
+        # ax.get_xaxis().set_major_locator(mdates.MonthLocator(interval=3))
+        # ax.get_xaxis().set_major_formatter(mdates.DateFormatter("%b %Y"))
+        # fig.autofmt_xdate()
+
+        # Remove components for a cleaner look
+        plt.setp((ax.get_yticklabels() + ax.get_yticklines() +
+                  list(ax.spines.values())), visible=False)
+        # plt.show()
+
         # plot
-        if '0' in answer_list or '2' in answer_list:
+        if '0' in graph_ans_list or '2' in graph_ans_list:
             fig = plt.figure()
 
             target2txphr_hist_plt = fig.add_subplot(4, 2, 1)
@@ -1356,9 +1540,10 @@ def graph_it():
             cl_dur_hist_plt = fig.add_subplot(4, 2, 8)
             cl_dur_df.plot(kind='bar', x='dur_ms', y='freq', ax=cl_dur_hist_plt, grid=True, title="CL duration in msec")
             cl_dur_hist_plt.xaxis.label.set_visible(False)
-            plt.subplots_adjust(hspace=1)
 
-        if '0' in answer_list or '3' in answer_list:
+            plt.subplots_adjust(hspace=1, left=0.05, right=0.95, top=0.95, wspace=0.1)
+
+        if '0' in graph_ans_list or '3' in graph_ans_list:
             fig = plt.figure()
 
             target2txphr_plt = fig.add_subplot(4, 2, 1)
@@ -1395,8 +1580,8 @@ def graph_it():
 
     # print("clstats\n", cl_stats)
 
-    plt.subplots_adjust(hspace=1)
-
+    plt.subplots_adjust(hspace=1, left=0.05, right=0.95, top=0.95, wspace=0.1)
+    print('Close the figure to {}..'.format('exit' if args.file else 'continue'))
     plt.show()
 
 
@@ -1406,6 +1591,8 @@ if __name__ == "__main__":
     outputVer = ""
     date_today = get_datetime().split(' ')[0].split('-')
     date_today = date_today[2] + date_today[1] + date_today[0]
+    graph_file = 'decoded.csv'
+    graph_ans_list = []
     REACHABLE = False
     glob["QUIT"] = False
 
@@ -1453,9 +1640,9 @@ if __name__ == "__main__":
     my_group.add_argument('-f', '--file',
                           type=str,
                           help='path to the local file to decode. The local file should be obtained from hexdump -C option')
-    my_group.add_argument('-g', '--graph',
-                          type=str,
-                          help='Show Graphs using decoded.csv')
+    my_parser.add_argument('-g', '--graph',
+                           action='store_true',
+                           help='Show Graphs using decoded.csv. Required -c option')
     my_group.add_argument('-i', '--ip', metavar="IPv4",
                           type=str,
                           action=Ipv4Action,
@@ -1536,6 +1723,9 @@ if __name__ == "__main__":
 
     # check node reachability
     if args.ip:
+        if args.graph and not args.csv:
+            print("-g option requires -c option. Please add the param and try again")
+            exit(0)
         args.ip = args.ip.strip()
         print(" - Node IP '{}'..VALID..".format(args.ip), end='')
         if checkNodeReachability(args.ip) == RET_FAIL:
@@ -1546,20 +1736,36 @@ if __name__ == "__main__":
         REACHABLE = True
 
     if args.graph:
-        graph_it()
-        exit()
+
+        graph_dic = {
+            0: "All",
+            1: "RTT Between CL DataGet Req/Cnf",
+            2: "CL Timing Histogram",
+            3: "CL Timing PDF/CDF",
+        }
+
+        for key, val in graph_dic.items():
+            print("\t{} : {}".format(key, val))
+        graph_ans = input("Which graph (use a single number or list like 1,2) ")
+        graph_ans_list = graph_ans.split(',')
+        result = all(int(elem, 10) in list(graph_dic.keys()) for elem in graph_ans_list)
+        if not result:
+            print("Invalid entry {}. Choose from {}".format(graph_ans, list(graph_dic.keys())))
+            exit(0)
 
     # if file mode process and exit
     if args.file:
+        if(args.file.split('.')[-1].strip().lower() != 'csv'):
 
-        with open(args.file, 'r') as file:
-            hexdump = file.read()
-            # print(hexdump)
-            process_hexdump(hexdump, 0, True)
-        print("")
-        print(
-            " - Decoded Traces are saved to {}\{}".format(get_current_path(), args.output))
-
+            with open(args.file, 'r') as file:
+                hexdump = file.read()
+                # print(hexdump)
+                process_hexdump(hexdump, 0, True)
+            print("")
+            print(
+                " - Decoded Traces are saved to {}\{}".format(get_current_path(), args.output))
+        if args.graph:
+            graph_it()
         exit()
 
     print(" - Reading the device... ", end='')
@@ -1660,6 +1866,9 @@ if __name__ == "__main__":
             if (args.trace and hexdump):
                 with open(hexfile, 'w') as fout:
                     fout.writelines(hexdump)
+
+            if (args.graph):
+                graph_it()
 
         # time.sleep(args.poll)
         my_wait(args.poll)
