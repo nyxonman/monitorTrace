@@ -1141,6 +1141,7 @@ def graph_it():
             rtt_df.plot(x='diff', y=['pdf', 'cdf'], grid=True, title="RTT between clDataGet Req/Cnf", ax=rtt_plt)
 
             rtt_df.plot(kind='bar', x='diff', y='freq', title="Histogram of RTT", ax=rtt_hist)
+            rtt_hist.xaxis_date()
 
             plt.subplots_adjust(hspace=1, left=0.05, right=0.95, top=0.95, wspace=0.1)
 
@@ -1345,6 +1346,9 @@ def graph_it():
         names = ['WrapperCall1', 'WrapperReturn', 'TargetTx1', 'TxPHR1', 'EndTxTime', 'rxStart_beforeCall', 'rxStart_afterCall',
                  'rxEnd', 'WrapperCall2', 'TargetTx2', 'TxPHR2', ]
 
+        tx_dur = 2000
+        rx_dur = 1500
+
         names_label_dic = {
             'WrapperCall1': "WrapperCall",
             'WrapperReturn': "WrapperReturn",
@@ -1385,13 +1389,7 @@ def graph_it():
             'TargetTx2': 'r',
             'TxPHR2': 'r',
         }
-    #     'target2txphr', 'txend2rxstart', 'rxend2targettime', 'rxend2txtime',
-    #    'txcall2targettime', 'txcall2aftertx', 'rxend2txcall',
-    #    'rxcall2afterrx'
-        # print(timings_df.columns)
 
-        # exit(0)
-        print(timings_df.rxend2targettime.head(20))
         diff_points_dic = {
             'wrapperCall2Return1': int(timings_df.txcall2aftertx.mean()),
             'wrapperCall2TargetTx1': int(timings_df.txcall2targettime.mean()),
@@ -1404,6 +1402,7 @@ def graph_it():
             'rxEnd2TxPHR': int(timings_df.rxend2txtime.mean()),
             'targetTx2TxPHR2': int(timings_df.target2txphr.mean())
         }
+
         diff_points_arr = list(diff_points_dic.values())
 
         points_dic = {}
@@ -1411,10 +1410,10 @@ def graph_it():
         points_dic['WrapperReturn'] = points_dic['WrapperCall1'] + diff_points_dic['wrapperCall2Return1']
         points_dic['TargetTx1'] = points_dic['WrapperCall1'] + diff_points_dic['wrapperCall2TargetTx1']
         points_dic['TxPHR1'] = points_dic['TargetTx1'] + diff_points_dic['targetTx2TxPHR1']
-        points_dic['EndTxTime'] = points_dic['TxPHR1'] + 1000
+        points_dic['EndTxTime'] = points_dic['TxPHR1'] + tx_dur
         points_dic['rxStart_beforeCall'] = points_dic['EndTxTime'] + diff_points_dic['endTxTime2rxStartbefore']
         points_dic['rxStart_afterCall'] = points_dic['rxStart_beforeCall'] + diff_points_dic['rxstartBefore2After']
-        points_dic['rxEnd'] = points_dic['rxStart_afterCall'] + 1000
+        points_dic['rxEnd'] = points_dic['rxStart_afterCall'] + rx_dur
         points_dic['WrapperCall2'] = points_dic['rxEnd'] + diff_points_dic['rxEnd2wrapperCall']
         points_dic['TargetTx2'] = points_dic['WrapperCall2'] + diff_points_dic['wrapperCall2TargetTx2']
         points_dic['TxPHR2'] = points_dic['TargetTx2'] + diff_points_dic['targetTx2TxPHR2']
@@ -1426,6 +1425,7 @@ def graph_it():
             {'x1': points_dic['WrapperCall1'], 'x2':points_dic['TargetTx1'], 'y': 0.5},
             {'x1': points_dic['TargetTx1'], 'x2':points_dic['TxPHR1'], 'y': 0.75},
             {'x1': points_dic['EndTxTime'], 'x2': points_dic['rxStart_beforeCall'], 'y': -0.5},
+            {'x1': points_dic['EndTxTime'], 'x2': points_dic['EndTxTime']+1000, 'y': 0.5},
             {'x1': points_dic['rxStart_beforeCall'], 'x2':points_dic['rxStart_afterCall'], 'y': -0.75},
             {'x1': points_dic['rxEnd'], 'x2':points_dic['WrapperCall2'], 'y': 0.5},
             {'x1': points_dic['rxEnd'], 'x2':points_dic['TargetTx2'], 'y': -0.5},
@@ -1433,11 +1433,13 @@ def graph_it():
             {'x1': points_dic['WrapperCall2'], 'x2':points_dic['TargetTx2'], 'y': 0.75},
             {'x1': points_dic['TargetTx2'], 'x2':points_dic['TxPHR2'], 'y': 0.5},
         ]
+
         val_texts = [
             str(int(timings_df.txcall2aftertx.min()))+'/'+str(int(timings_df.txcall2aftertx.max()))+'/'+str(int(timings_df.txcall2aftertx.mean())),
             str(int(timings_df.txcall2targettime.min()))+'/'+str(int(timings_df.txcall2targettime.max()))+'/'+str(int(timings_df.txcall2targettime.mean())),
             str(int(timings_df.target2txphr.min()))+'/'+str(int(timings_df.target2txphr.max()))+'/'+str(int(timings_df.target2txphr.mean())),
             str(int(timings_df.txend2rxstart.min()))+'/'+str(int(timings_df.txend2rxstart.max()))+'/'+str(int(timings_df.txend2rxstart.mean())),
+            '1000(to have)',
             str(int(timings_df.rxcall2afterrx.min()))+'/'+str(int(timings_df.rxcall2afterrx.max()))+'/'+str(int(timings_df.rxcall2afterrx.mean())),
             str(int(timings_df.rxend2txcall.min()))+'/'+str(int(timings_df.rxend2txcall.max()))+'/'+str(int(timings_df.rxend2txcall.mean())),
             str(int(timings_df.rxend2targettime.min()))+'/'+str(int(timings_df.rxend2targettime.max()))+'/'+str(int(timings_df.rxend2targettime.mean())),
@@ -1445,7 +1447,6 @@ def graph_it():
             str(int(timings_df.txcall2targettime.min()))+'/'+str(int(timings_df.txcall2targettime.max()))+'/'+str(int(timings_df.txcall2targettime.mean())),
             str(int(timings_df.target2txphr.min()))+'/'+str(int(timings_df.target2txphr.max()))+'/'+str(int(timings_df.target2txphr.mean())),
         ]
-        print(val_texts)
 
         fig, ax = plt.subplots(figsize=(8, 5))
 
@@ -1467,7 +1468,11 @@ def graph_it():
                     horizontalalignment='center', verticalalignment=vert, fontsize=10,
                     backgroundcolor=(1., 1., 1., .3))
 
-        # draw the arrow lines
+        # min/max/avg label
+        ax.text(0.6,-1.0, 'min/max/avg', style='italic', fontsize=10,
+        bbox={'facecolor':'blue', 'alpha':0.4, 'pad':5})
+
+        # draw the arrow lines with the text
         i = 0
         for d in arrows_x:
             x1, x2, y = d.values()
@@ -1477,28 +1482,14 @@ def graph_it():
                     backgroundcolor=(1., 1., 1., .3))
             i = i+1
 
-        # for key, val in diff_points_dic.items():
-        # temp = list(names)
-        # try:
-        #     res = temp[temp.index(iname) + 1]
-        # except (ValueError, IndexError):
-        #     res = None
-        # if res:
-        #     if(iname=="TxPHR1" and res=="EndTxTime"):
-        #         ax.plot((ipt, points_dic[res]),(0,0.5), c='green')
-        #     # ax.plot((ipt, points_dic[res]), (level/2-0.2,level/2-0.2),c='orange')
-        #     # ax.arrow(ipt, level/2-0.2, points_dic[res]-ipt, 0, head_width=0.05, head_length=0.1,  fc='k', ec='k')
-        #     ax.annotate("", xy=(ipt, level/2), xytext=(points_dic[res], level/2),arrowprops=dict(arrowstyle="<->",facecolor='orange',ec='orange'))
-        #     # ax.arrow(ipt, points_dic[res], level/2-0.2, level/2-0.2, head_width=0.05, head_length=0.1, fc='k', ec='k')
-        #     ax.text((ipt+points_dic[res])/2, level/2-0.2, diff_points_arr[ii],
-        #             horizontalalignment='center', verticalalignment=vert, fontsize=6,
-        #             backgroundcolor=(1., 1., 1., .3))
-        ax.set(title="Timing Report")
-        # Set the xticks formatting
-        # format xaxis with 3 month intervals
-        # ax.get_xaxis().set_major_locator(mdates.MonthLocator(interval=3))
-        # ax.get_xaxis().set_major_formatter(mdates.DateFormatter("%b %Y"))
-        # fig.autofmt_xdate()
+        # POLL/ACK/DATA
+        ax.bar(x=(points_dic['TxPHR1']-100),height=0.25,width=tx_dur+100, align='edge', color='orange', alpha=0.6, label="POLL")
+        ax.bar(x=(points_dic['EndTxTime']+1000),height=-0.25,width=points_dic['rxEnd']-(points_dic['EndTxTime']+1000), align='edge', color='green', alpha=0.6, label="POLL")
+        ax.bar(x=(points_dic['TxPHR2']-100),height=0.25,width=(tx_dur+100)/2, align='edge', color='orange', alpha=0.6, label="POLL")
+
+
+        ax.set(title="Timing Report in usecs")
+        plt.subplots_adjust(left=0.05, right=0.95, top=0.95, bottom=0.05)
 
         # Remove components for a cleaner look
         plt.setp((ax.get_yticklabels() + ax.get_yticklines() +
