@@ -9,6 +9,8 @@ import time
 from datetime import datetime
 import argparse
 import csv
+import random
+from numpy.random import rand
 
 # list of global variables subject to change
 glob = {
@@ -437,6 +439,18 @@ sts_code_str = {
     583: "STS_FATAL_ERROR",
 }
 
+txsts_code_str = {
+    0:"SDU_TX_SUCCESS",
+    65535:"SDU_TX_FAILURE",
+    65534:"SDU_TX_NO_TX"
+}
+
+seqctrl_sts_code_str={
+    0: "TX_SUCCESS",
+    1: "TX_FAILURE",
+    2: "TX_NO_TX",
+    15: "RX_SUCCESS",
+}
 pdll_flag_str = {
     0x0001: "RX_ET",
     0x0002: "POLLED",
@@ -695,10 +709,10 @@ def process_cl(code, infoArr):
         processClInfo = "nextTime {:d}(0x{:08X})".format(next_time, next_time)
 
     elif tracing_events_num_str[code] == "CL_TXDONE":
-        status = int(infoArr[14] + infoArr[13], 16)
+        txstatus = int(infoArr[14] + infoArr[13], 16)
         clId = int(infoArr[16] + infoArr[15], 16)
         processClInfo = "{:s}({:d},0x{:X}) CL Id {:d}".format(
-            sts_code_str[status], status, status, clId)
+            txsts_code_str[txstatus], txstatus, txstatus, clId)
 
     elif tracing_events_num_str[code] == "CL_DATA_REQ":
         status = int(infoArr[14] + infoArr[13], 16)
@@ -717,14 +731,8 @@ def process_cl(code, infoArr):
         status = field & 0x000F
         fraglen = (field & 0xFFF0) >> 4
         fraglen = "|{:d}B".format(fraglen) if fraglen != 0 else ""
-        if status == 1:
-            statusStr = "TX_SUCCESS"
-        elif status == 0:
-            statusStr = "TX_FALURE"
-        elif status == 2:
-            statusStr = "RX_SUCCESS"
-        else:
-            statusStr = "TX/RX UNDEF"
+
+        statusStr = seqctrl_sts_code_str[status]
 
         seqInfo = int(infoArr[16] + infoArr[15], 16)
         seqNum = seqInfo & 0x3FF
@@ -861,7 +869,6 @@ def process_hexdump(hexdump, startLine=-1, showFirstLine=False):
     output = ''
     nlines = startLine
     firstLine = ' BYTENUM:   FRT_DEC   (0xFRT_HEXAD)  [TRACECODE]:       TRACE INFO '
-
 
     if showFirstLine:
         print(firstLine)
@@ -1033,6 +1040,32 @@ def signal_handler(sig, frame):
     glob["QUIT"] = True
     raise SystemExit
 
+def get_colors(n):
+  ret = []
+  r = int(random.random() * 256)
+  g = int(random.random() * 256)
+  b = int(random.random() * 256)
+  step = 256 / n
+  for i in range(n):
+    r += step
+    g += step
+    b += step
+    r = int(r) % 256
+    g = int(g) % 256
+    b = int(b) % 256
+    ret.append((r/256,g/256,b/256))
+  return ret
+
+x, y, c, s = rand(4, 100)
+
+def onclick(event):
+    import numpy as np
+    ind = event.ind
+    print ('onpick3 scatter:', ind, np.take(x, ind), np.take(y, ind))
+    print('%s click: button=%d, x=%d, y=%d, xdata=%f, ydata=%f' %
+          ('double' if event.dblclick else 'single', event.button,
+           event.x, event.y, event.xdata, event.ydata))
+
 
 def graph_it():
 
@@ -1045,6 +1078,7 @@ def graph_it():
         import numpy as np
         # import mplcursors
         import matplotlib.pyplot as plt
+        import mpld3
 
     except:
         print("installing dependecies...")
@@ -1145,8 +1179,124 @@ def graph_it():
 
             plt.subplots_adjust(hspace=1, left=0.05, right=0.95, top=0.95, wspace=0.1)
 
-            # print(rtt_df)
-            # print(cl_dur_df)
+    # Timeline Visualizer
+    if '0' in graph_ans_list or '4' in graph_ans_list:
+        filter_list = [149, 148]
+        timeline_df = cl_csv_df[['byte', 'frt_dec', 'cl_id', 'trace_info', 'tracecode_dec']]
+        unique_traces = timeline_df.tracecode_dec.astype(int).unique()
+        # result = map(lambda x: x:get_colors(x), unique_traces)
+        colors = get_colors(len(unique_traces))
+        key=0
+        colors_dict={}
+        for val in unique_traces:
+            colors_dict[val] = colors[key]
+            key = key +1
+        timeline_df['color'] = timeline_df.tracecode_dec.apply(lambda x: colors_dict[x])
+        print(timeline_df.head(20))
+        # trace_list = list(set(list(fast_link_df.tracecode_dec)))
+        # if sorted(trace_list) != sorted(filter_list):
+        #     print("All required traces {} are not present {}. Cannot draw the graph".format(filter_list, trace_list))
+        #     return
+        fig = plt.figure()
+
+        if not timeline_df.empty:
+            plot = fig.add_subplot(111)
+
+            points = list(timeline_df.frt_dec)
+            colors = list(timeline_df.color)
+
+            level = 1
+            vert = 'top'
+            levels_str="1,0.2,0.4,0.6,0.8"*(len(points))
+
+            levels = levels_str.split(',')[:len(points)]
+
+            names = list(timeline_df.trace_info)
+            fig, ax = plt.subplots(figsize=(8, 5))
+
+            # Create the base line
+            start = min(points)
+            stop = max(points)
+            ax.plot((start, stop), (0, 0), 'k', alpha=.5)
+            scatter = ax.scatter(x=points, y=levels, facecolor='w', edgecolor='k',zorder=999, label="scatter",cmap=plt.cm.jet,gid=list(timeline_df.trace_info))
+            print("scatter=", scatter)
+            # ax.plot([1, 2, 3], [1, 2, 3],[3,2,1], 'go-', label='line 1', linewidth=2)
+            # ax.plot([(start, start),[ (0, level),], c='orange', alpha=.7)
+            # ax.bar(x=start, height=100, width=1000, align='edge', color='orange', alpha=0.6, label="POLL")
+            ax.vlines(points, 0, levels, colors=colors, label=["test","test2"], alpha=0.5, linewidth=0.5,)
+            # ax.axvline(points,0,1,c='red', alpha=0.5)
+
+            # ax.plot((start, stop), (0, 1), 'k', alpha=.5)
+            ax.legend()
+
+            x = np.random.rand(15)
+            y = np.random.rand(15)
+            names = np.array(list("ABCDEFGHIJKLMNO"))
+            c = np.random.randint(1,5,size=15)
+
+            norm = plt.Normalize(1,4)
+            cmap = plt.cm.RdYlGn
+            # sc = plt.scatter(x,y,c=c, s=100, cmap=cmap, norm=norm)
+
+            annot = ax.annotate("", xy=(0,0), xytext=(20,20),textcoords="offset points",
+                                bbox=dict(boxstyle="round", fc="w"),
+                                arrowprops=dict(arrowstyle="->"))
+            annot.set_visible(False)
+
+            def update_annot(ind,event):
+
+                pos = scatter.get_offsets()[ind["ind"][0]]
+                annot.xy = pos
+                # text = "{}, {}".format(" ".join(list(map(str,ind["ind"]))),
+                #                     " ".join([names[n] for n in ind["ind"]]))
+                print("ind",ind['ind'])
+                print("event",event)
+                x = event.xdata
+                x = int(x)
+                print("event x", x)
+                text = "text"
+                val = str(timeline_df.loc[(timeline_df.frt_dec == x)].trace_info)
+                print("val",val)
+                text = text + val
+                annot.set_text(text)
+                # annot.get_bbox_patch().set_facecolor(cmap(norm(c[ind["ind"][0]])))
+                annot.get_bbox_patch().set_alpha(0.4)
+
+
+            def hover(event):
+                vis = annot.get_visible()
+                print("vis",vis)
+
+                if event.inaxes == ax:
+                    cont, ind = scatter.contains(event)
+                    print("cont, ind", cont, ind)
+                    if cont:
+                        update_annot(ind,event)
+                        annot.set_visible(True)
+                        fig.canvas.draw_idle()
+                    else:
+                        if vis:
+                            annot.set_visible(False)
+                            fig.canvas.draw_idle()
+
+            # fig.canvas.mpl_connect("motion_notify_event", hover)
+            fig.canvas.mpl_connect("button_press_event", hover)
+
+
+            # cid = fig.canvas.mpl_connect('button_press_event', onclick)
+
+            # # Iterate through releases annotating each one
+            # for ii, (iname, ipt) in enumerate(zip(names, points)):
+            #     level = levels[ii]
+            #     vert = 'top'
+
+            #     # ax.scatter(ipt, 0, s=100, facecolor='w', edgecolor='k', zorder=9999)
+            #     # Plot a line up to the text
+            #     # ax.plot((ipt, ipt), (0, level), c='orange', alpha=.7)
+            #     # Give the text a faint background and align it properly
+            #     ax.text(ipt, level, iname,
+            #             horizontalalignment='center', verticalalignment=vert, fontsize=10,
+            #             backgroundcolor=(1., 1., 1., .3))
 
     if '0' in graph_ans_list or '3' in graph_ans_list or '2' in graph_ans_list:
 
@@ -1469,8 +1619,8 @@ def graph_it():
                     backgroundcolor=(1., 1., 1., .3))
 
         # min/max/avg label
-        ax.text(0.6,-1.0, 'min/max/avg', style='italic', fontsize=10,
-        bbox={'facecolor':'blue', 'alpha':0.4, 'pad':5})
+        ax.text(0.6, -1.0, 'min/max/avg', style='italic', fontsize=10,
+                bbox={'facecolor': 'blue', 'alpha': 0.2, 'pad': 5})
 
         # draw the arrow lines with the text
         i = 0
@@ -1483,10 +1633,9 @@ def graph_it():
             i = i+1
 
         # POLL/ACK/DATA
-        ax.bar(x=(points_dic['TxPHR1']-100),height=0.25,width=tx_dur+100, align='edge', color='orange', alpha=0.6, label="POLL")
-        ax.bar(x=(points_dic['EndTxTime']+1000),height=-0.25,width=points_dic['rxEnd']-(points_dic['EndTxTime']+1000), align='edge', color='green', alpha=0.6, label="POLL")
-        ax.bar(x=(points_dic['TxPHR2']-100),height=0.25,width=(tx_dur+100)/2, align='edge', color='orange', alpha=0.6, label="POLL")
-
+        ax.bar(x=(points_dic['TxPHR1']-100), height=0.25, width=tx_dur+100, align='edge', color='orange', alpha=0.6, label="POLL")
+        ax.bar(x=(points_dic['EndTxTime']+1000), height=-0.25, width=points_dic['rxEnd']-(points_dic['EndTxTime']+1000), align='edge', color='green', alpha=0.6, label="POLL")
+        ax.bar(x=(points_dic['TxPHR2']-100), height=0.25, width=(tx_dur+100)/2, align='edge', color='orange', alpha=0.6, label="POLL")
 
         ax.set(title="Timing Report in usecs")
         plt.subplots_adjust(left=0.05, right=0.95, top=0.95, bottom=0.05)
@@ -1733,6 +1882,7 @@ if __name__ == "__main__":
             1: "RTT Between CL DataGet Req/Cnf",
             2: "CL Timing Histogram",
             3: "CL Timing PDF/CDF",
+            4: "Timeline"
         }
 
         for key, val in graph_dic.items():
