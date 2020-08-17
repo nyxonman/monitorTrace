@@ -20,7 +20,7 @@ glob = {
 
 OS_POSIX = "posix"
 OS_WIN = "nt"
-__VERSION__ = "1.9"
+__VERSION__ = "2.0"
 APP_VERSION = __VERSION__ + " {OS: " + os.name + "}"
 OUTPUT_FILE_NAME = "lastdecodedTraces"
 OUTPUT_FILE_EXT = ".log"
@@ -59,6 +59,12 @@ ID_TRACE = 3
 ID_FLAG = 4
 ID_OWNERS = 5
 ID_MAX = 6
+
+graphs = {
+    'rtt': {},
+    'cl_timing': {},
+    'timeline': {}
+}
 
 tracing_events_num_str = {
     0: "LMMGR_PRE_IND",
@@ -216,43 +222,43 @@ tracing_events_num_str = {
     189: "BCAST_CANCELLED_SCHID",
     200: "BCAST_RESERVED",
     201: "UPCALL_RX_TX_DELAY",
-    211: "LMDC",
-	212: "RLT_LINK",
-	213: "LDC_CHECK",
-	214: "LDC_TXDUR_CUR",
-	215: "LDC_WINDOW_SPAN",
-	216: "LDC_WINDOW_BIN",
-	217: "SDC_CHECK",
-	218: "SDC_TXDUR_CUR",
-	219: "SDC_WINDOW_SPAN",
-	220: "SDC_WINDOW_BIN",
-	221: "RLT_CHECK",
-	222: "TTC_TOK_ADDED_SINCE_LAST_TX",
-	223: "TTC_TOK_IN_BUCKET",
-	224: "TTC_TOK_AVAILABLE",
-	225: "TTC_TOK_ERROR",
-	226: "RLT_RETRY",
-	227: "LDC_UPDATE",
-	228: "SDC_UPDATE",
-	229: "TTC_TX_UPDATE",
-	230: "TTC_TMR_CB",
-    231: "ELG",
-    232: "ELG_TIMER",
-    233: "ELG_EVENT",
-	235: "LMDC_RESERVED",
-	241: "SA_HAPPY_RETURN",
-	242: "SA_ERROR_RETURN",
-	243: "SA_HSM_HAPPY_RETURN",
-	244: "SA_HSM_ERROR_RETURN",
-    250: "ELG_RESERVED",
-	# 270: "SA_RESERVED",
+    211: "LMDC_ERROR",
+    212: "RLT_LINK",
+    213: "LDC_CHECK",
+    214: "LDC_TXDUR_CUR",
+    215: "LDC_WINDOW_SPAN",
+    216: "LDC_WINDOW_BIN",
+    217: "SDC_CHECK",
+    218: "SDC_TXDUR_CUR",
+    219: "SDC_WINDOW_SPAN",
+    220: "SDC_WINDOW_BIN",
+    221: "RLT_CHECK",
+    222: "TTC_TOK_ADDED_SINCE_LAST_TX",
+    223: "TTC_TOK_IN_BUCKET",
+    224: "TTC_TOK_AVAILABLE",
+    225: "TTC_TOK_ERROR",
+    226: "RLT_RETRY",
+    227: "LDC_UPDATE",
+    228: "SDC_UPDATE",
+    229: "TTC_TX_UPDATE",
+    230: "TTC_TMR_CB",
+    231: "LMDC_EEROR_LN",
+    235: "LMDC_RESERVED",
+    241: "SA_HAPPY_RETURN",
+    242: "SA_ERROR_RETURN",
+    243: "SA_HSM_HAPPY_RETURN",
+    244: "SA_HSM_ERROR_RETURN",
+    270: "SA_RESERVED",
+    271: "ELG",
+    272: "ELG_TIMER",
+    273: "ELG_EVENT",
+    290: "ELG_RESERVED",
 
 }
 tracing_events_str_num = {value: key for key, value in tracing_events_num_str.items()}
 MAX_TRACE_EVT = list(tracing_events_num_str.keys())[-1] + 1
 
 TRACING_DEBUG_MASK_LEN = int(MAX_TRACE_EVT/8) + 1
-
 
 state_arr = [
     "LMSM_TOP",
@@ -331,30 +337,26 @@ owner_ids_arr = [
     "OID_MAX"
 ]
 
-elg_code_str={
- 1: "ELG_TIMER_CB",
- 2: "ELG_AC_LOSS_ISR",
- 3: "ELG_EPF_ISR",
-
- 50: "ELG_EPF_EVENTS_OFS",
+elg_code_str = {
+    1: "ELG_TIMER_CB",
+    2: "ELG_AC_LOSS_ISR",
+    3: "ELG_EPF_ISR",
+    50: "ELG_EPF_EVENTS_OFS",
 }
 
 
-
-elg_event_code_str={
-    0:"ELG_EV_INVALID",
-    1:"ELG_EV_TIMER",
-    2:"ELG_EV_AC_LOSS",
-    3:"ELG_EV_AC_RESTORED",
-    4:"ELG_EV_EPF",
-    5:"ELG_EV_SFP_START",
-    6:"ELG_EV_SFP_DONE_SUCCESS",
-    7:"ELG_EV_SFP_DONE_FAILED",
-    8:"ELG_EV_MOLF_WAKEUP",
-    9:"ELG_EV_TX_BUNDLE",
-    10:"ELG_EV_TX_BUNDLE_SUCCESS",
-    11:"ELG_EV_TX_BUNDLE_FAILED",
-    12:"ELG_EV_MAX",
+elg_event_code_str = {
+    0: "ELG_EV_INVALID",
+    1: "ELG_EV_TIMER",
+    2: "ELG_EV_AC_LOSS",
+    3: "ELG_EV_AC_RESTORED",
+    4: "ELG_EV_EPF",
+    5: "ELG_EV_SFP_START",
+    6: "ELG_EV_SFP_TXDONE",
+    7: "ELG_EV_MOLF_WAKEUP",
+    8: "ELG_EV_TX_BUNDLE",
+    9: "ELG_EV_TX_BUNDLE_DONE",
+    10: "ELG_EV_MAX",
 }
 
 sts_code_str = {
@@ -481,15 +483,18 @@ sts_code_str = {
     581: "STS_INPROGRESS",
     582: "STS_MAC_BACKOFF",
     583: "STS_FATAL_ERROR",
+    584: "STS_RLT_TX_PKT_NOT_ALLOWED",
+    585: "STS_RLT_TX_PKT_OK",
+    586: "STS_RLT_TX_PKT_LAST",
 }
 
 txsts_code_str = {
-    0:"SDU_TX_SUCCESS",
-    65535:"SDU_TX_FAILURE",
-    65534:"SDU_TX_NO_TX"
+    0: "SDU_TX_SUCCESS",
+    65535: "SDU_TX_FAILURE",
+    65534: "SDU_TX_NO_TX"
 }
 
-seqctrl_sts_code_str={
+seqctrl_sts_code_str = {
     0: "TX_SUCCESS",
     1: "TX_FAILURE",
     2: "TX_NO_TX",
@@ -580,6 +585,15 @@ prim_code_str = {
     0x40: "MAC_TXB_SET_FAST_BCN_REQ",
     0x41: "MAC_TXB_SET_FAST_BCN_CONF",
     0x42: "CL_STAT_IND",
+    0x43: "TST_NFL_IND",
+    0x44: "ELG_SRV_INFO_REQ",
+    0x45: "ELG_SRV_INFO_CONF",
+    0x46: "LINKLAYER_SEC_KEY_UPD_REQ",
+    0x47: "LINKLAYER_SEC_KEY_UPD_CONF",
+    0x48: "LINKLAYER_SEC_INFO_UPD_REQ",
+    0x49: "LINKLAYER_SEC_INFO_UPD_CONF",
+    0x4A: "SA_START_IND",
+    0x4B: "SA_ERRPKT_IND",
     0xFB: "ERROR",
     0xFC: "INVALID",
     0xFD: "LOGGER_IND",
@@ -710,7 +724,8 @@ def process_cl(code, infoArr):
     elif tracing_events_num_str[code] == "CL_OUT_REQ":
         pktId = int(infoArr[16]+infoArr[15]+infoArr[14]+infoArr[13], 16)
         processClInfo = "pktId {:d}(0x{:X})".format(pktId, pktId)
-        print("==="*40)
+        if not args.nolog:
+            print("==="*40)
 
     elif tracing_events_num_str[code] == "CL_OUT_CNF" or tracing_events_num_str[code] == "CL_START":
         status = int(infoArr[14] + infoArr[13], 16)
@@ -722,7 +737,8 @@ def process_cl(code, infoArr):
         crcstatus = int(infoArr[16] + infoArr[15] +
                         infoArr[14] + infoArr[13], 16)
         processClInfo = "crc {:d}(0x{:X})".format(crcstatus, crcstatus)
-        print("==="*40)
+        if not args.nolog:
+            print("==="*40)
 
     elif tracing_events_num_str[code] == "CL_TX":
         status = int(infoArr[14] + infoArr[13], 16)
@@ -894,11 +910,11 @@ def process_one_trace(code, infoArr):
         field_32 = int(infoArr[16] + infoArr[15] +
                        infoArr[14] + infoArr[13], 16)
         info = "ptr 0x{:08X}".format(field_32)
-    #elg
+    # elg
     elif code == tracing_events_str_num["ELG"] or code == tracing_events_str_num["ELG_TIMER"] or code == tracing_events_str_num["ELG_EVENT"]:
         field_32 = int(infoArr[16] + infoArr[15] +
                        infoArr[14] + infoArr[13], 16)
-        if (code ==tracing_events_str_num["ELG_EVENT"]):
+        if (code == tracing_events_str_num["ELG_EVENT"]):
             info = "ev {}".format(elg_event_code_str[field_32])
 
         else:
@@ -923,7 +939,8 @@ def process_hexdump(hexdump, startLine=-1, showFirstLine=False):
     firstLine = ' BYTENUM:   FRT_DEC   (0xFRT_HEXAD)  [TRACECODE]:       TRACE INFO '
 
     if showFirstLine:
-        print(firstLine)
+        if not args.nolog:
+            print(firstLine)
         outputList.extend(outputVer + "\n\n")
         outputList.extend(firstLine + "\n")
         csvList.append(["BYTENUM", "FRT_DEC", "FRT_HEX",
@@ -959,11 +976,13 @@ def process_hexdump(hexdump, startLine=-1, showFirstLine=False):
         csvList.append([byteArr[0], timestamp, hex(timestamp), str(
             tracecode) + " (" + str(hex(tracecode)) + ")", tracing_events_num_str[tracecode]+" " + info])
 
-        print(output, "[{}]".format(cl_id))
+        if not args.nolog:
+            print(output, "[{}]".format(cl_id))
 
     halflen = int(len(output)/2) - int(len(get_datetime())/2)
 
-    print(("-"*halflen) + "( "+get_datetime() + " )" + ("-" * halflen))
+    if not args.nolog:
+        print(("-"*halflen) + "( "+get_datetime() + " )" + ("-" * halflen))
 
     with open(args.output, 'w') as fout:
         fout.writelines(outputList)
@@ -1074,12 +1093,13 @@ class listIdAction(argparse.Action):
         setattr(namespace, self.dest, values)
 
 
-def my_wait(sec):
+def my_wait(sec, new_count=0):
     for i in range(sec):
         # if(glob['QUIT']):
         #     break
-        print("*** Polling {} ({}) in {:3d}sec...".format(args.ip,
-                                                          macAddr, sec-i), end='\r')
+        lines = "[lines={}]".format(new_count) if args.nolog else ""
+        print("*** Polling {} ({}) in {:3d}sec... {}".format(args.ip,
+                                                             macAddr, sec-i, lines), end='\r')
         sys.stdout.flush()
         time.sleep(1)
     print
@@ -1092,45 +1112,43 @@ def signal_handler(sig, frame):
     glob["QUIT"] = True
     raise SystemExit
 
+
 def get_colors(n):
-  ret = []
-  r = int(random.random() * 256)
-  g = int(random.random() * 256)
-  b = int(random.random() * 256)
-  step = 256 / n
-  for i in range(n):
-    r += step
-    g += step
-    b += step
-    r = int(r) % 256
-    g = int(g) % 256
-    b = int(b) % 256
-    ret.append((r/256,g/256,b/256))
-  return ret
+    ret = []
+    r = int(random.random() * 256)
+    g = int(random.random() * 256)
+    b = int(random.random() * 256)
+    step = 256 / n
+    for i in range(n):
+        r += step
+        g += step
+        b += step
+        r = int(r) % 256
+        g = int(g) % 256
+        b = int(b) % 256
+        # ret.append((r/256, g/256, b/256))
+        ret.append('rgb({},{},{})'.format(r, g, b))
+    return ret
+
 
 x, y, c, s = rand(4, 100)
-
-def onclick(event):
-    import numpy as np
-    ind = event.ind
-    print ('onpick3 scatter:', ind, np.take(x, ind), np.take(y, ind))
-    print('%s click: button=%d, x=%d, y=%d, xdata=%f, ydata=%f' %
-          ('double' if event.dblclick else 'single', event.button,
-           event.x, event.y, event.xdata, event.ydata))
 
 
 def graph_it():
 
     if not os.path.isfile('decoded.csv'):
-        print("'decoded.csv' not found")
+        print("'decoded.csv' not found. Use -c option to create the required csv.")
         return
 
     try:
         import pandas as pd
         import numpy as np
         # import mplcursors
-        import matplotlib.pyplot as plt
-        import mpld3
+        # import matplotlib.pyplot as plt
+        import plotly.express as px
+        import plotly.graph_objects as go
+        from plotly.subplots import make_subplots
+        import plotly.offline as py
 
     except:
         print("installing dependecies...")
@@ -1145,10 +1163,10 @@ def graph_it():
         # p1.communicate()
         import pandas as pd
         import numpy as np
-        import matplotlib.pyplot as plt
+        # import matplotlib.pyplot as plt
 
     # plt.style.use('seaborn-deep')
-    plt.style.use('ggplot')
+    # plt.style.use('ggplot')
 
     print("showing graph", graph_ans_list)
 
@@ -1198,7 +1216,6 @@ def graph_it():
         if sorted(trace_list) != sorted(filter_list):
             print("All required traces {} are not present {}. Cannot draw the graph".format(filter_list, trace_list))
             return
-        fig = plt.figure()
 
         if not fast_link_df.empty:
             fast_link_df['A_dif'] = fast_link_df['frt_dec'].diff()
@@ -1219,138 +1236,114 @@ def graph_it():
             rtt_df = rtt_df.reset_index()
             rtt_df = rtt_df.astype({'diff': int})
 
-            # Divide the figure into a 1x2 grid, and give me the first section
-            rtt_plt = fig.add_subplot(211)
+            # Create figure with secondary y-axisspecs
+            if(graphs['rtt'] == {}):
+                graphs['rtt'] = make_subplots(specs=[[{"secondary_y": True}]])
 
-            # Divide the figure into a 1x2 grid, and give me the second section
-            rtt_hist = fig.add_subplot(212)
-            rtt_df.plot(x='diff', y=['pdf', 'cdf'], grid=True, title="RTT between clDataGet Req/Cnf", ax=rtt_plt)
+                # Add traces
+                graphs['rtt'].add_bar(x=rtt_df['diff'], y=rtt_df['freq'], name="Count", opacity=0.5)
+                graphs['rtt'].add_scatter(x=rtt_df['diff'], y=rtt_df['pdf'], name="PDF", secondary_y=True)
+                graphs['rtt'].add_scatter(x=rtt_df['diff'], y=rtt_df['cdf'], name="CDF", secondary_y=True)
+                # graphs['rtt'].add_trace(go.Bar(x=rtt_df['diff'], y=rtt_df['freq'], name="Count", opacity=0.5,
+                #                      ), secondary_y=True)
+                # graphs['rtt'].add_trace(go.Scatter(x=rtt_df['diff'], y=rtt_df['pdf'], name="PDF"))
+                # graphs['rtt'].add_trace(go.Scatter(x=rtt_df['diff'], y=rtt_df['cdf'], name='CDF'))
+                graphs['rtt'].update_layout(
+                    template="plotly_dark",
+                    title="Round Trip time in usec",
+                    xaxis_title="RTT (usecs)",
+                    yaxis_title="Count",
+                    yaxis2_title="PDF & CDF",
 
-            rtt_df.plot(kind='bar', x='diff', y='freq', title="Histogram of RTT", ax=rtt_hist)
-            rtt_hist.xaxis_date()
+                )
+                graphs['rtt'].show()
 
-            plt.subplots_adjust(hspace=1, left=0.05, right=0.95, top=0.95, wspace=0.1)
+            else:
+                print(graphs['rtt'])
+                graphs['rtt'].data[0].x = list(rtt_df['diff'])
+                graphs['rtt'].data[0].y = list(rtt_df['freq'])
+
+                graphs['rtt'].data[1].x = list(rtt_df['diff'])
+                graphs['rtt'].data[1].y = list(rtt_df['pdf'])
+
+                graphs['rtt'].data[2].x = list(rtt_df['diff'])
+                graphs['rtt'].data[2].y = list(rtt_df['cdf'])
+
+            # fig.show()
 
     # Timeline Visualizer
-    if '0' in graph_ans_list or '4' in graph_ans_list:
+    if '0' in graph_ans_list or '3' in graph_ans_list:
         filter_list = [149, 148]
         timeline_df = cl_csv_df[['byte', 'frt_dec', 'cl_id', 'trace_info', 'tracecode_dec']]
         unique_traces = timeline_df.tracecode_dec.astype(int).unique()
         # result = map(lambda x: x:get_colors(x), unique_traces)
         colors = get_colors(len(unique_traces))
-        key=0
-        colors_dict={}
+        key = 0
+        colors_dict = {}
         for val in unique_traces:
             colors_dict[val] = colors[key]
-            key = key +1
+            key = key + 1
         timeline_df['color'] = timeline_df.tracecode_dec.apply(lambda x: colors_dict[x])
-        print(timeline_df.head(20))
-        # trace_list = list(set(list(fast_link_df.tracecode_dec)))
-        # if sorted(trace_list) != sorted(filter_list):
-        #     print("All required traces {} are not present {}. Cannot draw the graph".format(filter_list, trace_list))
-        #     return
-        fig = plt.figure()
+        # print(timeline_df.head(20))
+        trace_list = list(set(list(fast_link_df.tracecode_dec)))
+        if sorted(trace_list) != sorted(filter_list):
+            print("All required traces {} are not present {}. Cannot draw the graph".format(filter_list, trace_list))
+            return
 
         if not timeline_df.empty:
-            plot = fig.add_subplot(111)
 
             points = list(timeline_df.frt_dec)
             colors = list(timeline_df.color)
 
             level = 1
             vert = 'top'
-            levels_str="1,0.2,0.4,0.6,0.8"*(len(points))
+            levels_str = "1,0.2,0.4,0.6,0.8"*(len(points))
 
             levels = levels_str.split(',')[:len(points)]
 
             names = list(timeline_df.trace_info)
-            fig, ax = plt.subplots(figsize=(8, 5))
 
             # Create the base line
             start = min(points)
             stop = max(points)
-            ax.plot((start, stop), (0, 0), 'k', alpha=.5)
-            scatter = ax.scatter(x=points, y=levels, facecolor='w', edgecolor='k',zorder=999, label="scatter",cmap=plt.cm.jet,gid=list(timeline_df.trace_info))
-            print("scatter=", scatter)
-            # ax.plot([1, 2, 3], [1, 2, 3],[3,2,1], 'go-', label='line 1', linewidth=2)
-            # ax.plot([(start, start),[ (0, level),], c='orange', alpha=.7)
-            # ax.bar(x=start, height=100, width=1000, align='edge', color='orange', alpha=0.6, label="POLL")
-            ax.vlines(points, 0, levels, colors=colors, label=["test","test2"], alpha=0.5, linewidth=0.5,)
-            # ax.axvline(points,0,1,c='red', alpha=0.5)
 
-            # ax.plot((start, stop), (0, 1), 'k', alpha=.5)
-            ax.legend()
+            fig = go.Figure()
 
-            x = np.random.rand(15)
-            y = np.random.rand(15)
-            names = np.array(list("ABCDEFGHIJKLMNO"))
-            c = np.random.randint(1,5,size=15)
+            # Add baseline
+            fig.add_shape(
+                # Line Horizontal
+                type="line",
+                x0=start, y0=0,
+                x1=stop, y1=0,
+                line=dict(
+                    color="grey",
+                    width=1,
+                ),
+            )
+            # add circle markers
+            fig.add_trace(go.Scatter(
+                x=points, y=levels,
+                hovertext=names,
+                mode="text+markers",
+                marker=dict(size=12,
+                            color='white',
+                            line=dict(width=2,
+                                      color=colors))
+            ))
 
-            norm = plt.Normalize(1,4)
-            cmap = plt.cm.RdYlGn
-            # sc = plt.scatter(x,y,c=c, s=100, cmap=cmap, norm=norm)
+            fig.add_bar(
+                x=points, y=levels,
+                width=1,
+                hoverinfo="none",
+                marker=dict(
+                    color=colors,
+                    line=dict(width=1,
+                              color=colors))
+            )
+            fig.update_xaxes(rangeslider_visible=True, title="Timing Visualizer")
+            fig.show()
 
-            annot = ax.annotate("", xy=(0,0), xytext=(20,20),textcoords="offset points",
-                                bbox=dict(boxstyle="round", fc="w"),
-                                arrowprops=dict(arrowstyle="->"))
-            annot.set_visible(False)
-
-            def update_annot(ind,event):
-
-                pos = scatter.get_offsets()[ind["ind"][0]]
-                annot.xy = pos
-                # text = "{}, {}".format(" ".join(list(map(str,ind["ind"]))),
-                #                     " ".join([names[n] for n in ind["ind"]]))
-                print("ind",ind['ind'])
-                print("event",event)
-                x = event.xdata
-                x = int(x)
-                print("event x", x)
-                text = "text"
-                val = str(timeline_df.loc[(timeline_df.frt_dec == x)].trace_info)
-                print("val",val)
-                text = text + val
-                annot.set_text(text)
-                # annot.get_bbox_patch().set_facecolor(cmap(norm(c[ind["ind"][0]])))
-                annot.get_bbox_patch().set_alpha(0.4)
-
-
-            def hover(event):
-                vis = annot.get_visible()
-                print("vis",vis)
-
-                if event.inaxes == ax:
-                    cont, ind = scatter.contains(event)
-                    print("cont, ind", cont, ind)
-                    if cont:
-                        update_annot(ind,event)
-                        annot.set_visible(True)
-                        fig.canvas.draw_idle()
-                    else:
-                        if vis:
-                            annot.set_visible(False)
-                            fig.canvas.draw_idle()
-
-            # fig.canvas.mpl_connect("motion_notify_event", hover)
-            fig.canvas.mpl_connect("button_press_event", hover)
-
-
-            # cid = fig.canvas.mpl_connect('button_press_event', onclick)
-
-            # # Iterate through releases annotating each one
-            # for ii, (iname, ipt) in enumerate(zip(names, points)):
-            #     level = levels[ii]
-            #     vert = 'top'
-
-            #     # ax.scatter(ipt, 0, s=100, facecolor='w', edgecolor='k', zorder=9999)
-            #     # Plot a line up to the text
-            #     # ax.plot((ipt, ipt), (0, level), c='orange', alpha=.7)
-            #     # Give the text a faint background and align it properly
-            #     ax.text(ipt, level, iname,
-            #             horizontalalignment='center', verticalalignment=vert, fontsize=10,
-            #             backgroundcolor=(1., 1., 1., .3))
-
-    if '0' in graph_ans_list or '3' in graph_ans_list or '2' in graph_ans_list:
+    if '0' in graph_ans_list or '2' in graph_ans_list:
 
         timings_df = pd.DataFrame()
         timings_plot_df = pd.DataFrame()
@@ -1571,25 +1564,26 @@ def graph_it():
             'TargetTx1': 1,
             'TxPHR1': 2,
             'EndTxTime': 1,
-            'rxStart_beforeCall': -1,
+            'rxStart_beforeCall': -1.2,
             'rxStart_afterCall': -2,
             'rxEnd': -1,
             'WrapperCall2': 2,
             'TargetTx2': 1,
             'TxPHR2': 1,
         }
+
         colors_dic = {
-            'WrapperCall1': 'b',
-            'WrapperReturn': 'b',
-            'TargetTx1': 'r',
-            'TxPHR1': 'r',
-            'EndTxTime': 'r',
-            'rxStart_beforeCall': 'g',
-            'rxStart_afterCall': 'g',
-            'rxEnd': 'g',
-            'WrapperCall2': 'b',
-            'TargetTx2': 'r',
-            'TxPHR2': 'r',
+            'WrapperCall1': 'royalblue',
+            'WrapperReturn': 'royalblue',
+            'TargetTx1': 'crimson',
+            'TxPHR1': 'crimson',
+            'EndTxTime': 'crimson',
+            'rxStart_beforeCall': 'LightSeaGreen',
+            'rxStart_afterCall': 'LightSeaGreen',
+            'rxEnd': 'LightSeaGreen',
+            'WrapperCall2': 'royalblue',
+            'TargetTx2': 'crimson',
+            'TxPHR2': 'crimson',
         }
 
         diff_points_dic = {
@@ -1650,131 +1644,195 @@ def graph_it():
             str(int(timings_df.target2txphr.min()))+'/'+str(int(timings_df.target2txphr.max()))+'/'+str(int(timings_df.target2txphr.mean())),
         ]
 
-        fig, ax = plt.subplots(figsize=(8, 5))
+        # MAKE THE TIMING REPORT
 
         # Create the base line
         start = min(points)
         stop = max(points)
-        ax.plot((start, stop), (0, 0), 'k', alpha=.5)
 
-        # Iterate through releases annotating each one
+        fig = go.Figure()
+
+        # Add baseline
+        fig.add_shape(
+            # Line Horizontal
+            type="line",
+            x0=start, y0=0,
+            x1=stop, y1=0,
+            line=dict(
+                color="grey",
+                width=1,
+            ),
+        )
+
+        # legend for min/max/avg
+        fig.add_annotation(
+            x=1000, y=-1,
+            xref="x", yref="y",
+            text="min/max/avg",
+            showarrow=False,
+            font=dict(
+                family="Courier New, monospace",
+                size=16,
+                color="#ffffff"
+            ),
+            align="center",
+            arrowhead=2,
+            arrowsize=1,
+            arrowwidth=2,
+            arrowcolor="#636363",
+            ax=20, ay=-30,
+            bordercolor="#c7c7c7",
+            borderwidth=2,
+            borderpad=4,
+            bgcolor="#ff7f0e",
+            opacity=0.8
+        )
+
+        # add vertical lines
         for ii, (iname, ipt) in enumerate(zip(names, points)):
             level = levels_dic[iname]
             vert = 'top' if level < 0 else 'bottom'
+            # fig.add_scatter(x=target2txphr_df['target2txphr'], y=target2txphr_df['pdf'], name="PDF", secondary_y=True, row=1, col=1)
+            # print(ii, iname, ipt)
+            fig.add_shape(
+                # Line vertical
+                type="line",
+                x0=ipt, y0=0,
+                x1=ipt, y1=level,
+                line=dict(
+                    color=colors_dic[iname],
+                    width=2,
+                )
+            )
 
-            ax.scatter(ipt, 0, s=100, facecolor='w', edgecolor='k', zorder=9999)
-            # Plot a line up to the text
-            ax.plot((ipt, ipt), (0, level), c=colors_dic[iname], alpha=.7)
-            # Give the text a faint background and align it properly
-            ax.text(ipt, level, names_label_dic[iname],
-                    horizontalalignment='center', verticalalignment=vert, fontsize=10,
-                    backgroundcolor=(1., 1., 1., .3))
+        # add labels to the lines
+        fig.add_trace(go.Scatter(
+            x=points,
+            # y=[i * 1.05 for i in list(levels_dic.values())],
+            y=[i for i in list(levels_dic.values())],
+            text=list(names_label_dic.values()),
+            textposition="top center",
+            mode="text+markers",
+            hoverinfo="none",
+            marker=dict(size=12,
+                        color='white',
+                        line=dict(width=2,
+                                  color='black'))
+        ))
 
-        # min/max/avg label
-        ax.text(0.6, -1.0, 'min/max/avg', style='italic', fontsize=10,
-                bbox={'facecolor': 'blue', 'alpha': 0.2, 'pad': 5})
-
-        # draw the arrow lines with the text
+        # draw the horizontal lines
         i = 0
         for d in arrows_x:
             x1, x2, y = d.values()
-            ax.annotate("", xy=(x1, y), xytext=(x2, y), arrowprops=dict(arrowstyle="<->", facecolor='orange', ec='orange'))
-            ax.text((x1+x2)/2, y+0.05, val_texts[i],
-                    horizontalalignment='center', verticalalignment=vert, fontsize=8,
-                    backgroundcolor=(1., 1., 1., .3))
+            fig.add_shape(
+                # Line horizontals for texts
+                type="line",
+                x0=x1, y0=y,
+                x1=x2, y1=y,
+                line=dict(
+                    color='DarkOrange',
+                    width=2,
+                    dash="dot"
+                )
+            )
+
             i = i+1
 
+        # add the values;labels over the horizontal line.
+        x = [(sub["x1"]+sub["x2"]) / 2 for sub in arrows_x]
+        y = [sub["y"]*1.15 for sub in arrows_x]
+        fig.add_trace(go.Scatter(
+            x=x,
+            y=y,
+            text=val_texts,
+            mode="text",
+            hoverinfo="none",
+
+        ))
         # POLL/ACK/DATA
-        ax.bar(x=(points_dic['TxPHR1']-100), height=0.25, width=tx_dur+100, align='edge', color='orange', alpha=0.6, label="POLL")
-        ax.bar(x=(points_dic['EndTxTime']+1000), height=-0.25, width=points_dic['rxEnd']-(points_dic['EndTxTime']+1000), align='edge', color='green', alpha=0.6, label="POLL")
-        ax.bar(x=(points_dic['TxPHR2']-100), height=0.25, width=(tx_dur+100)/2, align='edge', color='orange', alpha=0.6, label="POLL")
+        rx_dur = points_dic['rxEnd']-(points_dic['EndTxTime']+1000)
+        fig.add_bar(
+            x=[(points_dic['TxPHR1']+(tx_dur+300)/2-300), (points_dic['EndTxTime']+1000+rx_dur/2), (points_dic['TxPHR2']+tx_dur/2-300)],
+            y=[0.25, -0.25, 0.25],
+            width=[tx_dur+300, rx_dur, (tx_dur+300)],
+            text=["POLL", "ACK", "DATA"],
+            textposition="inside",
+            hoverinfo="none",
+            marker=dict(
+                         color=['darksalmon', 'darkseagreen', 'darksalmon'],
+                         line=dict(width=2,
+                                   color='black'))
+        )
 
-        ax.set(title="Timing Report in usecs")
-        plt.subplots_adjust(left=0.05, right=0.95, top=0.95, bottom=0.05)
+        fig.update_layout(
+            title="CL Timing Report",
 
-        # Remove components for a cleaner look
-        plt.setp((ax.get_yticklabels() + ax.get_yticklines() +
-                  list(ax.spines.values())), visible=False)
-        # plt.show()
+        )
 
+        fig.show()
+
+        # MAKE THE TIMING GRAPHS
         # plot
-        if '0' in graph_ans_list or '2' in graph_ans_list:
-            fig = plt.figure()
+        fig = make_subplots(4, 2,
+                            specs=[[{"secondary_y": True},    {"secondary_y": True}],
+                                   [{"secondary_y": True},    {"secondary_y": True}],
+                                   [{"secondary_y": True},    {"secondary_y": True}],
+                                   [{"secondary_y": True}, {"secondary_y": True}]],
+                            subplot_titles=("Target Time to Tx PHR Time",
+                                            "Tx End to Rx Start",
+                                            "Rx End to Target Time",
+                                            "rxend2txtime",
+                                            "Tx Call to Target Time",
+                                            "Rx End to Tx Call",
+                                            "Rxcall to After Rx",
+                                            "CL duration in msec"),
+                            x_title="time in msec",
+                            y_title="Frequency",
+                            )
 
-            target2txphr_hist_plt = fig.add_subplot(4, 2, 1)
-            target2txphr_df.plot(kind='bar', x='target2txphr', y='freq', ax=target2txphr_hist_plt, grid=True, title="Target Time to Tx PHR Time")
-            target2txphr_hist_plt.xaxis.label.set_visible(False)
+        # Add traces
+        fig.add_bar(x=target2txphr_df['target2txphr'], y=target2txphr_df['freq'], name="Target Time to Tx PHR Time", opacity=0.8, row=1, col=1)
+        fig.add_scatter(x=target2txphr_df['target2txphr'], y=target2txphr_df['pdf'], name="PDF", secondary_y=True, row=1, col=1)
+        fig.add_scatter(x=target2txphr_df['target2txphr'], y=target2txphr_df['cdf'], name="CDF", secondary_y=True, row=1, col=1)
 
-            txend2rxstart_hist_plt = fig.add_subplot(4, 2, 2)
-            txend2rxstart_df.plot(kind='bar', x='txend2rxstart', y='freq', ax=txend2rxstart_hist_plt, grid=True, title="Tx End to Rx Start")
-            txend2rxstart_hist_plt.xaxis.label.set_visible(False)
+        fig.add_bar(x=txend2rxstart_df['txend2rxstart'], y=txend2rxstart_df['freq'], name="Tx End to Rx Start", opacity=0.8, row=1, col=2)
+        fig.add_scatter(x=txend2rxstart_df['txend2rxstart'], y=txend2rxstart_df['pdf'], name="PDF", secondary_y=True, row=1, col=2)
+        fig.add_scatter(x=txend2rxstart_df['txend2rxstart'], y=txend2rxstart_df['cdf'], name="CDF", secondary_y=True, row=1, col=2)
 
-            rxend2targettime_hist_plt = fig.add_subplot(4, 2, 3)
-            rxend2targettime_df.plot(kind='bar', x='rxend2targettime', y='freq', ax=rxend2targettime_hist_plt, grid=True, title="Rx End to Target Time")
-            rxend2targettime_hist_plt.xaxis.label.set_visible(False)
+        fig.add_bar(x=rxend2targettime_df['rxend2targettime'], y=rxend2targettime_df['freq'], name="Rx End to Target Time", opacity=0.8, row=2, col=1)
+        fig.add_scatter(x=rxend2targettime_df['rxend2targettime'], y=rxend2targettime_df['pdf'], name="PDF", secondary_y=True, row=2, col=1)
+        fig.add_scatter(x=rxend2targettime_df['rxend2targettime'], y=rxend2targettime_df['cdf'], name="CDF", secondary_y=True, row=2, col=1)
 
-            rxend2txtime_hist_plt = fig.add_subplot(4, 2, 4)
-            rxend2txtime_df.plot(kind='bar', x='rxend2txtime', y='freq', ax=rxend2txtime_hist_plt, grid=True, title="rxend2txtime")
-            rxend2txtime_hist_plt.xaxis.label.set_visible(False)
+        fig.add_bar(x=rxend2txtime_df['rxend2txtime'], y=rxend2txtime_df['freq'], name="rxend2txtime", opacity=0.8, row=2, col=2)
+        fig.add_scatter(x=rxend2txtime_df['rxend2txtime'], y=rxend2txtime_df['pdf'], name="PDF", secondary_y=True, row=2, col=2)
+        fig.add_scatter(x=rxend2txtime_df['rxend2txtime'], y=rxend2txtime_df['cdf'], name="CDF", secondary_y=True, row=2, col=2)
 
-            txcall2targettime_hist_plt = fig.add_subplot(4, 2, 5)
-            txcall2targettime_df.plot(kind='bar', x='txcall2targettime', y='freq', ax=txcall2targettime_hist_plt, grid=True, title="Tx Call to Target Time")
-            txcall2targettime_hist_plt.xaxis.label.set_visible(False)
+        fig.add_bar(x=txcall2targettime_df['txcall2targettime'], y=txcall2targettime_df['freq'], name="Tx Call to Target Time", opacity=0.8, row=3, col=1)
+        fig.add_scatter(x=txcall2targettime_df['txcall2targettime'], y=txcall2targettime_df['pdf'], name="PDF", secondary_y=True, row=3, col=1)
+        fig.add_scatter(x=txcall2targettime_df['txcall2targettime'], y=txcall2targettime_df['cdf'], name="CDF", secondary_y=True, row=3, col=1)
 
-            rxend2txcall_hist_plt = fig.add_subplot(4, 2, 6)
-            rxend2txcall_df.plot(kind='bar', x='rxend2txcall', y='freq', ax=rxend2txcall_hist_plt, grid=True, title="Rx End to Tx Call")
-            rxend2txcall_hist_plt.xaxis.label.set_visible(False)
+        fig.add_bar(x=rxend2txcall_df['rxend2txcall'], y=rxend2txcall_df['freq'], name="Rx End to Tx Call", opacity=0.8, row=3, col=2)
+        fig.add_scatter(x=rxend2txcall_df['rxend2txcall'], y=rxend2txcall_df['pdf'], name="PDF", secondary_y=True, row=3, col=2)
+        fig.add_scatter(x=rxend2txcall_df['rxend2txcall'], y=rxend2txcall_df['cdf'], name="CDF", secondary_y=True, row=3, col=2)
 
-            rxcall2afterrx_hist_plt = fig.add_subplot(4, 2, 7)
-            rxcall2afterrx_df.plot(kind='bar', x='rxcall2afterrx', y='freq', ax=rxcall2afterrx_hist_plt, grid=True, title="Rxcall to After Rx")
-            rxcall2afterrx_hist_plt.xaxis.label.set_visible(False)
+        fig.add_bar(x=rxcall2afterrx_df['rxcall2afterrx'], y=rxcall2afterrx_df['freq'], name="Rxcall to After Rx", opacity=0.8, row=4, col=1)
+        fig.add_scatter(x=rxcall2afterrx_df['rxcall2afterrx'], y=rxcall2afterrx_df['pdf'], name="PDF", secondary_y=True, row=4, col=1)
+        fig.add_scatter(x=rxcall2afterrx_df['rxcall2afterrx'], y=rxcall2afterrx_df['cdf'], name="CDF", secondary_y=True, row=4, col=1)
 
-            cl_dur_hist_plt = fig.add_subplot(4, 2, 8)
-            cl_dur_df.plot(kind='bar', x='dur_ms', y='freq', ax=cl_dur_hist_plt, grid=True, title="CL duration in msec")
-            cl_dur_hist_plt.xaxis.label.set_visible(False)
+        fig.add_bar(x=cl_dur_df['dur_ms'], y=cl_dur_df['freq'], name="CL duration in msec", opacity=0.8, row=4, col=2)
+        fig.add_scatter(x=cl_dur_df['dur_ms'], y=cl_dur_df['pdf'], name="PDF", secondary_y=True, row=4, col=2)
+        fig.add_scatter(x=cl_dur_df['dur_ms'], y=cl_dur_df['cdf'], name="CDF", secondary_y=True, row=4, col=2)
 
-            plt.subplots_adjust(hspace=1, left=0.05, right=0.95, top=0.95, wspace=0.1)
+        fig.update_layout(
+            title="CL Timings",
+            showlegend=False,
+            xaxis={
+                'visible': False
+            }
 
-        if '0' in graph_ans_list or '3' in graph_ans_list:
-            fig = plt.figure()
+        )
 
-            target2txphr_plt = fig.add_subplot(4, 2, 1)
-            target2txphr_df.plot(kind='line', x='target2txphr', y=['pdf', 'cdf'], ax=target2txphr_plt, grid=True, title="Target Time to Tx PHR Time")
-            target2txphr_plt.xaxis.label.set_visible(False)
-
-            txend2rxstart_plt = fig.add_subplot(4, 2, 2)
-            txend2rxstart_df.plot(kind='line', x='txend2rxstart', y=['pdf', 'cdf'], ax=txend2rxstart_plt, grid=True, title="Tx End to Rx Start")
-            txend2rxstart_plt.xaxis.label.set_visible(False)
-
-            rxend2targettime_plt = fig.add_subplot(4, 2, 3)
-            rxend2targettime_df.plot(kind='line', x='rxend2targettime', y=['pdf', 'cdf'], ax=rxend2targettime_plt, grid=True, title="Rx End to Target Time")
-            rxend2targettime_plt.xaxis.label.set_visible(False)
-
-            rxend2txtime_plt = fig.add_subplot(4, 2, 4)
-            rxend2txtime_df.plot(kind='line', x='rxend2txtime', y=['pdf', 'cdf'], ax=rxend2txtime_plt, grid=True, title="rxend2txtime")
-            rxend2txtime_plt.xaxis.label.set_visible(False)
-
-            txcall2targettime_plt = fig.add_subplot(4, 2, 5)
-            txcall2targettime_df.plot(kind='line', x='txcall2targettime', y=['pdf', 'cdf'], ax=txcall2targettime_plt, grid=True, title="Tx Call to Target Time")
-            txcall2targettime_plt.xaxis.label.set_visible(False)
-
-            rxend2txcall_plt = fig.add_subplot(4, 2, 6)
-            rxend2txcall_df.plot(kind='line', x='rxend2txcall', y=['pdf', 'cdf'], ax=rxend2txcall_plt, grid=True, title="Rx End to Tx Call")
-            rxend2txcall_plt.xaxis.label.set_visible(False)
-
-            rxcall2afterrx_plt = fig.add_subplot(4, 2, 7)
-            rxcall2afterrx_df.plot(kind='line', x='rxcall2afterrx', y=['pdf', 'cdf'], ax=rxcall2afterrx_plt, grid=True, title="Rxcall to After Rx")
-            rxcall2afterrx_plt.xaxis.label.set_visible(False)
-
-            cl_dur_plt = fig.add_subplot(4, 2, 8)
-            cl_dur_df.plot(kind='line', x='dur_ms', y=['pdf', 'cdf'], ax=cl_dur_plt, grid=True, title="CL duration in ms")
-            cl_dur_plt.xaxis.label.set_visible(False)
-
-    # print("clstats\n", cl_stats)
-
-    plt.subplots_adjust(hspace=1, left=0.05, right=0.95, top=0.95, wspace=0.1)
-    print('Close the figure to {}..'.format('exit' if args.file else 'continue'))
-    plt.show()
+        fig.show()
 
 
 cl_id = 0
@@ -1848,10 +1906,14 @@ if __name__ == "__main__":
     my_parser.add_argument('-m', '--mask',
                            action=maskAction,
                            help='{} byte tracing debug mask to set for live tracing'.format(TRACING_DEBUG_MASK_LEN))
+    my_parser.add_argument('-n', '--nolog',
+                           action='store_true',
+                           help='Do not show the decoded traces in the output')
     my_parser.add_argument('-p', '--poll',
                            type=float,
                            default=POLL_INTERVAL,
                            help='Polling Inverval in seconds (Default:{})'.format(POLL_INTERVAL))
+
     my_parser.add_argument('-o', '--output',
                            default=outputfile,
                            help='Output to a file (Default={})'.format(outputfile))
@@ -1932,9 +1994,8 @@ if __name__ == "__main__":
         graph_dic = {
             0: "All",
             1: "RTT Between CL DataGet Req/Cnf",
-            2: "CL Timing Histogram",
-            3: "CL Timing PDF/CDF",
-            4: "Timeline"
+            2: "CL Timings",
+            3: "Timeline"
         }
 
         for key, val in graph_dic.items():
@@ -1966,7 +2027,7 @@ if __name__ == "__main__":
 
     ret, outputVer = test_ssh(
         args.ip, "cat /etc/Version.txt;echo -n 'RF MAC: '; pib -gi 030000A2  --raw;echo -n 'Uptime: ';uptime;echo -n 'MAC ADDR: ';pib -gi FFFFFFF4;", True)
-    if (ret != RET_SUCC or len(outputVer)==0 or outputVer.strip() == ""):
+    if (ret != RET_SUCC or len(outputVer) == 0 or outputVer.strip() == ""):
         print("FAILED")
         print("Cannot read the pib. Check if DSP is running or NOT and try again.")
         exit(1)
@@ -1999,10 +2060,10 @@ if __name__ == "__main__":
     output = str_decode(output).strip()
     output = convert_pib_val(output)
     if (args.mask and output != args.mask):
-        print("{} ...MISMATCH".format(output))
+        print("{} ... MISMATCH".format(output))
         exit(1)
 
-    print("{} ...SUCCESS".format((output)))
+    print("{} ... SUCCESS".format((output)))
 
     # clean up once to remove residues.
 
@@ -2064,4 +2125,4 @@ if __name__ == "__main__":
                 graph_it()
 
         # time.sleep(args.poll)
-        my_wait(args.poll)
+        my_wait(args.poll, new_count)
