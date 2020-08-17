@@ -236,12 +236,16 @@ tracing_events_num_str = {
 	228: "SDC_UPDATE",
 	229: "TTC_TX_UPDATE",
 	230: "TTC_TMR_CB",
+    231: "ELG",
+    232: "ELG_TIMER",
+    233: "ELG_EVENT",
 	235: "LMDC_RESERVED",
 	241: "SA_HAPPY_RETURN",
 	242: "SA_ERROR_RETURN",
 	243: "SA_HSM_HAPPY_RETURN",
 	244: "SA_HSM_ERROR_RETURN",
-	270: "SA_RESERVED",
+    250: "ELG_RESERVED",
+	# 270: "SA_RESERVED",
 
 }
 tracing_events_str_num = {value: key for key, value in tracing_events_num_str.items()}
@@ -327,6 +331,31 @@ owner_ids_arr = [
     "OID_MAX"
 ]
 
+elg_code_str={
+ 1: "ELG_TIMER_CB",
+ 2: "ELG_AC_LOSS_ISR",
+ 3: "ELG_EPF_ISR",
+
+ 50: "ELG_EPF_EVENTS_OFS",
+}
+
+
+
+elg_event_code_str={
+    0:"ELG_EV_INVALID",
+    1:"ELG_EV_TIMER",
+    2:"ELG_EV_AC_LOSS",
+    3:"ELG_EV_AC_RESTORED",
+    4:"ELG_EV_EPF",
+    5:"ELG_EV_SFP_START",
+    6:"ELG_EV_SFP_DONE_SUCCESS",
+    7:"ELG_EV_SFP_DONE_FAILED",
+    8:"ELG_EV_MOLF_WAKEUP",
+    9:"ELG_EV_TX_BUNDLE",
+    10:"ELG_EV_TX_BUNDLE_SUCCESS",
+    11:"ELG_EV_TX_BUNDLE_FAILED",
+    12:"ELG_EV_MAX",
+}
 
 sts_code_str = {
     0: "STS_SUCCESS",
@@ -865,7 +894,15 @@ def process_one_trace(code, infoArr):
         field_32 = int(infoArr[16] + infoArr[15] +
                        infoArr[14] + infoArr[13], 16)
         info = "ptr 0x{:08X}".format(field_32)
+    #elg
+    elif code == tracing_events_str_num["ELG"] or code == tracing_events_str_num["ELG_TIMER"] or code == tracing_events_str_num["ELG_EVENT"]:
+        field_32 = int(infoArr[16] + infoArr[15] +
+                       infoArr[14] + infoArr[13], 16)
+        if (code ==tracing_events_str_num["ELG_EVENT"]):
+            info = "ev {}".format(elg_event_code_str[field_32])
 
+        else:
+            info = "param 0x{:08X}".format(field_32)
     else:
         field32 = int(infoArr[16] + infoArr[15] +
                       infoArr[14] + infoArr[13], 16)
@@ -1929,7 +1966,7 @@ if __name__ == "__main__":
 
     ret, outputVer = test_ssh(
         args.ip, "cat /etc/Version.txt;echo -n 'RF MAC: '; pib -gi 030000A2  --raw;echo -n 'Uptime: ';uptime;echo -n 'MAC ADDR: ';pib -gi FFFFFFF4;", True)
-    if (ret != RET_SUCC or str_decode(outputVer)).strip() == "":
+    if (ret != RET_SUCC or len(outputVer)==0 or outputVer.strip() == ""):
         print("FAILED")
         print("Cannot read the pib. Check if DSP is running or NOT and try again.")
         exit(1)
@@ -1997,14 +2034,14 @@ if __name__ == "__main__":
     # MAIN monitoring LOOP
     while True:
 
-        if args.mask:
-            ret, output = test_ssh(
-                args.ip, "pib -si E0000000 -v {} >/dev/null".format(args.mask))
-            if (ret != RET_SUCC):
-                print("Cannot write the pib. Check if DSP is running or NOT")
-                REACHABLE = False
-                my_wait(args.poll)
-                continue
+        # if args.mask:
+        #     ret, output = test_ssh(
+        #         args.ip, "pib -si E0000000 -v {} >/dev/null".format(args.mask))
+        #     if (ret != RET_SUCC):
+        #         print("Cannot write the pib. Check if DSP is running or NOT")
+        #         REACHABLE = False
+        #         my_wait(args.poll)
+        #         continue
 
         REACHABLE = True
         ret, output = test_ssh(args.ip, "cat /tmp/hexTrace.log")
