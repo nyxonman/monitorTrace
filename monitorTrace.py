@@ -1,22 +1,19 @@
-from sys import exit, argv, stdin
+from sys import exit, argv
 import sys
 import signal
 import os
 import subprocess
 import socket
-import atexit
 import time
 from datetime import datetime
 import argparse
 import csv
 import random
-from numpy.random import rand
 
 # list of global variables subject to change
 glob = {
     'QUIT': False,
 }
-
 
 OS_POSIX = "posix"
 OS_WIN = "nt"
@@ -603,6 +600,20 @@ prim_code_str = {
 }
 
 
+def check_and_install_package(pkg_list):
+    """ check and installs the packages present in the list pkg_list """
+    import importlib
+    for pkg in pkg_list:
+        package = pkg.split('=', 2)[0]
+        try:
+            importlib.import_module(package)
+        except ImportError:
+            print("\t\t ##### INSTALLING PKG {} (one time) #####".format(pkg))
+            subprocess.check_call([sys.executable, "-m", "pip", "install", pkg])
+        finally:
+            globals()[pkg] = importlib.import_module(package)
+
+
 def LOG_DBG(str):
     if args.debug == 0:
         return
@@ -610,6 +621,7 @@ def LOG_DBG(str):
 
 
 def convert_pib_val(pibval):
+    """ convert the pibval into correct format """
     size = len(pibval)
     ret = ""
     for i in range(0, size, 2):
@@ -619,6 +631,7 @@ def convert_pib_val(pibval):
 
 
 def get_datetime():
+    convert_pib_val()
     'get current date in a particular format'
     # return (datetime.now().strftime('%d %b %Y %H:%M:%S'))
     return (datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
@@ -699,6 +712,7 @@ def checkNodeReachability(ipv4Addr):
 
 
 def process_cl(code, infoArr):
+    """ process all cl related tracing codes """
     info = ""
     global cl_id
 
@@ -865,6 +879,7 @@ def get_substate_str(state, substate):
 
 
 def process_one_trace(code, infoArr):
+    """ process a single trace """
     info = ""
 
     if (code >= tracing_events_str_num["HSM_EVENT_ENTRY"]) and (code <= tracing_events_str_num["HSM_EVENT_EPF_RESTORE"]) and (code != tracing_events_str_num["HSM_EVENT_LMFS_TIMER"]):
@@ -1131,7 +1146,7 @@ def get_colors(n):
     return ret
 
 
-x, y, c, s = rand(4, 100)
+# x, y, c, s = rand(4, 100)
 
 
 def graph_it():
@@ -1139,6 +1154,8 @@ def graph_it():
     if not os.path.isfile('decoded.csv'):
         print("'decoded.csv' not found. Use -c option to create the required csv.")
         return
+
+    check_and_install_package(["pandas", "plotly==4.9.0"])
 
     try:
         import pandas as pd
@@ -1151,18 +1168,7 @@ def graph_it():
         import plotly.offline as py
 
     except:
-        print("installing dependecies...")
-        p1 = subprocess.Popen(['pip', 'install', 'pandas'],
-                              stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
-        p1.communicate()
-        p1 = subprocess.Popen(['pip', 'install', 'numpy'],
-                              stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
-        p1.communicate()
-        # p1 = subprocess.Popen(['pip', 'install', 'mplcursors'],
-        #                       stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
-        # p1.communicate()
-        import pandas as pd
-        import numpy as np
+        print("Error while installing packages")
         # import matplotlib.pyplot as plt
 
     # plt.style.use('seaborn-deep')
@@ -1249,11 +1255,12 @@ def graph_it():
                 # graphs['rtt'].add_trace(go.Scatter(x=rtt_df['diff'], y=rtt_df['pdf'], name="PDF"))
                 # graphs['rtt'].add_trace(go.Scatter(x=rtt_df['diff'], y=rtt_df['cdf'], name='CDF'))
                 graphs['rtt'].update_layout(
-                    template="plotly_dark",
+                    # template="plotly_dark",
                     title="Round Trip time in usec",
                     xaxis_title="RTT (usecs)",
                     yaxis_title="Count",
                     yaxis2_title="PDF & CDF",
+                    hovermode='x',
 
                 )
                 graphs['rtt'].show()
@@ -1828,7 +1835,8 @@ def graph_it():
             showlegend=False,
             xaxis={
                 'visible': False
-            }
+            },
+            hovermode='x',
 
         )
 
@@ -1845,6 +1853,11 @@ if __name__ == "__main__":
     graph_ans_list = []
     REACHABLE = False
     glob["QUIT"] = False
+
+    # verify we have python atleast 3.x+
+    assert sys.version_info >= (3, 0), "Requires Python 3.x+. Current Version is {}".format(sys.version.split(" ", 2)[0])
+
+    check_and_install_package(['numpy'])
 
     epilog = """
     Example Usage:
@@ -2092,6 +2105,8 @@ if __name__ == "__main__":
     print("\n*** Monitoring LIVE on {} (Poll intv:{} secs)".format(args.ip, args.poll))
     print("")
 
+    graph_shown = False
+
     # MAIN monitoring LOOP
     while True:
 
@@ -2121,8 +2136,10 @@ if __name__ == "__main__":
                 with open(hexfile, 'w') as fout:
                     fout.writelines(hexdump)
 
-            if (args.graph):
+            if (args.graph and not graph_shown):
+                print("##### Graphs are not live. It will be shown only once.")
                 graph_it()
+                graph_shown = True
 
         # time.sleep(args.poll)
         my_wait(args.poll, new_count)
