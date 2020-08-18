@@ -631,7 +631,6 @@ def convert_pib_val(pibval):
 
 
 def get_datetime():
-    convert_pib_val()
     'get current date in a particular format'
     # return (datetime.now().strftime('%d %b %Y %H:%M:%S'))
     return (datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
