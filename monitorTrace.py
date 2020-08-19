@@ -608,10 +608,11 @@ def check_and_install_package(pkg_list):
         try:
             importlib.import_module(package)
         except ImportError:
-            print("\t\t ##### INSTALLING PKG {} (one time) #####".format(pkg))
+            print("\n\t\t ##### INSTALLING PKG {} (one time) #####".format(pkg))
             subprocess.check_call([sys.executable, "-m", "pip", "install", pkg])
         finally:
             globals()[pkg] = importlib.import_module(package)
+        print("")
 
 
 def LOG_DBG(str):
@@ -1279,7 +1280,7 @@ def graph_it():
 
     # Timeline Visualizer
     if '0' in graph_ans_list or '3' in graph_ans_list:
-        filter_list = [149, 148]
+        filter_list = [148, 149]
         timeline_df = cl_csv_df[['byte', 'frt_dec', 'cl_id', 'trace_info', 'tracecode_dec']]
         unique_traces = timeline_df.tracecode_dec.astype(int).unique()
         # result = map(lambda x: x:get_colors(x), unique_traces)
@@ -1291,8 +1292,9 @@ def graph_it():
             key = key + 1
         timeline_df['color'] = timeline_df.tracecode_dec.apply(lambda x: colors_dict[x])
         # print(timeline_df.head(20))
-        trace_list = list(set(list(fast_link_df.tracecode_dec)))
-        if sorted(trace_list) != sorted(filter_list):
+        trace_list = list(set(list(timeline_df.tracecode_dec)))
+
+        if not set(filter_list).issubset(trace_list):
             print("All required traces {} are not present {}. Cannot draw the graph".format(filter_list, trace_list))
             return
 
@@ -1347,6 +1349,10 @@ def graph_it():
                               color=colors))
             )
             fig.update_xaxes(rangeslider_visible=True, title="Timing Visualizer")
+            fig.update_layout(
+                showlegend=False,
+                xaxis_tickformat='f'
+            )
             fig.show()
 
     if '0' in graph_ans_list or '2' in graph_ans_list:
@@ -1357,7 +1363,7 @@ def graph_it():
         timings_df = cl_csv_df[cl_csv_df.tracecode_dec.isin(filter_list)]
 
         trace_list = list(set(list(timings_df.tracecode_dec)))
-        if sorted(trace_list) != sorted(filter_list):
+        if not set(filter_list).issubset(trace_list):
             print("All required traces {} are not present. Cannot draw the graph".format(filter_list))
             return
 
@@ -1772,6 +1778,10 @@ def graph_it():
 
         fig.update_layout(
             title="CL Timing Report",
+            showlegend=False,
+            yaxis=dict(
+                showticklabels=False
+            ),
 
         )
 
@@ -1797,45 +1807,45 @@ def graph_it():
                             )
 
         # Add traces
-        fig.add_bar(x=target2txphr_df['target2txphr'], y=target2txphr_df['freq'], name="Target Time to Tx PHR Time", opacity=0.8, row=1, col=1)
+        fig.add_bar(x=target2txphr_df['target2txphr'], y=target2txphr_df['freq'], name="Count", opacity=0.8, row=1, col=1)
         fig.add_scatter(x=target2txphr_df['target2txphr'], y=target2txphr_df['pdf'], name="PDF", secondary_y=True, row=1, col=1)
         fig.add_scatter(x=target2txphr_df['target2txphr'], y=target2txphr_df['cdf'], name="CDF", secondary_y=True, row=1, col=1)
 
-        fig.add_bar(x=txend2rxstart_df['txend2rxstart'], y=txend2rxstart_df['freq'], name="Tx End to Rx Start", opacity=0.8, row=1, col=2)
+        fig.add_bar(x=txend2rxstart_df['txend2rxstart'], y=txend2rxstart_df['freq'], name="Count", opacity=0.8, row=1, col=2)
         fig.add_scatter(x=txend2rxstart_df['txend2rxstart'], y=txend2rxstart_df['pdf'], name="PDF", secondary_y=True, row=1, col=2)
         fig.add_scatter(x=txend2rxstart_df['txend2rxstart'], y=txend2rxstart_df['cdf'], name="CDF", secondary_y=True, row=1, col=2)
 
-        fig.add_bar(x=rxend2targettime_df['rxend2targettime'], y=rxend2targettime_df['freq'], name="Rx End to Target Time", opacity=0.8, row=2, col=1)
+        fig.add_bar(x=rxend2targettime_df['rxend2targettime'], y=rxend2targettime_df['freq'], name="Count", opacity=0.8, row=2, col=1)
         fig.add_scatter(x=rxend2targettime_df['rxend2targettime'], y=rxend2targettime_df['pdf'], name="PDF", secondary_y=True, row=2, col=1)
         fig.add_scatter(x=rxend2targettime_df['rxend2targettime'], y=rxend2targettime_df['cdf'], name="CDF", secondary_y=True, row=2, col=1)
 
-        fig.add_bar(x=rxend2txtime_df['rxend2txtime'], y=rxend2txtime_df['freq'], name="rxend2txtime", opacity=0.8, row=2, col=2)
+        fig.add_bar(x=rxend2txtime_df['rxend2txtime'], y=rxend2txtime_df['freq'], name="Count", opacity=0.8, row=2, col=2)
         fig.add_scatter(x=rxend2txtime_df['rxend2txtime'], y=rxend2txtime_df['pdf'], name="PDF", secondary_y=True, row=2, col=2)
         fig.add_scatter(x=rxend2txtime_df['rxend2txtime'], y=rxend2txtime_df['cdf'], name="CDF", secondary_y=True, row=2, col=2)
 
-        fig.add_bar(x=txcall2targettime_df['txcall2targettime'], y=txcall2targettime_df['freq'], name="Tx Call to Target Time", opacity=0.8, row=3, col=1)
+        fig.add_bar(x=txcall2targettime_df['txcall2targettime'], y=txcall2targettime_df['freq'], name="Count", opacity=0.8, row=3, col=1)
         fig.add_scatter(x=txcall2targettime_df['txcall2targettime'], y=txcall2targettime_df['pdf'], name="PDF", secondary_y=True, row=3, col=1)
         fig.add_scatter(x=txcall2targettime_df['txcall2targettime'], y=txcall2targettime_df['cdf'], name="CDF", secondary_y=True, row=3, col=1)
 
-        fig.add_bar(x=rxend2txcall_df['rxend2txcall'], y=rxend2txcall_df['freq'], name="Rx End to Tx Call", opacity=0.8, row=3, col=2)
+        fig.add_bar(x=rxend2txcall_df['rxend2txcall'], y=rxend2txcall_df['freq'], name="Count", opacity=0.8, row=3, col=2)
         fig.add_scatter(x=rxend2txcall_df['rxend2txcall'], y=rxend2txcall_df['pdf'], name="PDF", secondary_y=True, row=3, col=2)
         fig.add_scatter(x=rxend2txcall_df['rxend2txcall'], y=rxend2txcall_df['cdf'], name="CDF", secondary_y=True, row=3, col=2)
 
-        fig.add_bar(x=rxcall2afterrx_df['rxcall2afterrx'], y=rxcall2afterrx_df['freq'], name="Rxcall to After Rx", opacity=0.8, row=4, col=1)
+        fig.add_bar(x=rxcall2afterrx_df['rxcall2afterrx'], y=rxcall2afterrx_df['freq'], name="Count", opacity=0.8, row=4, col=1)
         fig.add_scatter(x=rxcall2afterrx_df['rxcall2afterrx'], y=rxcall2afterrx_df['pdf'], name="PDF", secondary_y=True, row=4, col=1)
         fig.add_scatter(x=rxcall2afterrx_df['rxcall2afterrx'], y=rxcall2afterrx_df['cdf'], name="CDF", secondary_y=True, row=4, col=1)
 
-        fig.add_bar(x=cl_dur_df['dur_ms'], y=cl_dur_df['freq'], name="CL duration in msec", opacity=0.8, row=4, col=2)
+        fig.add_bar(x=cl_dur_df['dur_ms'], y=cl_dur_df['freq'], name="Count", opacity=0.8, row=4, col=2)
         fig.add_scatter(x=cl_dur_df['dur_ms'], y=cl_dur_df['pdf'], name="PDF", secondary_y=True, row=4, col=2)
         fig.add_scatter(x=cl_dur_df['dur_ms'], y=cl_dur_df['cdf'], name="CDF", secondary_y=True, row=4, col=2)
 
         fig.update_layout(
             title="CL Timings",
             showlegend=False,
-            xaxis={
-                'visible': False
-            },
             hovermode='x',
+            yaxis2=dict(
+                title='PDF/CDF',
+            )
 
         )
 
@@ -2007,7 +2017,8 @@ if __name__ == "__main__":
             0: "All",
             1: "RTT Between CL DataGet Req/Cnf",
             2: "CL Timings",
-            3: "Timeline"
+            3: "Timeline Visualizer",
+            4: "Buffer Claim/Release",
         }
 
         for key, val in graph_dic.items():
