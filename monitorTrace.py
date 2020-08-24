@@ -600,44 +600,45 @@ prim_code_str = {
 }
 
 colors_list = [
-        "#000000", "#FFFF00", "#1CE6FF", "#FF34FF", "#FF4A46", "#008941", "#006FA6", "#A30059",
-        "#FFDBE5", "#7A4900", "#0000A6", "#63FFAC", "#B79762", "#004D43", "#8FB0FF", "#997D87",
-        "#5A0007", "#809693", "#FEFFE6", "#1B4400", "#4FC601", "#3B5DFF", "#4A3B53", "#FF2F80",
-        "#61615A", "#BA0900", "#6B7900", "#00C2A0", "#FFAA92", "#FF90C9", "#B903AA", "#D16100",
-        "#DDEFFF", "#000035", "#7B4F4B", "#A1C299", "#300018", "#0AA6D8", "#013349", "#00846F",
-        "#372101", "#FFB500", "#C2FFED", "#A079BF", "#CC0744", "#C0B9B2", "#C2FF99", "#001E09",
-        "#00489C", "#6F0062", "#0CBD66", "#EEC3FF", "#456D75", "#B77B68", "#7A87A1", "#788D66",
-        "#885578", "#FAD09F", "#FF8A9A", "#D157A0", "#BEC459", "#456648", "#0086ED", "#886F4C",
+    "#000000", "#FFFF00", "#1CE6FF", "#FF34FF", "#FF4A46", "#008941", "#006FA6", "#A30059",
+    "#FFDBE5", "#7A4900", "#0000A6", "#63FFAC", "#B79762", "#004D43", "#8FB0FF", "#997D87",
+    "#5A0007", "#809693", "#FEFFE6", "#1B4400", "#4FC601", "#3B5DFF", "#4A3B53", "#FF2F80",
+    "#61615A", "#BA0900", "#6B7900", "#00C2A0", "#FFAA92", "#FF90C9", "#B903AA", "#D16100",
+    "#DDEFFF", "#000035", "#7B4F4B", "#A1C299", "#300018", "#0AA6D8", "#013349", "#00846F",
+    "#372101", "#FFB500", "#C2FFED", "#A079BF", "#CC0744", "#C0B9B2", "#C2FF99", "#001E09",
+    "#00489C", "#6F0062", "#0CBD66", "#EEC3FF", "#456D75", "#B77B68", "#7A87A1", "#788D66",
+    "#885578", "#FAD09F", "#FF8A9A", "#D157A0", "#BEC459", "#456648", "#0086ED", "#886F4C",
 
-        "#34362D", "#B4A8BD", "#00A6AA", "#452C2C", "#636375", "#A3C8C9", "#FF913F", "#938A81",
-        "#575329", "#00FECF", "#B05B6F", "#8CD0FF", "#3B9700", "#04F757", "#C8A1A1", "#1E6E00",
-        "#7900D7", "#A77500", "#6367A9", "#A05837", "#6B002C", "#772600", "#D790FF", "#9B9700",
-        "#549E79", "#FFF69F", "#201625", "#72418F", "#BC23FF", "#99ADC0", "#3A2465", "#922329",
-        "#5B4534", "#FDE8DC", "#404E55", "#0089A3", "#CB7E98", "#A4E804", "#324E72", "#6A3A4C",
-        "#83AB58", "#001C1E", "#D1F7CE", "#004B28", "#C8D0F6", "#A3A489", "#806C66", "#222800",
-        "#BF5650", "#E83000", "#66796D", "#DA007C", "#FF1A59", "#8ADBB4", "#1E0200", "#5B4E51",
-        "#C895C5", "#320033", "#FF6832", "#66E1D3", "#CFCDAC", "#D0AC94", "#7ED379", "#012C58",
+    "#34362D", "#B4A8BD", "#00A6AA", "#452C2C", "#636375", "#A3C8C9", "#FF913F", "#938A81",
+    "#575329", "#00FECF", "#B05B6F", "#8CD0FF", "#3B9700", "#04F757", "#C8A1A1", "#1E6E00",
+    "#7900D7", "#A77500", "#6367A9", "#A05837", "#6B002C", "#772600", "#D790FF", "#9B9700",
+    "#549E79", "#FFF69F", "#201625", "#72418F", "#BC23FF", "#99ADC0", "#3A2465", "#922329",
+    "#5B4534", "#FDE8DC", "#404E55", "#0089A3", "#CB7E98", "#A4E804", "#324E72", "#6A3A4C",
+    "#83AB58", "#001C1E", "#D1F7CE", "#004B28", "#C8D0F6", "#A3A489", "#806C66", "#222800",
+    "#BF5650", "#E83000", "#66796D", "#DA007C", "#FF1A59", "#8ADBB4", "#1E0200", "#5B4E51",
+    "#C895C5", "#320033", "#FF6832", "#66E1D3", "#CFCDAC", "#D0AC94", "#7ED379", "#012C58",
 
-        "#7A7BFF", "#D68E01", "#353339", "#78AFA1", "#FEB2C6", "#75797C", "#837393", "#943A4D",
-        "#B5F4FF", "#D2DCD5", "#9556BD", "#6A714A", "#001325", "#02525F", "#0AA3F7", "#E98176",
-        "#DBD5DD", "#5EBCD1", "#3D4F44", "#7E6405", "#02684E", "#962B75", "#8D8546", "#9695C5",
-        "#E773CE", "#D86A78", "#3E89BE", "#CA834E", "#518A87", "#5B113C", "#55813B", "#E704C4",
-        "#00005F", "#A97399", "#4B8160", "#59738A", "#FF5DA7", "#F7C9BF", "#643127", "#513A01",
-        "#6B94AA", "#51A058", "#A45B02", "#1D1702", "#E20027", "#E7AB63", "#4C6001", "#9C6966",
-        "#64547B", "#97979E", "#006A66", "#391406", "#F4D749", "#0045D2", "#006C31", "#DDB6D0",
-        "#7C6571", "#9FB2A4", "#00D891", "#15A08A", "#BC65E9", "#FFFFFE", "#C6DC99", "#203B3C",
+    "#7A7BFF", "#D68E01", "#353339", "#78AFA1", "#FEB2C6", "#75797C", "#837393", "#943A4D",
+    "#B5F4FF", "#D2DCD5", "#9556BD", "#6A714A", "#001325", "#02525F", "#0AA3F7", "#E98176",
+    "#DBD5DD", "#5EBCD1", "#3D4F44", "#7E6405", "#02684E", "#962B75", "#8D8546", "#9695C5",
+    "#E773CE", "#D86A78", "#3E89BE", "#CA834E", "#518A87", "#5B113C", "#55813B", "#E704C4",
+    "#00005F", "#A97399", "#4B8160", "#59738A", "#FF5DA7", "#F7C9BF", "#643127", "#513A01",
+    "#6B94AA", "#51A058", "#A45B02", "#1D1702", "#E20027", "#E7AB63", "#4C6001", "#9C6966",
+    "#64547B", "#97979E", "#006A66", "#391406", "#F4D749", "#0045D2", "#006C31", "#DDB6D0",
+    "#7C6571", "#9FB2A4", "#00D891", "#15A08A", "#BC65E9", "#FFFFFE", "#C6DC99", "#203B3C",
 
-        "#671190", "#6B3A64", "#F5E1FF", "#FFA0F2", "#CCAA35", "#374527", "#8BB400", "#797868",
-        "#C6005A", "#3B000A", "#C86240", "#29607C", "#402334", "#7D5A44", "#CCB87C", "#B88183",
-        "#AA5199", "#B5D6C3", "#A38469", "#9F94F0", "#A74571", "#B894A6", "#71BB8C", "#00B433",
-        "#789EC9", "#6D80BA", "#953F00", "#5EFF03", "#E4FFFC", "#1BE177", "#BCB1E5", "#76912F",
-        "#003109", "#0060CD", "#D20096", "#895563", "#29201D", "#5B3213", "#A76F42", "#89412E",
-        "#1A3A2A", "#494B5A", "#A88C85", "#F4ABAA", "#A3F3AB", "#00C6C8", "#EA8B66", "#958A9F",
-        "#BDC9D2", "#9FA064", "#BE4700", "#658188", "#83A485", "#453C23", "#47675D", "#3A3F00",
-        "#061203", "#DFFB71", "#868E7E", "#98D058", "#6C8F7D", "#D7BFC2", "#3C3E6E", "#D83D66",
+    "#671190", "#6B3A64", "#F5E1FF", "#FFA0F2", "#CCAA35", "#374527", "#8BB400", "#797868",
+    "#C6005A", "#3B000A", "#C86240", "#29607C", "#402334", "#7D5A44", "#CCB87C", "#B88183",
+    "#AA5199", "#B5D6C3", "#A38469", "#9F94F0", "#A74571", "#B894A6", "#71BB8C", "#00B433",
+    "#789EC9", "#6D80BA", "#953F00", "#5EFF03", "#E4FFFC", "#1BE177", "#BCB1E5", "#76912F",
+    "#003109", "#0060CD", "#D20096", "#895563", "#29201D", "#5B3213", "#A76F42", "#89412E",
+    "#1A3A2A", "#494B5A", "#A88C85", "#F4ABAA", "#A3F3AB", "#00C6C8", "#EA8B66", "#958A9F",
+    "#BDC9D2", "#9FA064", "#BE4700", "#658188", "#83A485", "#453C23", "#47675D", "#3A3F00",
+    "#061203", "#DFFB71", "#868E7E", "#98D058", "#6C8F7D", "#D7BFC2", "#3C3E6E", "#D83D66",
 
-        "#2F5D9B", "#6C5E46", "#D25B88", "#5B656C", "#00B57F", "#545C46", "#866097", "#365D25",
-        "#252F99", "#00CCFF", "#674E60", "#FC009C", "#92896B"]
+    "#2F5D9B", "#6C5E46", "#D25B88", "#5B656C", "#00B57F", "#545C46", "#866097", "#365D25",
+    "#252F99", "#00CCFF", "#674E60", "#FC009C", "#92896B"]
+
 
 def check_and_install_package(pkg_list):
     """ check and installs the packages present in the list pkg_list """
@@ -801,9 +802,9 @@ def process_cl(code, infoArr):
 
     elif tracing_events_num_str[code] == "CL_RX":
         status = int(infoArr[14] + infoArr[13], 16)
-        freq = int(infoArr[16] + infoArr[15], 16)
-        processClInfo = "{:s}({:d},0x{:X}) freq {:d}KHz".format(
-            sts_code_str[status], status, status, freq * 100)
+        chan = int(infoArr[16] + infoArr[15], 16)
+        processClInfo = "{:s}({:d},0x{:X}) chan {:d}".format(
+            sts_code_str[status], status, status, chan)
 
     elif tracing_events_num_str[code] == "CL_SEND_PRIMITIVE":
         status = int(infoArr[14] + infoArr[13], 16)
@@ -1166,12 +1167,14 @@ def signal_handler(sig, frame):
     glob["QUIT"] = True
     raise SystemExit
 
+
 def get_n_colors(n):
     ret = []
-    r = min(int(random.random() *256) - n -1,0)
+    r = min(int(random.random() * 256) - n - 1, 0)
     for i in range(n):
         ret.append(colors_list[r+i])
     return ret
+
 
 def get_colors(n):
     ret = []
@@ -1592,39 +1595,41 @@ def graph_it():
             cl_dur_df['cdf'] = cl_dur_df['pdf'].cumsum()
             cl_dur_df = cl_dur_df.reset_index()
 
-
     if '0' in graph_ans_list or '3' in graph_ans_list:
 
         timeline_rx_df = pd.DataFrame()
-        timeline_rx_df = timings_df[['byte','frt32_dec','frt32_val','afterrx_col','rxend_col','cl_id']]
+        timeline_rx_df = timings_df[['byte', 'frt32_dec', 'frt32_val', 'afterrx_col', 'rxend_col', 'cl_id']]
         timeline_rx_df = timeline_rx_df.assign(dummy=timeline_rx_df.rxend_col.shift(-1))
         timeline_rx_df = timeline_rx_df.assign(dummy_frt32=timeline_rx_df.frt32_val.shift(-1))
 
-
         timeline_rx_df['rx_dur'] = timeline_rx_df.dummy_frt32 - timeline_rx_df.frt32_dec
-        timeline_rx_df.dropna(subset=['dummy', 'afterrx_col'],inplace=True)
+        timeline_rx_df.dropna(subset=['dummy', 'afterrx_col'], inplace=True)
         timeline_rx_df.rename(columns={"frt32_dec": "ts_rxstart", "dummy_frt32": "ts_rxend"}, inplace=True)
-        timeline_rx_df.drop(columns=['dummy', 'frt32_val','afterrx_col','rxend_col'], inplace=True)
+        timeline_rx_df.drop(columns=['dummy', 'frt32_val', 'afterrx_col', 'rxend_col'], inplace=True)
 
-        timeline_tx_df = timings_df[['byte','trace_info','frt32_val','dc_col', 'txend_col','cl_id']]
+        timeline_tx_df = timings_df[['byte', 'trace_info', 'frt32_val', 'dc_col', 'txend_col', 'cl_id']]
         timeline_tx_df = timeline_tx_df.assign(dummy=timeline_tx_df.txend_col.shift(-2))
         timeline_tx_df['dummy_frt32_val'] = timeline_tx_df.frt32_val.shift(-2)
-        timeline_tx_df.dropna(subset=['dc_col', 'dummy'],inplace=True)
+        timeline_tx_df.dropna(subset=['dc_col', 'dummy'], inplace=True)
         timeline_tx_df.rename(columns={"frt32_val": "ts_txstart", "dummy_frt32_val": "ts_txend"}, inplace=True)
         timeline_tx_df['tx_dur'] = timeline_tx_df.ts_txend - timeline_tx_df.ts_txstart
-        timeline_tx_df.drop(columns=['dummy', 'trace_info','txend_col','dc_col'], inplace=True)
+        timeline_tx_df.drop(columns=['dummy', 'trace_info', 'txend_col', 'dc_col'], inplace=True)
 
-        timeline_tx_df = timeline_tx_df[timeline_tx_df.tx_dur<=500000]
+        timeline_tx_df = timeline_tx_df[timeline_tx_df.tx_dur <= 500000]
 
-        # PHY INDICATIONS
-        filter_list = [1,2,3,4,6]
-        timeline_phyind_df = pd.DataFrame()
-        timeline_phyind_df = cl_csv_df[cl_csv_df.tracecode_dec.isin(filter_list)]
-        timeline_phyind_df = timeline_phyind_df.assign(frt32_dec=pd.Series(np.nan))
+        # PHY INDICATIONS and CALLs
+        filter_list = [1, 2, 3, 4, 6, 140, 141]
+        timeline_phycallind_df = pd.DataFrame()
+        timeline_phycallind_df = cl_csv_df[cl_csv_df.tracecode_dec.isin(filter_list)]
+        timeline_phycallind_df = timeline_phycallind_df.assign(frt32_dec=pd.Series(np.nan))
 
         # FRT32_dec
-        timeline_phyind_df['frt32_dec'] = timeline_phyind_df.frt_hex.apply(lambda x: int(x[-min(len(x)-2, 8):], 16))
-        timeline_phyind_df.drop(columns=['frt_hex'], inplace=True)
+        timeline_phycallind_df['frt32_dec'] = timeline_phycallind_df.frt_hex.apply(lambda x: int(x[-min(len(x)-2, 8):], 16))
+        y0 = 0
+        y1 = 3
+        timeline_phycallind_df['y1'] = timeline_phycallind_df.tracecode_dec.apply(lambda x: -y1 if x in [1, 2, 3, 4, 141] else y1)
+        timeline_phycallind_df['y0'] = timeline_phycallind_df.tracecode_dec.apply(lambda x: -y0 if x in [1, 2, 3, 4, 141] else y0)
+        timeline_phycallind_df.drop(columns=['frt_hex'], inplace=True)
 
         fig = go.Figure()
 
@@ -1634,75 +1639,68 @@ def graph_it():
             y=[1]*len(timeline_tx_df.index),
             width=timeline_tx_df.tx_dur,
             # base=1,
-            name="TX" ,
-            text= "CL ID " + timeline_tx_df.cl_id.astype(str) + ", dur " +timeline_tx_df.tx_dur.astype(int).astype(str) + "usec",
+            name="TX",
+            text="<b>CL ID</b> " + timeline_tx_df.cl_id.astype(str) + ", <b>dur</b> " + timeline_tx_df.tx_dur.astype(int).astype(str) + "usec",
             textposition="inside",
+            hovertemplate=' <b>FRT:</b>%{x}<br> %{text}',            # hoverinfo="none",
+
             # offset=-timeline_tx_df.tx_dur/2,
             # hoverinfo="none",
             marker=dict(
-                        color='darksalmon',
-                        opacity=0.8,
-                        line=dict(width=1,
-                                color='darksalmon'))
+                color='darksalmon',
+                opacity=1,
+                line=dict(width=2,
+                          color='darksalmon'))
         )
-        # fig.add_scatter(
-        #     x=timeline_tx_df.ts_txphr,
-        #     y=[1]*len(timeline_tx_df.index),
-        #     # width=timeline_tx_df.tx_dur,
 
-        #     mode="markers",
-        #     # hoverinfo="none",
-        #     marker=dict(
-        #                  color='red',
-        #                  line=dict(width=1,
-        #                            color='red'))
-        # )
         # add RXs
         fig.add_bar(
             x=timeline_rx_df.ts_rxstart + timeline_rx_df.rx_dur/2,
             y=[-1]*len(timeline_rx_df.index),
             width=timeline_rx_df.rx_dur,
             name="RX",
-            text= "CL ID " + timeline_rx_df.cl_id.astype(str) + ", dur " +timeline_rx_df.rx_dur.astype(int).astype(str) + "usec",
+            text="<b>CL ID </b>" + timeline_rx_df.cl_id.astype(str) + ", <b>dur</b> " + timeline_rx_df.rx_dur.astype(int).astype(str) + "usec",
             textposition="inside",
-            # hoverinfo="none",
+            hovertemplate=' <b>FRT:</b>%{x}<br> %{text}',            # hoverinfo="none",
             marker=dict(
-                        color='darkseagreen',
-                        line=dict(width=1,
-                                color='darkseagreen'))
+                color='darkseagreen',
+                line=dict(width=1,
+                          color='darkseagreen'))
         )
 
-        # add PHR Indications
+        # add PHY Indications and calls
 
         # draw a lines
-        tuple_val = list(zip(timeline_phyind_df.frt32_dec,timeline_phyind_df.tracecode_dec))
+        tuple_val = list(zip(timeline_phycallind_df.frt32_dec, timeline_phycallind_df.y0, timeline_phycallind_df.y1, timeline_phycallind_df.tracecode_dec))
         colors = px.colors.qualitative.Dark24
-        shapes=[]
-        for x, code in tuple_val:
+
+        shapes = []
+        for x, y0, y1, code in tuple_val:
             shapes.append({'type': 'line',
-                        'x0': x,
-                        'y0': 2,
-                        'x1': x,
-                        'y1': 3,
-                        # 'fillcolor':colors_list[i+1],
-                        'line':dict(
-                            color=colors[code],
-                            # width=3,
-                        ),
-                        })
+                           'x0': x,
+                           'y0': y0,
+                           'x1': x,
+                           'y1': y1,
+                           # 'fillcolor':colors_list[i+1],
+                           'line': dict(
+                               color=colors_list[code],
+                               width=1,
+                               dash="dot",
+                           ),
+                           })
 
         fig.add_scatter(
-            x=timeline_phyind_df.frt32_dec,
-            y=[3]*len(timeline_phyind_df.index),
+            x=timeline_phycallind_df.frt32_dec,
+            y=timeline_phycallind_df.y1,
             mode="markers",
-            name="PHR Indications",
-        text= timeline_phyind_df.trace_info,
-
+            name="PHY Call/Indications",
+            text="<b>CL_ID:</b> " + timeline_phycallind_df.cl_id + "<br>" + timeline_phycallind_df.trace_info,
+            hovertemplate="<b>FRT:</b>%{x}<br>%{text}",
             # hoverinfo="none",
             marker=dict(
-                        color='white',
-                        line=dict(width=1,
-                                color='red'))
+                color='white',
+                line=dict(width=1,
+                          color='red'))
         )
 
         fig.update_layout(
@@ -1710,8 +1708,8 @@ def graph_it():
             showlegend=True,
             xaxis_tickformat='f',
             yaxis=dict(
-                range=[-4,4],
-                fixedrange = True,
+                range=[-10, 10],
+                fixedrange=True,
                 showticklabels=False,
             ),
             # hovermode='x',
@@ -1721,16 +1719,14 @@ def graph_it():
 
         fig.show()
 
-
         # exit(0)
     if '0' in graph_ans_list or '2' in graph_ans_list:
-
 
         # PLOT THE TIMING DIAGRAM
         # A list of Matplotlib releases and their dates
         # Taken from https://api.github.com/repos/matplotlib/matplotlib/releases
         names = ['WrapperCall1', 'WrapperReturn', 'TargetTx1', 'TxPHR1', 'EndTxTime', 'rxStart_beforeCall', 'rxStart_afterCall',
-                'rxEnd', 'WrapperCall2', 'TargetTx2', 'TxPHR2', ]
+                 'rxEnd', 'WrapperCall2', 'TargetTx2', 'TxPHR2', ]
 
         tx_dur = 2000
         rx_dur = 1500
@@ -1908,7 +1904,7 @@ def graph_it():
             marker=dict(size=12,
                         color='white',
                         line=dict(width=2,
-                                color='black'))
+                                  color='black'))
         ))
 
         # draw the horizontal lines
@@ -1950,9 +1946,9 @@ def graph_it():
             textposition="inside",
             hoverinfo="none",
             marker=dict(
-                        color=['darksalmon', 'darkseagreen', 'darksalmon'],
-                        line=dict(width=2,
-                                color='black'))
+                color=['darksalmon', 'darkseagreen', 'darksalmon'],
+                line=dict(width=2,
+                          color='black'))
         )
 
         fig.update_layout(
@@ -1970,9 +1966,9 @@ def graph_it():
         # plot
         fig = make_subplots(4, 2,
                             specs=[[{"secondary_y": True},    {"secondary_y": True}],
-                                [{"secondary_y": True},    {"secondary_y": True}],
-                                [{"secondary_y": True},    {"secondary_y": True}],
-                                [{"secondary_y": True}, {"secondary_y": True}]],
+                                   [{"secondary_y": True},    {"secondary_y": True}],
+                                   [{"secondary_y": True},    {"secondary_y": True}],
+                                   [{"secondary_y": True}, {"secondary_y": True}]],
                             subplot_titles=("Target Time to Tx PHR Time",
                                             "Tx End to Rx Start",
                                             "Rx End to Target Time",
@@ -2047,7 +2043,7 @@ def graph_it():
         # print(bufmgr_df[['tracecode_dec','buffer']].head(30))
         # print(bufmgr_df.head(10))
 
-        bufmgr_get_df = bufmgr_df[bufmgr_df["tracecode_dec"] == 19][['byte','frt_dec', 'trace_info','buffer', 'buffer_dec']]
+        bufmgr_get_df = bufmgr_df[bufmgr_df["tracecode_dec"] == 19][['byte', 'frt_dec', 'trace_info', 'buffer', 'buffer_dec']]
 
         bufmgr_get_df['owner'] = bufmgr_get_df.trace_info.str.split().str[2].str.split("(").str[0]
         bufmgr_get_df['owner'] = bufmgr_get_df.owner.str[4:]
@@ -2057,34 +2053,34 @@ def graph_it():
         # to get the rel frt
         def buf_filter(x):
             mydf = bufmgr_df[bufmgr_df.frt_dec > x.frt_dec]
-            index= mydf[mydf.buffer==x.buffer].first_valid_index()
+            index = mydf[mydf.buffer == x.buffer].first_valid_index()
 
             if index:
                 return mydf.at[index, 'frt_dec']
             else:
                 return np.nan
 
-        bufmgr_get_df['rel_frt'] = bufmgr_get_df.apply(buf_filter,axis=1)
+        bufmgr_get_df['rel_frt'] = bufmgr_get_df.apply(buf_filter, axis=1)
         bufmgr_get_df['frt_diff'] = (bufmgr_get_df['rel_frt'] - bufmgr_get_df['frt_dec'])
         bufmgr_get_df['frt_diff'] = bufmgr_get_df['frt_diff'].astype('str')
 
-        bufmgr_get_df['info'] = bufmgr_get_df.owner + " 0x" + bufmgr_get_df.buffer + " "+ bufmgr_get_df.frt_diff.astype(str) + "us"
+        bufmgr_get_df['info'] = bufmgr_get_df.owner + " 0x" + bufmgr_get_df.buffer + " " + bufmgr_get_df.frt_diff.astype(str) + "us"
         # bufmgr_get_df['frt_diff']
 
         unique_owners = bufmgr_get_df.owner.unique()
 
         buf_owner_dic = dict()
         for owner in unique_owners:
-            buf_owner_dic[owner]=(bufmgr_get_df[bufmgr_get_df['owner'].str.match(owner)])[['frt_dec','owner','buffer_dec','rel_frt','info']]
+            buf_owner_dic[owner] = (bufmgr_get_df[bufmgr_get_df['owner'].str.match(owner)])[['frt_dec', 'owner', 'buffer_dec', 'rel_frt', 'info']]
 
         # print(px.colors.qualitative.Dark24)
-        buff_colors = px.colors.qualitative.Dark24;
+        buff_colors = px.colors.qualitative.Dark24
         # buff_colors = get_n_colors(len(unique_owners));
 
         fig = go.Figure()
 
         shapes = list()
-        i=0
+        i = 0
 
         # per owner graphing
         for key, owner_df in buf_owner_dic.items():
@@ -2096,7 +2092,7 @@ def graph_it():
                 mode="markers",
                 hoverinfo='text',
                 hovertext=owner_df['info'],
-                name = key,
+                name=key,
                 marker=dict(
                     color=buff_colors[i],
                     line=dict(width=1,
@@ -2104,20 +2100,19 @@ def graph_it():
             )
 
             # draw a rectangle
-            tuple_val = list(zip(owner_df.frt_dec,owner_df.rel_frt, owner_df.buffer_dec))
-            for get_frt,rel_frt, height in tuple_val:
+            tuple_val = list(zip(owner_df.frt_dec, owner_df.rel_frt, owner_df.buffer_dec))
+            for get_frt, rel_frt, height in tuple_val:
                 shapes.append({'type': 'rect',
-                            'x0': get_frt,
-                            'y0': 0,
-                            'x1': rel_frt,
-                            'y1': height,
-                            # 'fillcolor':colors_list[i+1],
-                            'fillcolor':buff_colors[i],
-                            'opacity':0.5
-                            })
+                               'x0': get_frt,
+                               'y0': 0,
+                               'x1': rel_frt,
+                               'y1': height,
+                               # 'fillcolor':colors_list[i+1],
+                               'fillcolor': buff_colors[i],
+                               'opacity': 0.5
+                               })
 
-            i=i+1
-
+            i = i+1
 
         fig.update_layout(
             title="Buffer",
@@ -2127,18 +2122,17 @@ def graph_it():
         )
         fig.show()
 
-        buf_summary_df = (bufmgr_get_df.groupby('owner').count()).reset_index()[['owner','frt_dec','rel_frt']]
+        buf_summary_df = (bufmgr_get_df.groupby('owner').count()).reset_index()[['owner', 'frt_dec', 'rel_frt']]
         # fig.add_trace(go.bar(buf_summary_df, x="owner", y=["frt_dec","rel_frt"], barmode='group',), row=2, col=1)
         # fig.add_trace(go.Bar(x=buf_summary_df.owner, y=buf_summary_df[["frt_dec"]]), row=2, col=1)
-        fig = px.bar(buf_summary_df, x="owner", y=["frt_dec","rel_frt"],
-              barmode='group',
-             )
+        fig = px.bar(buf_summary_df, x="owner", y=["frt_dec", "rel_frt"],
+                     barmode='group',
+                     )
         # # print(fig)
         fig.update_layout(barmode='group')
         fig.show()
 
         # count of buffers get and released
-
 
 
 cl_id = 0
