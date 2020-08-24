@@ -1244,7 +1244,7 @@ def graph_it():
     stat_total = stat_total[['tracecode_dec', 'byte']]
     stat_total = stat_total.merge(traceCodeMap_df, how='inner', on="tracecode_dec").sort_values(by=['tracecode_dec']).reset_index()
 
-    cl_csv_df = csv_df.loc[(csv_df['tracecode_dec'] >= 131) & (csv_df['tracecode_dec'] <= 151) | (csv_df.tracecode_dec == 6)]
+    cl_csv_df = csv_df.loc[(csv_df['tracecode_dec'] >= 131) & (csv_df['tracecode_dec'] <= 151) | (csv_df.tracecode_dec <= 6)]
     cl_csv_df = cl_csv_df.drop(columns=['tracecode_hex'])
 
     # cl_csv_df = cl_csv_df.assign(sts=pd.Series(np.nan))
@@ -1324,7 +1324,7 @@ def graph_it():
             # fig.show()
 
     # Timeline Visualizer
-    if '0' in graph_ans_list or '3' in graph_ans_list:
+    if '0' in graph_ans_list or '7' in graph_ans_list:
         filter_list = [148, 149]
         timeline_df = cl_csv_df[['byte', 'frt_dec', 'cl_id', 'trace_info', 'tracecode_dec']]
         unique_traces = timeline_df.tracecode_dec.astype(int).unique()
@@ -1400,7 +1400,7 @@ def graph_it():
             )
             fig.show()
 
-    if '0' in graph_ans_list or '2' in graph_ans_list:
+    if '0' in graph_ans_list or '2' in graph_ans_list or '3' in graph_ans_list:
 
         timings_df = pd.DataFrame()
         timings_plot_df = pd.DataFrame()
@@ -1456,7 +1456,7 @@ def graph_it():
             x.trace_info[-9:-1], 16) if x.tracecode_dec == 151 else int(x.trace_info[-8:], 16) if x.tracecode_dec == 6 else np.nan, axis=1)
 
         # FRT32_dec
-        timings_df['frt32_dec'] = timings_df.apply(lambda x: int(x.frt_hex[-min(len(x)-2, 8):], 16), axis=1)
+        timings_df['frt32_dec'] = timings_df.apply(lambda x: int(x.frt_hex[-min(len(x.frt_hex)-2, 8):], 16), axis=1)
 
         timings_df.drop(columns=['frt_hex'], inplace=True)
 
@@ -1592,11 +1592,145 @@ def graph_it():
             cl_dur_df['cdf'] = cl_dur_df['pdf'].cumsum()
             cl_dur_df = cl_dur_df.reset_index()
 
+
+    if '0' in graph_ans_list or '3' in graph_ans_list:
+
+        timeline_rx_df = pd.DataFrame()
+        timeline_rx_df = timings_df[['byte','frt32_dec','frt32_val','afterrx_col','rxend_col','cl_id']]
+        timeline_rx_df = timeline_rx_df.assign(dummy=timeline_rx_df.rxend_col.shift(-1))
+        timeline_rx_df = timeline_rx_df.assign(dummy_frt32=timeline_rx_df.frt32_val.shift(-1))
+
+
+        timeline_rx_df['rx_dur'] = timeline_rx_df.dummy_frt32 - timeline_rx_df.frt32_dec
+        timeline_rx_df.dropna(subset=['dummy', 'afterrx_col'],inplace=True)
+        timeline_rx_df.rename(columns={"frt32_dec": "ts_rxstart", "dummy_frt32": "ts_rxend"}, inplace=True)
+        timeline_rx_df.drop(columns=['dummy', 'frt32_val','afterrx_col','rxend_col'], inplace=True)
+
+        timeline_tx_df = timings_df[['byte','trace_info','frt32_val','dc_col', 'txend_col','cl_id']]
+        timeline_tx_df = timeline_tx_df.assign(dummy=timeline_tx_df.txend_col.shift(-2))
+        timeline_tx_df['dummy_frt32_val'] = timeline_tx_df.frt32_val.shift(-2)
+        timeline_tx_df.dropna(subset=['dc_col', 'dummy'],inplace=True)
+        timeline_tx_df.rename(columns={"frt32_val": "ts_txstart", "dummy_frt32_val": "ts_txend"}, inplace=True)
+        timeline_tx_df['tx_dur'] = timeline_tx_df.ts_txend - timeline_tx_df.ts_txstart
+        timeline_tx_df.drop(columns=['dummy', 'trace_info','txend_col','dc_col'], inplace=True)
+
+        timeline_tx_df = timeline_tx_df[timeline_tx_df.tx_dur<=500000]
+
+        # PHY INDICATIONS
+        filter_list = [1,2,3,4,6]
+        timeline_phyind_df = pd.DataFrame()
+        timeline_phyind_df = cl_csv_df[cl_csv_df.tracecode_dec.isin(filter_list)]
+        timeline_phyind_df = timeline_phyind_df.assign(frt32_dec=pd.Series(np.nan))
+
+        # FRT32_dec
+        timeline_phyind_df['frt32_dec'] = timeline_phyind_df.frt_hex.apply(lambda x: int(x[-min(len(x)-2, 8):], 16))
+        timeline_phyind_df.drop(columns=['frt_hex'], inplace=True)
+
+        fig = go.Figure()
+
+        # add TXs
+        fig.add_bar(
+            x=timeline_tx_df.ts_txstart + timeline_tx_df.tx_dur/2,
+            y=[1]*len(timeline_tx_df.index),
+            width=timeline_tx_df.tx_dur,
+            # base=1,
+            name="TX" ,
+            text= "CL ID " + timeline_tx_df.cl_id.astype(str) + ", dur " +timeline_tx_df.tx_dur.astype(int).astype(str) + "usec",
+            textposition="inside",
+            # offset=-timeline_tx_df.tx_dur/2,
+            # hoverinfo="none",
+            marker=dict(
+                        color='darksalmon',
+                        opacity=0.8,
+                        line=dict(width=1,
+                                color='darksalmon'))
+        )
+        # fig.add_scatter(
+        #     x=timeline_tx_df.ts_txphr,
+        #     y=[1]*len(timeline_tx_df.index),
+        #     # width=timeline_tx_df.tx_dur,
+
+        #     mode="markers",
+        #     # hoverinfo="none",
+        #     marker=dict(
+        #                  color='red',
+        #                  line=dict(width=1,
+        #                            color='red'))
+        # )
+        # add RXs
+        fig.add_bar(
+            x=timeline_rx_df.ts_rxstart + timeline_rx_df.rx_dur/2,
+            y=[-1]*len(timeline_rx_df.index),
+            width=timeline_rx_df.rx_dur,
+            name="RX",
+            text= "CL ID " + timeline_rx_df.cl_id.astype(str) + ", dur " +timeline_rx_df.rx_dur.astype(int).astype(str) + "usec",
+            textposition="inside",
+            # hoverinfo="none",
+            marker=dict(
+                        color='darkseagreen',
+                        line=dict(width=1,
+                                color='darkseagreen'))
+        )
+
+        # add PHR Indications
+
+        # draw a lines
+        tuple_val = list(zip(timeline_phyind_df.frt32_dec,timeline_phyind_df.tracecode_dec))
+        colors = px.colors.qualitative.Dark24
+        shapes=[]
+        for x, code in tuple_val:
+            shapes.append({'type': 'line',
+                        'x0': x,
+                        'y0': 2,
+                        'x1': x,
+                        'y1': 3,
+                        # 'fillcolor':colors_list[i+1],
+                        'line':dict(
+                            color=colors[code],
+                            # width=3,
+                        ),
+                        })
+
+        fig.add_scatter(
+            x=timeline_phyind_df.frt32_dec,
+            y=[3]*len(timeline_phyind_df.index),
+            mode="markers",
+            name="PHR Indications",
+        text= timeline_phyind_df.trace_info,
+
+            # hoverinfo="none",
+            marker=dict(
+                        color='white',
+                        line=dict(width=1,
+                                color='red'))
+        )
+
+        fig.update_layout(
+            title="Timeline Visualizer",
+            showlegend=True,
+            xaxis_tickformat='f',
+            yaxis=dict(
+                range=[-4,4],
+                fixedrange = True,
+                showticklabels=False,
+            ),
+            # hovermode='x',
+            shapes=shapes,
+        )
+        fig.update_xaxes(rangeslider_visible=True, title="Timing Visualizer")
+
+        fig.show()
+
+
+        # exit(0)
+    if '0' in graph_ans_list or '2' in graph_ans_list:
+
+
         # PLOT THE TIMING DIAGRAM
         # A list of Matplotlib releases and their dates
         # Taken from https://api.github.com/repos/matplotlib/matplotlib/releases
         names = ['WrapperCall1', 'WrapperReturn', 'TargetTx1', 'TxPHR1', 'EndTxTime', 'rxStart_beforeCall', 'rxStart_afterCall',
-                 'rxEnd', 'WrapperCall2', 'TargetTx2', 'TxPHR2', ]
+                'rxEnd', 'WrapperCall2', 'TargetTx2', 'TxPHR2', ]
 
         tx_dur = 2000
         rx_dur = 1500
@@ -1774,7 +1908,7 @@ def graph_it():
             marker=dict(size=12,
                         color='white',
                         line=dict(width=2,
-                                  color='black'))
+                                color='black'))
         ))
 
         # draw the horizontal lines
@@ -1816,9 +1950,9 @@ def graph_it():
             textposition="inside",
             hoverinfo="none",
             marker=dict(
-                         color=['darksalmon', 'darkseagreen', 'darksalmon'],
-                         line=dict(width=2,
-                                   color='black'))
+                        color=['darksalmon', 'darkseagreen', 'darksalmon'],
+                        line=dict(width=2,
+                                color='black'))
         )
 
         fig.update_layout(
@@ -1836,9 +1970,9 @@ def graph_it():
         # plot
         fig = make_subplots(4, 2,
                             specs=[[{"secondary_y": True},    {"secondary_y": True}],
-                                   [{"secondary_y": True},    {"secondary_y": True}],
-                                   [{"secondary_y": True},    {"secondary_y": True}],
-                                   [{"secondary_y": True}, {"secondary_y": True}]],
+                                [{"secondary_y": True},    {"secondary_y": True}],
+                                [{"secondary_y": True},    {"secondary_y": True}],
+                                [{"secondary_y": True}, {"secondary_y": True}]],
                             subplot_titles=("Target Time to Tx PHR Time",
                                             "Tx End to Rx Start",
                                             "Rx End to Target Time",
@@ -1895,11 +2029,11 @@ def graph_it():
         )
 
         fig.show()
+
     # buffer get/release
     if '0' in graph_ans_list or '4' in graph_ans_list:
 
         bufmgr_df = pd.DataFrame()
-        timings_plot_df = pd.DataFrame()
         filter_list = [19, 20]
         bufmgr_df = csv_df[csv_df.tracecode_dec.isin(filter_list)]
 
@@ -1946,7 +2080,6 @@ def graph_it():
         # print(px.colors.qualitative.Dark24)
         buff_colors = px.colors.qualitative.Dark24;
         # buff_colors = get_n_colors(len(unique_owners));
-
 
         fig = go.Figure()
 
