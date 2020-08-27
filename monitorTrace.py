@@ -15,6 +15,8 @@ glob = {
     'QUIT': False,
 }
 
+MIN_A7_VER = (10,0,488)
+
 OS_POSIX = "posix"
 OS_WIN = "nt"
 __VERSION__ = "2.0"
@@ -1153,7 +1155,7 @@ def my_wait(sec, new_count=0):
     for i in range(sec):
         # if(glob['QUIT']):
         #     break
-        lines = "[lines={}]".format(new_count)
+        lines = "[{} lines decoded]".format(new_count)
         print("*** Polling {} ({}) in {:3d}sec... {}".format(args.ip,
                                                              macAddr, sec-i, lines), end='\r')
         sys.stdout.flush()
@@ -1664,7 +1666,7 @@ def graph_it():
 
         timings_df = timings_df.assign(rxend2txcall=pd.Series(np.nan))
         timings_df.rxend2txcall = timings_df.apply(lambda x: x.dummy_frt-x.frt_val if x.rxend_col == 'rxEnd' and x.dummy == 'beforeTx' and x.cl_id == x.dummy_cl_id else np.nan, axis=1)
-        timings_df.drop(columns=['dummy', 'dummy_frt'], inplace=True)
+        timings_df.drop(columns=['dummy', 'dummy_frt','dummy_cl_id'], inplace=True)
         # freq
         rxend2txcall_df = timings_df[['byte', 'rxend2txcall']].groupby('rxend2txcall').agg('count').rename(columns={'byte': 'freq'}).reset_index()
         rxend2txcall_df = rxend2txcall_df.astype({'rxend2txcall': int})
@@ -1703,10 +1705,19 @@ def graph_it():
             cl_dur_df['cdf'] = cl_dur_df['pdf'].cumsum()
             cl_dur_df = cl_dur_df.reset_index()
 
+        # rxcall2rxPHR
+        timings_df['dummy_frt'] = timings_df.ts_rxstart.shift(-1)
+        timings_df = timings_df.assign(afterRx2rxPHR=pd.Series(np.nan))
+        timings_df.afterRx2rxPHR = timings_df.apply(lambda x: x.dummy_frt - x.frt_dec if x.afterrx_col == 'afterRx' and x.dummy_frt !=np.nan else np.nan, axis =1)
+
+        # drop values higher than 3sec
+        timings_df.afterRx2rxPHR = timings_df.apply(lambda x:np.nan if x.afterRx2rxPHR == np.nan or x.afterRx2rxPHR > 3000.0 else x.afterRx2rxPHR,axis=1 )
+
+
         # PLOT THE TIMING DIAGRAM
         # A list of Matplotlib releases and their dates
         # Taken from https://api.github.com/repos/matplotlib/matplotlib/releases
-        names = ['WrapperCall1', 'WrapperReturn', 'TargetTx1', 'TxPHR1', 'EndTxTime', 'rxStart_beforeCall', 'rxStart_afterCall',
+        names = ['WrapperCall1', 'WrapperReturn', 'TargetTx1', 'TxPHR1', 'EndTxTime', 'rxStart_beforeCall', 'rxStart_afterCall', 'rxPHR',
                  'rxEnd', 'WrapperCall2', 'TargetTx2', 'TxPHR2', ]
 
         tx_dur = 2000
@@ -1720,6 +1731,7 @@ def graph_it():
             'EndTxTime': "EndTxTime",
             'rxStart_beforeCall': "rxStart\nbeforeCall",
             'rxStart_afterCall': "rxStart\nafterCall",
+            'rxPHR':"rx PHR",
             'rxEnd': "rxEnd",
             'WrapperCall2': "WrapperCall",
             'TargetTx2': "TargetTx",
@@ -1734,6 +1746,7 @@ def graph_it():
             'EndTxTime': 1,
             'rxStart_beforeCall': -1.2,
             'rxStart_afterCall': -2,
+            'rxPHR': -2,
             'rxEnd': -1,
             'WrapperCall2': 2,
             'TargetTx2': 1,
@@ -1748,6 +1761,7 @@ def graph_it():
             'EndTxTime': 'crimson',
             'rxStart_beforeCall': 'LightSeaGreen',
             'rxStart_afterCall': 'LightSeaGreen',
+            'rxPHR':'LightSeaGreen',
             'rxEnd': 'LightSeaGreen',
             'WrapperCall2': 'royalblue',
             'TargetTx2': 'crimson',
@@ -1761,6 +1775,7 @@ def graph_it():
             'endTxTime2rxStartbefore': int(timings_df.txend2rxstart.mean()),
             'rxstartBefore2After': int(timings_df.rxcall2afterrx.mean()),
             'rxEnd2wrapperCall': int(timings_df.rxend2txcall.mean()),
+            'rxstartAfter2rxPHR': int(timings_df.afterRx2rxPHR.mean()),
             'wrapperCall2TargetTx2': int(timings_df.txcall2targettime.mean()),
             'rxEnd2targetTx': int(timings_df.rxend2targettime.mean()),
             'rxEnd2TxPHR': int(timings_df.rxend2txtime.mean()),
@@ -1777,7 +1792,8 @@ def graph_it():
         points_dic['EndTxTime'] = points_dic['TxPHR1'] + tx_dur
         points_dic['rxStart_beforeCall'] = points_dic['EndTxTime'] + diff_points_dic['endTxTime2rxStartbefore']
         points_dic['rxStart_afterCall'] = points_dic['rxStart_beforeCall'] + diff_points_dic['rxstartBefore2After']
-        points_dic['rxEnd'] = points_dic['rxStart_afterCall'] + rx_dur
+        points_dic['rxPHR'] = points_dic['rxStart_afterCall'] + diff_points_dic['rxstartAfter2rxPHR']
+        points_dic['rxEnd'] = points_dic['rxPHR'] + rx_dur
         points_dic['WrapperCall2'] = points_dic['rxEnd'] + diff_points_dic['rxEnd2wrapperCall']
         points_dic['TargetTx2'] = points_dic['WrapperCall2'] + diff_points_dic['wrapperCall2TargetTx2']
         points_dic['TxPHR2'] = points_dic['TargetTx2'] + diff_points_dic['targetTx2TxPHR2']
@@ -1791,6 +1807,7 @@ def graph_it():
             {'x1': points_dic['EndTxTime'], 'x2': points_dic['rxStart_beforeCall'], 'y': -0.5},
             {'x1': points_dic['EndTxTime'], 'x2': points_dic['EndTxTime']+1000, 'y': 0.5},
             {'x1': points_dic['rxStart_beforeCall'], 'x2':points_dic['rxStart_afterCall'], 'y': -0.75},
+            {'x1': points_dic['rxStart_afterCall'], 'x2':points_dic['rxPHR'], 'y': -1.5},
             {'x1': points_dic['rxEnd'], 'x2':points_dic['WrapperCall2'], 'y': 0.5},
             {'x1': points_dic['rxEnd'], 'x2':points_dic['TargetTx2'], 'y': -0.5},
             {'x1': points_dic['rxEnd'], 'x2':points_dic['TxPHR2'], 'y': -0.75},
@@ -1805,6 +1822,7 @@ def graph_it():
             str(int(timings_df.txend2rxstart.min()))+'/'+str(int(timings_df.txend2rxstart.max()))+'/'+str(int(timings_df.txend2rxstart.mean())),
             '1000(to have)',
             str(int(timings_df.rxcall2afterrx.min()))+'/'+str(int(timings_df.rxcall2afterrx.max()))+'/'+str(int(timings_df.rxcall2afterrx.mean())),
+            str(int(timings_df.afterRx2rxPHR.min()))+'/'+str(int(timings_df.afterRx2rxPHR.max()))+'/'+str(int(timings_df.afterRx2rxPHR.mean())),
             str(int(timings_df.rxend2txcall.min()))+'/'+str(int(timings_df.rxend2txcall.max()))+'/'+str(int(timings_df.rxend2txcall.mean())),
             str(int(timings_df.rxend2targettime.min()))+'/'+str(int(timings_df.rxend2targettime.max()))+'/'+str(int(timings_df.rxend2targettime.mean())),
             str(int(timings_df.rxend2txtime.min()))+'/'+str(int(timings_df.rxend2txtime.max()))+'/'+str(int(timings_df.rxend2txtime.mean())),
@@ -1918,11 +1936,12 @@ def graph_it():
 
         ))
         # POLL/ACK/DATA
-        rx_dur = points_dic['rxEnd']-(points_dic['EndTxTime']+1000)
+        rx_dur = points_dic['rxEnd']-(points_dic['rxPHR'])
+        txdiff = points_dic['TxPHR1'] - points_dic['TargetTx1']
         fig.add_bar(
-            x=[(points_dic['TxPHR1']+(tx_dur+300)/2-300), (points_dic['EndTxTime']+1000+rx_dur/2), (points_dic['TxPHR2']+tx_dur/2-300)],
+            x=[(points_dic['TxPHR1']-txdiff+(tx_dur+txdiff)/2), (points_dic['rxPHR']-txdiff+(rx_dur+txdiff)/2), (points_dic['TxPHR2']-txdiff+(tx_dur+txdiff+100)/2)],
             y=[0.25, -0.25, 0.25],
-            width=[tx_dur+300, rx_dur, (tx_dur+300)],
+            width=[tx_dur+txdiff, rx_dur+txdiff, (tx_dur+100+txdiff)],
             text=["POLL", "ACK", "DATA"],
             textposition="inside",
             hoverinfo="none",
@@ -2151,6 +2170,8 @@ if __name__ == "__main__":
 
     Example 6: Display some graphs using decoded file in csv
         %(prog)s -f decoded.csv -g
+        %(prog)s -f hex_trace.txt -g
+        In second example, the app will create the necessary csv file
 
     """
 
@@ -2335,8 +2356,17 @@ if __name__ == "__main__":
 
     print('')
     print(outputVer)
+    a7_ver_list = outputVer.split('\n')[2:5]
+    a7_major = int(a7_ver_list[0].split(':',2)[1],10)
+    a7_minor = int(a7_ver_list[1].split(':',2)[1],10)
+    a7_build = int(a7_ver_list[2].split(':',2)[1],10)
+    a7_ver = (a7_major, a7_minor, a7_build)
+    if(a7_ver < MIN_A7_VER):
+        print("\n\n*** The node Version A7 {} is not compatible. Minimum Required {}".format(a7_ver, MIN_A7_VER))
+        choice = input("The APP may not function properly. Continue? (y/n)? ")
+        if choice.lower() != 'y':
+            exit(0)
 
-    # exit(0)
     # if mask is provided, set and read back
     if args.mask:
         print(" - Setting the mask... {} ...".format(args.mask), end='')
@@ -2420,7 +2450,7 @@ if __name__ == "__main__":
                     fout.writelines(hexdump)
 
             if (args.graph and not graph_shown):
-                print("##### Graphs are not live. It will be shown only once.")
+                print("\n\n##### Graphs are not live. It will be shown only once.")
                 graph_it()
                 graph_shown = True
 
