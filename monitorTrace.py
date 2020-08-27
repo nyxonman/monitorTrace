@@ -173,7 +173,13 @@ tracing_events_num_str = {
     110: "CLT_TXDELAY",
     111: "CLT_PEER_CURSLOT",
     112: "CLT_RWIN_QUALTIME",
-    130: "CLT_RESERVED",
+    120: "CLT_RESERVED",
+    121: "FRT32_TX_START",
+    122: "FRT32_TX_END",
+    123: "FRT32_RX_START",
+    124: "FRT32_RX_END",
+    129: "CL_FRT32_TX_CALL",
+    130: "CL_FRT32_RX_CALL",
     131: "CL_NEW",
     132: "CL_END",
     133: "CL_OUT_REQ",
@@ -794,17 +800,12 @@ def process_cl(code, infoArr):
         if not args.nolog:
             print("==="*40)
 
-    elif tracing_events_num_str[code] == "CL_TX":
+    elif tracing_events_num_str[code] == "CL_TX" or tracing_events_num_str[code] == "CL_RX":
         status = int(infoArr[14] + infoArr[13], 16)
-        freq = int(infoArr[16] + infoArr[15], 16)
-        processClInfo = "{:s}({:d},0x{:X}) freq {:d}KHz".format(
-            sts_code_str[status], status, status, freq * 100)
-
-    elif tracing_events_num_str[code] == "CL_RX":
-        status = int(infoArr[14] + infoArr[13], 16)
-        chan = int(infoArr[16] + infoArr[15], 16)
-        processClInfo = "{:s}({:d},0x{:X}) chan {:d}".format(
-            sts_code_str[status], status, status, chan)
+        mode = int(infoArr[16], 16)
+        channel = int(infoArr[15], 16)
+        processClInfo = "{:s}({:d},0x{:X}) mode {:d} chan {:d}".format(
+            sts_code_str[status], status, status, mode, channel)
 
     elif tracing_events_num_str[code] == "CL_SEND_PRIMITIVE":
         status = int(infoArr[14] + infoArr[13], 16)
@@ -1152,7 +1153,7 @@ def my_wait(sec, new_count=0):
     for i in range(sec):
         # if(glob['QUIT']):
         #     break
-        lines = "[lines={}]".format(new_count) if args.nolog else ""
+        lines = "[lines={}]".format(new_count)
         print("*** Polling {} ({}) in {:3d}sec... {}".format(args.ip,
                                                              macAddr, sec-i, lines), end='\r')
         sys.stdout.flush()
@@ -1199,8 +1200,8 @@ def get_colors(n):
 
 def graph_it():
 
-    if not os.path.isfile('decoded.csv'):
-        print("'decoded.csv' not found. Use -c option to create the required csv.")
+    if not os.path.isfile(graph_file):
+        print("{} not found. Use -c option to create the required csv.".format(graph_file))
         return
 
     check_and_install_package(["pandas", "plotly==4.9.0"])
@@ -1222,7 +1223,7 @@ def graph_it():
     # plt.style.use('seaborn-deep')
     # plt.style.use('ggplot')
 
-    print("showing graph", graph_ans_list)
+    print("showing graph {} from '{}'".format(graph_ans_list, graph_file))
 
     # plt.show()
 
@@ -1237,17 +1238,35 @@ def graph_it():
     csv_df = csv_df.astype({'tracecode_dec': int})
     csv_df = csv_df.assign(cl_id=pd.Series(np.nan))
 
-    csv_df['cl_id'] = csv_df["trace_info"].apply(lambda x: x.split()[4] if "CL_OUT_CNF" in x or "CL_START" in x else "")
-    csv_df['cl_id'].ffill()
-    csv_df = csv_df.replace("", np.nan).ffill()
+    csv_df['cl_id'] = csv_df["trace_info"].apply(lambda x: x.split()[4] if "CL_OUT_CNF" in x or "CL_START" in x else np.nan)
+    # csv_df['cl_id'].ffill()
+    # csv_df = csv_df.replace("", np.nan).ffill()
 
     traceCodeMap_df = pd.DataFrame(tracing_events_num_str.items(), columns=['tracecode_dec', 'trace_str'])
+
+    # add owner id
+    csv_df = csv_df.assign(owner=pd.Series(np.nan))
+    csv_df['owner'] = csv_df.apply(lambda x: x.trace_info.split('LMSM_')[1].split('(', 2)[0] if x.tracecode_dec == 68 else "", axis=1)
+    csv_df = csv_df.replace("", np.nan).ffill()
+
+    # FRT_trace_val
+    csv_df['frt32_val'] = csv_df.apply(lambda x: (x.trace_info[-8:]) if x.tracecode_dec in [6, 121, 122, 123, 124, 129, 130] else np.nan, axis=1)
+
+    csv_df['dummy'] = csv_df.tracecode_dec.shift(1)
+    csv_df['dummy_frt'] = csv_df.frt32_val.shift(-1)
+    csv_df['dup'] = csv_df.apply(lambda x: 1 if x.tracecode_dec == x.dummy else 0, axis=1)
+
+    csv_df['frt_val'] = csv_df.dummy_frt + csv_df.frt32_val
+    csv_df['frt_val'] = csv_df.frt_val.apply(lambda x: int(x, 16) if type(x) == str else np.nan)
+    # csv_df.frt_val = csv_df.frt_val.apply(lambda x: "hello" if x!=np.nan else np.nan)
+    csv_df = csv_df[csv_df.dup == 0]
+    csv_df.drop(columns=['frt32_val', 'dummy', 'dummy_frt', 'dup'], inplace=True)
 
     stat_total = csv_df.groupby('tracecode_dec').count().reset_index().astype({"tracecode_dec": int})
     stat_total = stat_total[['tracecode_dec', 'byte']]
     stat_total = stat_total.merge(traceCodeMap_df, how='inner', on="tracecode_dec").sort_values(by=['tracecode_dec']).reset_index()
 
-    cl_csv_df = csv_df.loc[(csv_df['tracecode_dec'] >= 131) & (csv_df['tracecode_dec'] <= 151) | (csv_df.tracecode_dec <= 6)]
+    cl_csv_df = csv_df.loc[(csv_df['tracecode_dec'] > 120) & (csv_df['tracecode_dec'] <= 151) | (csv_df.tracecode_dec <= 6)]
     cl_csv_df = cl_csv_df.drop(columns=['tracecode_hex'])
 
     # cl_csv_df = cl_csv_df.assign(sts=pd.Series(np.nan))
@@ -1268,7 +1287,7 @@ def graph_it():
         fast_link_df = cl_csv_df[(cl_csv_df.tracecode_dec.isin(filter_list))][['byte', 'frt_dec', 'tracecode_dec', 'sts', 'cl_id']]
         trace_list = list(set(list(fast_link_df.tracecode_dec)))
         if sorted(trace_list) != sorted(filter_list):
-            print("All required traces {} are not present {}. Cannot draw the graph".format(filter_list, trace_list))
+            print("\n**** All required traces {} are not present {}. Cannot draw the graph".format(filter_list, trace_list))
             return
 
         if not fast_link_df.empty:
@@ -1326,150 +1345,233 @@ def graph_it():
 
             # fig.show()
 
-    # Timeline Visualizer
-    if '0' in graph_ans_list or '7' in graph_ans_list:
-        filter_list = [148, 149]
-        timeline_df = cl_csv_df[['byte', 'frt_dec', 'cl_id', 'trace_info', 'tracecode_dec']]
-        unique_traces = timeline_df.tracecode_dec.astype(int).unique()
-        # result = map(lambda x: x:get_colors(x), unique_traces)
-        colors = get_colors(len(unique_traces))
-        key = 0
-        colors_dict = {}
-        for val in unique_traces:
-            colors_dict[val] = colors[key]
-            key = key + 1
-        timeline_df['color'] = timeline_df.tracecode_dec.apply(lambda x: colors_dict[x])
-        # print(timeline_df.head(20))
-        trace_list = list(set(list(timeline_df.tracecode_dec)))
-
-        if not set(filter_list).issubset(trace_list):
-            print("All required traces {} are not present {}. Cannot draw the graph".format(filter_list, trace_list))
-            return
-
-        if not timeline_df.empty:
-
-            points = list(timeline_df.frt_dec)
-            colors = list(timeline_df.color)
-
-            level = 1
-            vert = 'top'
-            levels_str = "1,0.2,0.4,0.6,0.8"*(len(points))
-
-            levels = levels_str.split(',')[:len(points)]
-
-            names = list(timeline_df.trace_info)
-
-            # Create the base line
-            start = min(points)
-            stop = max(points)
-
-            fig = go.Figure()
-
-            # Add baseline
-            fig.add_shape(
-                # Line Horizontal
-                type="line",
-                x0=start, y0=0,
-                x1=stop, y1=0,
-                line=dict(
-                    color="grey",
-                    width=1,
-                ),
-            )
-            # add circle markers
-            fig.add_trace(go.Scatter(
-                x=points, y=levels,
-                hovertext=names,
-                mode="text+markers",
-                marker=dict(size=12,
-                            color='white',
-                            line=dict(width=2,
-                                      color=colors))
-            ))
-
-            fig.add_bar(
-                x=points, y=levels,
-                width=1,
-                hoverinfo="none",
-                marker=dict(
-                    color=colors,
-                    line=dict(width=1,
-                              color=colors))
-            )
-            fig.update_xaxes(rangeslider_visible=True, title="Timing Visualizer")
-            fig.update_layout(
-                showlegend=False,
-                xaxis_tickformat='f'
-            )
-            fig.show()
-
     if '0' in graph_ans_list or '2' in graph_ans_list or '3' in graph_ans_list:
 
         timings_df = pd.DataFrame()
         timings_plot_df = pd.DataFrame()
-        filter_list = [6, 131, 151, 141, 140]
+        filter_list = [6, 122, 123, 124, 129, 130, 141, 140, 142]
         timings_df = cl_csv_df[cl_csv_df.tracecode_dec.isin(filter_list)]
 
         trace_list = list(set(list(timings_df.tracecode_dec)))
         if not set(filter_list).issubset(trace_list):
-            print("All required traces {} are not present. Cannot draw the graph".format(filter_list))
+            print("\n**** All required traces {} are not present. {}  Cannot draw the graph".format(filter_list, trace_list))
             return
+
+        # nextCLI
+        timings_df = timings_df.assign(nextcli=pd.Series(np.nan))
+        timings_df.nextcli = timings_df.apply(lambda x: "CLI(" + x.trace_info.split(' ')[4] + ", " + x.trace_info.split(' ')
+                                              [2][:-1] + ")" if x.tracecode_dec == tracing_events_str_num['CL_NEXT_CLI'] else np.nan, axis=1)
+        timings_df.nextcli = timings_df.nextcli.fillna(method='bfill')
+        timings_df = timings_df[timings_df.tracecode_dec != tracing_events_str_num['CL_NEXT_CLI']]
 
         # aftertxcol
         timings_df = timings_df.assign(aftertx_col=pd.Series(np.nan))
-        timings_df['aftertx_col'] = timings_df.apply(lambda x: "afterTx" if x['tracecode_dec'] == 140 else np.nan, axis=1)
+        timings_df['aftertx_col'] = timings_df.apply(lambda x: "afterTx" if x['tracecode_dec'] == tracing_events_str_num['CL_TX'] else np.nan, axis=1)
         timings_df.afertx_col = np.zeros
 
         # beforetxcol
-        timings_df['dummy'] = timings_df.aftertx_col.shift(-1)
         timings_df = timings_df.assign(beforetx_col=pd.Series(np.nan))
-        timings_df.beforetx_col = timings_df.apply(lambda x: "beforeTx" if x.tracecode_dec == 151 and x.dummy == 'afterTx' else np.nan, axis=1)
-        timings_df.drop(columns=['dummy'], inplace=True)
+        timings_df.beforetx_col = timings_df.tracecode_dec.apply(lambda x: "beforeTx" if x == tracing_events_str_num['CL_FRT32_TX_CALL'] else np.nan)
 
         # dc
         timings_df['dummy'] = timings_df.aftertx_col.shift(1)
         timings_df = timings_df.assign(dc_col=pd.Series(np.nan))
-        timings_df.dc_col = timings_df.apply(lambda x: "dc" if x.tracecode_dec == 6 and x.dummy == 'afterTx' else np.nan, axis=1)
+        timings_df.dc_col = timings_df.apply(lambda x: "dc" if x.tracecode_dec == tracing_events_str_num['LMMGR_DATA_CONF'] else np.nan, axis=1)
         timings_df.drop(columns=['dummy'], inplace=True)
 
         # txend
-        timings_df['dummy'] = timings_df.dc_col.shift(2)
         timings_df = timings_df.assign(txend_col=pd.Series(np.nan))
-        timings_df.txend_col = timings_df.apply(lambda x: "txEnd" if x.tracecode_dec == 151 and x.dummy == 'dc' else np.nan, axis=1)
-        timings_df.drop(columns=['dummy'], inplace=True)
-
+        timings_df.txend_col = timings_df.apply(lambda x: "txEnd" if x.tracecode_dec == tracing_events_str_num['FRT32_TX_END'] else np.nan, axis=1)
         # afterRx
         timings_df = timings_df.assign(afterrx_col=pd.Series(np.nan))
-        timings_df.afterrx_col = timings_df.apply(lambda x: "afterRx" if x.tracecode_dec == 141 else np.nan, axis=1)
+        timings_df.afterrx_col = timings_df.apply(lambda x: "afterRx" if x.tracecode_dec == tracing_events_str_num['CL_RX'] else np.nan, axis=1)
 
         # beforeRx
-        timings_df['dummy'] = timings_df.afterrx_col.shift(-1)
         timings_df = timings_df.assign(beforerx_col=pd.Series(np.nan))
-        timings_df.beforerx_col = timings_df.apply(lambda x: "beforeRx" if x.tracecode_dec == 151 and x.dummy == 'afterRx' else np.nan, axis=1)
-        timings_df.drop(columns=['dummy'], inplace=True)
+        timings_df.beforerx_col = timings_df.apply(lambda x: "beforeRx" if x.tracecode_dec == tracing_events_str_num['CL_FRT32_RX_CALL'] else np.nan, axis=1)
 
         # rxend
-        timings_df['dummy'] = timings_df.afterrx_col.shift(1)
         timings_df = timings_df.assign(rxend_col=pd.Series(np.nan))
-        timings_df.rxend_col = timings_df.apply(lambda x: "rxEnd" if x.tracecode_dec == 151 and x.dummy == 'afterRx' else np.nan, axis=1)
-        timings_df.drop(columns=['dummy'], inplace=True)
+        timings_df.rxend_col = timings_df.apply(lambda x: "rxEnd" if x.tracecode_dec == tracing_events_str_num['FRT32_RX_END'] else np.nan, axis=1)
 
-        # FRT32_trace_val
-        timings_df['frt32_val'] = timings_df.apply(lambda x: int(
-            x.trace_info[-9:-1], 16) if x.tracecode_dec == 151 else int(x.trace_info[-8:], 16) if x.tracecode_dec == 6 else np.nan, axis=1)
-
-        # FRT32_dec
-        timings_df['frt32_dec'] = timings_df.apply(lambda x: int(x.frt_hex[-min(len(x.frt_hex)-2, 8):], 16), axis=1)
+        # # FRT_dec
+        # timings_df['frt_dec'] = timings_df.apply(lambda x: int(x.frt_hex[-min(len(x.frt_hex)-2, 8):], 16), axis=1)
 
         timings_df.drop(columns=['frt_hex'], inplace=True)
+
+        # timestamps for tx rx start and end
+        timings_df['ts_rxstart'] = timings_df.apply(lambda x: x.frt_val if x.tracecode_dec == tracing_events_str_num['FRT32_RX_START'] else np.nan, axis=1)
+        timings_df['ts_rxend'] = timings_df.apply(lambda x: x.frt_val if x.tracecode_dec == tracing_events_str_num['FRT32_RX_END'] else np.nan, axis=1)
+        timings_df['ts_txstart'] = timings_df.apply(lambda x: x.frt_val if x.dc_col == "dc" else np.nan, axis=1)
+        timings_df['ts_txend'] = timings_df.apply(lambda x: x.frt_val if x.tracecode_dec == tracing_events_str_num['FRT32_TX_END'] else np.nan, axis=1)
+
+    if '0' in graph_ans_list or '3' in graph_ans_list:
+        timeline_color = {
+
+            "TOP": colors_list[0],
+            "IDLE": colors_list[1],
+            "FH": 'orange',
+            "RXB": 'blue',
+            "TXB": 'green',
+            "CL": 'red',
+            "BCAST": 'purple',
+            "SA": colors_list[7],
+            "LLS": colors_list[8],
+            "ELG": colors_list[9],
+        }
+        # rx
+        timeline_rx_df = pd.DataFrame()
+        timeline_rx_df = timings_df[['byte', 'owner', 'nextcli', 'cl_id', 'ts_rxstart', 'ts_rxend']]
+        timeline_rx_df = timeline_rx_df.assign(ts_rxend=timeline_rx_df.ts_rxend.shift(-1))
+        timeline_rx_df.dropna(subset=['ts_rxstart', 'ts_rxend'], inplace=True)
+        timeline_rx_df['rx_dur'] = timeline_rx_df.ts_rxend - timeline_rx_df.ts_rxstart
+        timeline_rx_df['color'] = timeline_rx_df.owner.apply(lambda x: timeline_color[x])
+        timeline_rx_df['hoverinfo'] = "~~~ " + timeline_rx_df.owner + " ~~~<br>" + "<b>CL ID </b>" + timeline_rx_df.cl_id.astype(str) + ", <b>dur</b> " + timeline_rx_df.rx_dur.astype(
+            int).astype(str) + "usec"+"<br><b>Start:</b>"+timeline_rx_df.ts_rxstart.astype(str)+"<br><b>End:</b>" + timeline_rx_df.ts_rxend.astype(str) + "<br>" + timeline_rx_df.nextcli
+
+        # tx
+        timeline_tx_df = timings_df[['byte', 'owner', 'nextcli', 'cl_id', 'ts_txstart', 'ts_txend']]
+        timeline_tx_df = timeline_tx_df.assign(ts_txend=timeline_tx_df.ts_txend.shift(-1))
+        timeline_tx_df.dropna(subset=['ts_txstart', 'ts_txend'], inplace=True)
+        timeline_tx_df['tx_dur'] = timeline_tx_df.ts_txend - timeline_tx_df.ts_txstart
+        timeline_tx_df['color'] = timeline_tx_df.owner.apply(lambda x: timeline_color[x])
+        timeline_tx_df['hoverinfo'] = "~~~ " + timeline_tx_df.owner + " ~~~<br>" + "<b>CL ID </b>" + timeline_tx_df.cl_id.astype(str) + ", <b>dur</b> " + timeline_tx_df.tx_dur.astype(
+            int).astype(str) + "usec"+"<br><b>Start:</b>"+timeline_tx_df.ts_txstart.astype(str)+"<br><b>End:</b>" + timeline_tx_df.ts_txend.astype(str) + "<br>" + timeline_tx_df.nextcli
+
+        timeline_tx_df = timeline_tx_df[timeline_tx_df.tx_dur <= 500000]
+
+        # PHY INDICATIONS and CALLs
+        filter_list = [1, 2, 3, 4, 6, 140, 141, 148, 149]
+        timeline_phycallind_df = pd.DataFrame()
+        timeline_phycallind_df = cl_csv_df[cl_csv_df.tracecode_dec.isin(filter_list)]
+        timeline_phycallind_df = timeline_phycallind_df.assign(y1=pd.Series(np.nan))
+
+        y0 = 0
+        y1 = 3
+        timeline_phycallind_df['y1'] = timeline_phycallind_df.tracecode_dec.apply(lambda x: -y1 if x in [1, 2, 3, 4, 141] else y1)
+        timeline_phycallind_df['y0'] = timeline_phycallind_df.tracecode_dec.apply(lambda x: -y0 if x in [1, 2, 3, 4, 141] else y0)
+        timeline_phycallind_df['color'] = timeline_phycallind_df.tracecode_dec.apply(lambda x: colors_list[x])
+        timeline_phycallind_df.drop(columns=['frt_hex'], inplace=True)
+
+        fig = go.Figure()
+
+        # add TXs
+        fig.add_bar(
+            x=timeline_tx_df.ts_txstart + timeline_tx_df.tx_dur/2,
+            y=[2]*len(timeline_tx_df.index),
+            width=timeline_tx_df.tx_dur,
+            # base=1,
+            name="TX",
+            text=timeline_tx_df.hoverinfo,
+            textposition="inside",
+            hovertemplate='%{text}',            # hoverinfo="none",
+            # offset=-timeline_tx_df.tx_dur/2,
+            # hoverinfo="none",
+            marker=dict(
+                color='darksalmon',
+                opacity=1,
+                line=dict(width=0.5,
+                          color=timeline_tx_df['color']))
+        )
+
+        # add RXs
+        fig.add_bar(
+            x=timeline_rx_df.ts_rxstart + timeline_rx_df.rx_dur/2,
+            y=[-2]*len(timeline_rx_df.index),
+            width=timeline_rx_df.rx_dur,
+            name="RX",
+            text=timeline_rx_df.hoverinfo,
+            textposition="inside",
+            hovertemplate='%{text}',            # hoverinfo="none",
+            marker=dict(
+                color='darkseagreen',
+                line=dict(width=0.5,
+                          color=timeline_rx_df['color']))
+        )
+
+        # add PHY Indications and calls
+
+        fig.add_scatter(
+            x=timeline_phycallind_df.frt_dec,
+            y=timeline_phycallind_df.y0,
+            mode="markers",
+            name="Internal Controls/Indications",
+            text="<b>CL_ID:</b> " + timeline_phycallind_df.cl_id + "<br>" + timeline_phycallind_df.trace_info,
+            hovertemplate="<b>FRT:</b>%{x}<br>%{text}",
+            visible="legendonly",
+            # hoverinfo="none",
+            marker=dict(
+                color='white',
+                line=dict(width=1,
+                          color=timeline_phycallind_df.color))
+        )
+
+        # add annotations for tx and rx
+        fig.add_annotation(
+            x=min(timeline_tx_df.ts_txend),
+            y=3.5,
+            text="Transmissions",
+            font=dict(
+            family="Courier New, monospace",
+            size=16,
+            color="red"
+            ),
+            showarrow=False,)
+        fig.add_annotation(
+            x=min(timeline_rx_df.ts_rxend),
+            y=-4,
+            text="Receptions",
+            font=dict(
+            family="Courier New, monospace",
+            size=16,
+            color="green"
+            ),
+            showarrow=False,)
+
+        # # add tx-rx start/end
+        # fig.add_scatter(
+        #     x=timeline_tx_df.ts_txstart.append(timeline_tx_df.ts_txend).append(timeline_rx_df.ts_rxstart).append(timeline_rx_df.ts_rxend),
+        #     # x=pandas.concat(timeline_tx_df.ts_txstart,timeline_tx_df.ts_txend, timeline_rx_df.ts_rxstart,timeline_rx_df.ts_rxend),
+        #     y=[0]*(len(timeline_tx_df.index)*2 + len(timeline_tx_df.index)*2),
+        #     mode="markers",
+        #     name="TX/RX Start/End",
+        #     hovertemplate="<b>FRT:</b>%{x}",
+        #     visible="legendonly",
+        #     # hoverinfo="none",
+        #     marker=dict(
+        #         color='red',
+        #         line=dict(width=1,
+        #                   color="black"))
+        # )
+
+        fig.update_layout(
+            title="Timeline Visualizer",
+            showlegend=True,
+            xaxis_tickformat='f',
+            yaxis=dict(
+                # visible=False,
+                range=[-8, 8],
+                fixedrange=True,
+                showticklabels=False,
+            ),
+            # hovermode='x',
+            # shapes=shapes,
+        )
+        fig.update_xaxes(rangeslider_visible=True, title="FRT usec",)
+        fig.update_yaxes(zeroline=True, zerolinewidth=1, zerolinecolor='grey')
+
+        fig.show()
+
+        # exit(0)
+    if '0' in graph_ans_list or '2' in graph_ans_list:
 
         # target2txphr
 
         timings_df['dummy'] = timings_df.dc_col.shift(-2)
-        timings_df['dummy_frt32'] = timings_df.frt32_val.shift(-2)
+        timings_df['dummy_frt'] = timings_df.frt_val.shift(-2)
         timings_df = timings_df.assign(target2txphr=pd.Series(np.nan))
-        timings_df.target2txphr = timings_df.apply(lambda x: x.dummy_frt32-x.frt32_val if x.beforetx_col == 'beforeTx' and x.dummy == 'dc' else np.nan, axis=1)
-        timings_df.drop(columns=['dummy', 'dummy_frt32'], inplace=True)
+        timings_df.target2txphr = timings_df.apply(lambda x: x.dummy_frt-x.frt_val if x.beforetx_col == 'beforeTx' and x.dummy == 'dc' else np.nan, axis=1)
+        timings_df.drop(columns=['dummy', 'dummy_frt'], inplace=True)
         # freq
         target2txphr_df = timings_df[['byte', 'target2txphr']].groupby('target2txphr').agg('count').rename(columns={'byte': 'freq'}).reset_index()
         target2txphr_df = target2txphr_df.astype({'target2txphr': int})
@@ -1482,10 +1584,10 @@ def graph_it():
 
         # txend2rxstart
         timings_df['dummy'] = timings_df.beforerx_col.shift(-1)
-        timings_df['dummy_frt32'] = timings_df.frt32_dec.shift(-1)
+        timings_df['dummy_frt'] = timings_df.frt_dec.shift(-1)
         timings_df = timings_df.assign(txend2rxstart=pd.Series(np.nan))
-        timings_df.txend2rxstart = timings_df.apply(lambda x: x.dummy_frt32-x.frt32_val if x.txend_col == 'txEnd' and x.dummy == 'beforeRx' else np.nan, axis=1)
-        timings_df.drop(columns=['dummy', 'dummy_frt32'], inplace=True)
+        timings_df.txend2rxstart = timings_df.apply(lambda x: x.dummy_frt-x.frt_val if x.txend_col == 'txEnd' and x.dummy == 'beforeRx' else np.nan, axis=1)
+        timings_df.drop(columns=['dummy', 'dummy_frt'], inplace=True)
         # freq
         txend2rxstart_df = timings_df[['byte', 'txend2rxstart']].groupby('txend2rxstart').agg('count').rename(columns={'byte': 'freq'}).reset_index()
         txend2rxstart_df = txend2rxstart_df.astype({'txend2rxstart': int})
@@ -1497,10 +1599,13 @@ def graph_it():
 
         # rxend2targettime
         timings_df['dummy'] = timings_df.beforetx_col.shift(-1)
-        timings_df['dummy_frt32'] = timings_df.frt32_val.shift(-1)
+        timings_df['dummy_frt'] = timings_df.frt_val.shift(-1)
+        timings_df['dummy_cl_id'] = timings_df.cl_id.shift(-1)
+
         timings_df = timings_df.assign(rxend2targettime=pd.Series(np.nan))
-        timings_df.rxend2targettime = timings_df.apply(lambda x: x.dummy_frt32-x.frt32_val if x.rxend_col == 'rxEnd' and x.dummy == 'beforeTx' else np.nan, axis=1)
-        timings_df.drop(columns=['dummy', 'dummy_frt32'], inplace=True)
+
+        timings_df.rxend2targettime = timings_df.apply(lambda x: x.dummy_frt-x.frt_val if x.rxend_col == 'rxEnd' and x.dummy == 'beforeTx' and x.cl_id == x.dummy_cl_id else np.nan, axis=1)
+        timings_df.drop(columns=['dummy', 'dummy_frt', 'dummy_cl_id'], inplace=True)
         # freq
         rxend2targettime_df = timings_df[['byte', 'rxend2targettime']].groupby('rxend2targettime').agg('count').rename(columns={'byte': 'freq'}).reset_index()
         rxend2targettime_df = rxend2targettime_df.astype({'rxend2targettime': int})
@@ -1512,10 +1617,11 @@ def graph_it():
 
         # rxend2txtime
         timings_df['dummy'] = timings_df.dc_col.shift(-3)
-        timings_df['dummy_frt32'] = timings_df.frt32_val.shift(-3)
+        timings_df['dummy_frt'] = timings_df.frt_val.shift(-3)
+        timings_df['dummy_cl_id'] = timings_df.cl_id.shift(-3)
         timings_df = timings_df.assign(rxend2txtime=pd.Series(np.nan))
-        timings_df.rxend2txtime = timings_df.apply(lambda x: x.dummy_frt32-x.frt32_val if x.rxend_col == 'rxEnd' and x.dummy == 'dc' else np.nan, axis=1)
-        timings_df.drop(columns=['dummy', 'dummy_frt32'], inplace=True)
+        timings_df.rxend2txtime = timings_df.apply(lambda x: x.dummy_frt-x.frt_val if x.rxend_col == 'rxEnd' and x.dummy == 'dc' and x.cl_id == x.dummy_cl_id else np.nan, axis=1)
+        timings_df.drop(columns=['dummy', 'dummy_frt', 'dummy_cl_id'], inplace=True)
         # freq
         rxend2txtime_df = timings_df[['byte', 'rxend2txtime']].groupby('rxend2txtime').agg('count').rename(columns={'byte': 'freq'}).reset_index()
         rxend2txtime_df = rxend2txtime_df.astype({'rxend2txtime': int})
@@ -1527,7 +1633,7 @@ def graph_it():
 
         # txcall2targettime
         timings_df = timings_df.assign(txcall2targettime=pd.Series(np.nan))
-        timings_df.txcall2targettime = timings_df.apply(lambda x: x.frt32_val-x.frt32_dec if x.beforetx_col == 'beforeTx' else np.nan, axis=1)
+        timings_df.txcall2targettime = timings_df.apply(lambda x: x.frt_val-x.frt_dec if x.beforetx_col == 'beforeTx' else np.nan, axis=1)
         # freq
         txcall2targettime_df = timings_df[['byte', 'txcall2targettime']].groupby('txcall2targettime').agg('count').rename(columns={'byte': 'freq'}).reset_index()
         txcall2targettime_df = txcall2targettime_df.astype({'txcall2targettime': int})
@@ -1538,10 +1644,10 @@ def graph_it():
         txcall2targettime_df = txcall2targettime_df.reset_index()
         # txcall2aftertx
         timings_df['dummy'] = timings_df.aftertx_col.shift(-1)
-        timings_df['dummy_frt32'] = timings_df.frt32_dec.shift(-1)
+        timings_df['dummy_frt'] = timings_df.frt_dec.shift(-1)
         timings_df = timings_df.assign(txcall2aftertx=pd.Series(np.nan))
-        timings_df.txcall2aftertx = timings_df.apply(lambda x: x.dummy_frt32-x.frt32_dec if x.beforetx_col == 'beforeTx' and x.dummy == 'afterTx' else np.nan, axis=1)
-        timings_df.drop(columns=['dummy', 'dummy_frt32'], inplace=True)
+        timings_df.txcall2aftertx = timings_df.apply(lambda x: x.dummy_frt-x.frt_dec if x.beforetx_col == 'beforeTx' and x.dummy == 'afterTx' else np.nan, axis=1)
+        timings_df.drop(columns=['dummy', 'dummy_frt'], inplace=True)
         # freq
         txcall2aftertx_df = timings_df[['byte', 'txcall2aftertx']].groupby('txcall2aftertx').agg('count').rename(columns={'byte': 'freq'}).reset_index()
         txcall2aftertx_df = txcall2aftertx_df.astype({'txcall2aftertx': int})
@@ -1553,10 +1659,12 @@ def graph_it():
 
         # rxend2txcall
         timings_df['dummy'] = timings_df.beforetx_col.shift(-1)
-        timings_df['dummy_frt32'] = timings_df.frt32_dec.shift(-1)
+        timings_df['dummy_frt'] = timings_df.frt_dec.shift(-1)
+        timings_df['dummy_cl_id'] = timings_df.cl_id.shift(-1)
+
         timings_df = timings_df.assign(rxend2txcall=pd.Series(np.nan))
-        timings_df.rxend2txcall = timings_df.apply(lambda x: x.dummy_frt32-x.frt32_val if x.rxend_col == 'rxEnd' and x.dummy == 'beforeTx' else np.nan, axis=1)
-        timings_df.drop(columns=['dummy', 'dummy_frt32'], inplace=True)
+        timings_df.rxend2txcall = timings_df.apply(lambda x: x.dummy_frt-x.frt_val if x.rxend_col == 'rxEnd' and x.dummy == 'beforeTx' and x.cl_id == x.dummy_cl_id else np.nan, axis=1)
+        timings_df.drop(columns=['dummy', 'dummy_frt'], inplace=True)
         # freq
         rxend2txcall_df = timings_df[['byte', 'rxend2txcall']].groupby('rxend2txcall').agg('count').rename(columns={'byte': 'freq'}).reset_index()
         rxend2txcall_df = rxend2txcall_df.astype({'rxend2txcall': int})
@@ -1568,10 +1676,10 @@ def graph_it():
 
         # rxcall2afterrx
         timings_df['dummy'] = timings_df.afterrx_col.shift(-1)
-        timings_df['dummy_frt32'] = timings_df.frt32_dec.shift(-1)
+        timings_df['dummy_frt'] = timings_df.frt_dec.shift(-1)
         timings_df = timings_df.assign(rxcall2afterrx=pd.Series(np.nan))
-        timings_df.rxcall2afterrx = timings_df.apply(lambda x: x.dummy_frt32-x.frt32_dec if x.beforerx_col == 'beforeRx' and x.dummy == 'afterRx' else np.nan, axis=1)
-        timings_df.drop(columns=['dummy', 'dummy_frt32'], inplace=True)
+        timings_df.rxcall2afterrx = timings_df.apply(lambda x: x.dummy_frt-x.frt_dec if x.beforerx_col == 'beforeRx' and x.dummy == 'afterRx' else np.nan, axis=1)
+        timings_df.drop(columns=['dummy', 'dummy_frt'], inplace=True)
         # freq
         rxcall2afterrx_df = timings_df[['byte', 'rxcall2afterrx']].groupby('rxcall2afterrx').agg('count').rename(columns={'byte': 'freq'}).reset_index()
         rxcall2afterrx_df = rxcall2afterrx_df.astype({'rxcall2afterrx': int})
@@ -1594,133 +1702,6 @@ def graph_it():
             # CDF
             cl_dur_df['cdf'] = cl_dur_df['pdf'].cumsum()
             cl_dur_df = cl_dur_df.reset_index()
-
-    if '0' in graph_ans_list or '3' in graph_ans_list:
-
-        timeline_rx_df = pd.DataFrame()
-        timeline_rx_df = timings_df[['byte', 'frt32_dec', 'frt32_val', 'afterrx_col', 'rxend_col', 'cl_id']]
-        timeline_rx_df = timeline_rx_df.assign(dummy=timeline_rx_df.rxend_col.shift(-1))
-        timeline_rx_df = timeline_rx_df.assign(dummy_frt32=timeline_rx_df.frt32_val.shift(-1))
-
-        timeline_rx_df['rx_dur'] = timeline_rx_df.dummy_frt32 - timeline_rx_df.frt32_dec
-        timeline_rx_df.dropna(subset=['dummy', 'afterrx_col'], inplace=True)
-        timeline_rx_df.rename(columns={"frt32_dec": "ts_rxstart", "dummy_frt32": "ts_rxend"}, inplace=True)
-        timeline_rx_df.drop(columns=['dummy', 'frt32_val', 'afterrx_col', 'rxend_col'], inplace=True)
-
-        timeline_tx_df = timings_df[['byte', 'trace_info', 'frt32_val', 'dc_col', 'txend_col', 'cl_id']]
-        timeline_tx_df = timeline_tx_df.assign(dummy=timeline_tx_df.txend_col.shift(-2))
-        timeline_tx_df['dummy_frt32_val'] = timeline_tx_df.frt32_val.shift(-2)
-        timeline_tx_df.dropna(subset=['dc_col', 'dummy'], inplace=True)
-        timeline_tx_df.rename(columns={"frt32_val": "ts_txstart", "dummy_frt32_val": "ts_txend"}, inplace=True)
-        timeline_tx_df['tx_dur'] = timeline_tx_df.ts_txend - timeline_tx_df.ts_txstart
-        timeline_tx_df.drop(columns=['dummy', 'trace_info', 'txend_col', 'dc_col'], inplace=True)
-
-        timeline_tx_df = timeline_tx_df[timeline_tx_df.tx_dur <= 500000]
-
-        # PHY INDICATIONS and CALLs
-        filter_list = [1, 2, 3, 4, 6, 140, 141]
-        timeline_phycallind_df = pd.DataFrame()
-        timeline_phycallind_df = cl_csv_df[cl_csv_df.tracecode_dec.isin(filter_list)]
-        timeline_phycallind_df = timeline_phycallind_df.assign(frt32_dec=pd.Series(np.nan))
-
-        # FRT32_dec
-        timeline_phycallind_df['frt32_dec'] = timeline_phycallind_df.frt_hex.apply(lambda x: int(x[-min(len(x)-2, 8):], 16))
-        y0 = 0
-        y1 = 3
-        timeline_phycallind_df['y1'] = timeline_phycallind_df.tracecode_dec.apply(lambda x: -y1 if x in [1, 2, 3, 4, 141] else y1)
-        timeline_phycallind_df['y0'] = timeline_phycallind_df.tracecode_dec.apply(lambda x: -y0 if x in [1, 2, 3, 4, 141] else y0)
-        timeline_phycallind_df.drop(columns=['frt_hex'], inplace=True)
-
-        fig = go.Figure()
-
-        # add TXs
-        fig.add_bar(
-            x=timeline_tx_df.ts_txstart + timeline_tx_df.tx_dur/2,
-            y=[1]*len(timeline_tx_df.index),
-            width=timeline_tx_df.tx_dur,
-            # base=1,
-            name="TX",
-            text="<b>CL ID</b> " + timeline_tx_df.cl_id.astype(str) + ", <b>dur</b> " + timeline_tx_df.tx_dur.astype(int).astype(str) + "usec",
-            textposition="inside",
-            hovertemplate=' <b>FRT:</b>%{x}<br> %{text}',            # hoverinfo="none",
-
-            # offset=-timeline_tx_df.tx_dur/2,
-            # hoverinfo="none",
-            marker=dict(
-                color='darksalmon',
-                opacity=1,
-                line=dict(width=2,
-                          color='darksalmon'))
-        )
-
-        # add RXs
-        fig.add_bar(
-            x=timeline_rx_df.ts_rxstart + timeline_rx_df.rx_dur/2,
-            y=[-1]*len(timeline_rx_df.index),
-            width=timeline_rx_df.rx_dur,
-            name="RX",
-            text="<b>CL ID </b>" + timeline_rx_df.cl_id.astype(str) + ", <b>dur</b> " + timeline_rx_df.rx_dur.astype(int).astype(str) + "usec",
-            textposition="inside",
-            hovertemplate=' <b>FRT:</b>%{x}<br> %{text}',            # hoverinfo="none",
-            marker=dict(
-                color='darkseagreen',
-                line=dict(width=1,
-                          color='darkseagreen'))
-        )
-
-        # add PHY Indications and calls
-
-        # draw a lines
-        tuple_val = list(zip(timeline_phycallind_df.frt32_dec, timeline_phycallind_df.y0, timeline_phycallind_df.y1, timeline_phycallind_df.tracecode_dec))
-        colors = px.colors.qualitative.Dark24
-
-        shapes = []
-        for x, y0, y1, code in tuple_val:
-            shapes.append({'type': 'line',
-                           'x0': x,
-                           'y0': y0,
-                           'x1': x,
-                           'y1': y1,
-                           # 'fillcolor':colors_list[i+1],
-                           'line': dict(
-                               color=colors_list[code],
-                               width=1,
-                               dash="dot",
-                           ),
-                           })
-
-        fig.add_scatter(
-            x=timeline_phycallind_df.frt32_dec,
-            y=timeline_phycallind_df.y1,
-            mode="markers",
-            name="PHY Call/Indications",
-            text="<b>CL_ID:</b> " + timeline_phycallind_df.cl_id + "<br>" + timeline_phycallind_df.trace_info,
-            hovertemplate="<b>FRT:</b>%{x}<br>%{text}",
-            # hoverinfo="none",
-            marker=dict(
-                color='white',
-                line=dict(width=1,
-                          color='red'))
-        )
-
-        fig.update_layout(
-            title="Timeline Visualizer",
-            showlegend=True,
-            xaxis_tickformat='f',
-            yaxis=dict(
-                range=[-10, 10],
-                fixedrange=True,
-                showticklabels=False,
-            ),
-            # hovermode='x',
-            shapes=shapes,
-        )
-        fig.update_xaxes(rangeslider_visible=True, title="Timing Visualizer")
-
-        fig.show()
-
-        # exit(0)
-    if '0' in graph_ans_list or '2' in graph_ans_list:
 
         # PLOT THE TIMING DIAGRAM
         # A list of Matplotlib releases and their dates
@@ -2035,10 +2016,9 @@ def graph_it():
 
         trace_list = list(set(list(bufmgr_df.tracecode_dec)))
         if not set(filter_list).issubset(trace_list):
-            print("All required traces {} are not present. Cannot draw the graph".format(filter_list))
+            print("\n**** All required traces {} are not present. Cannot draw the graph".format(filter_list))
             return
-
-        bufmgr_df['buffer'] = bufmgr_df.trace_info.str[-4:]
+        bufmgr_df = bufmgr_df.assign(buffer=bufmgr_df.trace_info.str[-4:])
         bufmgr_df['buffer_dec'] = bufmgr_df.buffer.apply(int, base=16)
         # print(bufmgr_df[['tracecode_dec','buffer']].head(30))
         # print(bufmgr_df.head(10))
@@ -2161,13 +2141,16 @@ if __name__ == "__main__":
         %(prog)s -i 100.70.100.118
 
     Example 3: Setting the debug mask and monitoring a live trace
-        %(prog)s -m 81FF6702BCFB033E60C78F3FFFFFFFFF070000FFFFFFFFFFFFFDFFFFFF -i 100.70.100.118
+        %(prog)s -m 81FF6702BCFB033E60C78F3FFFBFFF01000000FFFFFFFFFFFFFDDFFDDFFFFFFFFF7FFCFFFF -i 100.70.100.118
 
     Example 4: Outputing the decoded file (e.g. for live tracing)
         %(prog)s -i 100.70.100.118 -o decodedTraces.log
 
     Example 5: Monitoring a live trace with mask and save the hex traces and decoded file in csv as well
-        %(prog)s -i 10.70.100.118 -m 81FF6702BCFB033E60C78F3FFFFFFFFF070000FFFFFFFFFFFFFDFFFFFF -t -c
+        %(prog)s -i 10.70.100.118 -m 81FF6702BCFB033E60C78F3FFFBFFF01000000FFFFFFFFFFFFFDDFFDDFFFFFFFFF7FFCFFFF -t -c
+
+    Example 6: Display some graphs using decoded file in csv
+        %(prog)s -f decoded.csv -g
 
     """
 
@@ -2197,7 +2180,7 @@ if __name__ == "__main__":
                           help='path to the local file to decode. The local file should be obtained from hexdump -C option')
     my_parser.add_argument('-g', '--graph',
                            action='store_true',
-                           help='Show Graphs using decoded.csv. Required -c option')
+                           help='Show Graphs using decoded csv file or the hex traces. Limited functionality with live option -i')
     my_group.add_argument('-i', '--ip', metavar="IPv4",
                           type=str,
                           action=Ipv4Action,
@@ -2315,8 +2298,14 @@ if __name__ == "__main__":
 
     # if file mode process and exit
     if args.file:
-        if(args.file.split('.')[-1].strip().lower() != 'csv'):
+        extension = args.file.split('.')[-1].strip().lower()
+        if not os.path.isfile(args.file):
+            print("\n*** Cannot find the file '{}'".format(args.file))
+            exit()
+        if (extension == 'csv'):
+            graph_file = args.file
 
+        else:
             with open(args.file, 'r') as file:
                 hexdump = file.read()
                 # print(hexdump)
@@ -2324,6 +2313,7 @@ if __name__ == "__main__":
             print("")
             print(
                 " - Decoded Traces are saved to {}\{}".format(get_current_path(), args.output))
+
         if args.graph:
             graph_it()
         exit()
