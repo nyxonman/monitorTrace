@@ -1556,6 +1556,7 @@ def graph_it():
                 fixedrange=True,
                 showticklabels=False,
             ),
+            legend=dict(orientation='h',yanchor='top',xanchor='center',y=1,x=0.5)
             # hovermode='x',
             # shapes=shapes,
         )
@@ -1951,7 +1952,7 @@ def graph_it():
         )
 
         fig.update_layout(
-            title="CL Timing Report",
+            title="CL Timing Summary Report",
             showlegend=False,
             yaxis=dict(
                 showticklabels=False
@@ -2064,7 +2065,6 @@ def graph_it():
         # check if there are any leaks
         bufmgr_leak_df = bufmgr_get_df[bufmgr_get_df.isna().any(axis=1)]
         bufmgr_get_unleaked_df = bufmgr_get_df.dropna()
-        print(bufmgr_get_df[bufmgr_get_df.isna().any(axis=1)])
         bufmgr_get_df['leak'] = bufmgr_get_df.apply(lambda x: 1 if np.isnan([x.rel_frt]) else np.nan, axis=1)
 
         # print(bufmgr_leak_df.tail(30))
@@ -2079,6 +2079,9 @@ def graph_it():
         # buff_colors = get_n_colors(len(unique_owners));
 
         fig = go.Figure()
+        fig = make_subplots(rows=2, cols=1,subplot_titles=("Buffer claimed and released Timeline",
+                                            "Buffer claims, releases and leaks stats",),
+                                            )
 
         shapes = list()
         i = 0
@@ -2097,6 +2100,8 @@ def graph_it():
                 # hovertext="FRT start:" + owner_df.frt_dec.astype(str) +"<br> FRT end: " +owner_df.rel_frt.astype(str) +"<br>" + owner_df['info'],
                 textposition="inside",
                 hovertemplate='%{text}',            # hoverinfo="none",
+                row=1,
+                col=1,
                 marker=dict(
                     color=buff_colors[i],
                     opacity=0.7,
@@ -2106,7 +2111,7 @@ def graph_it():
             i = i+1
 
         fig.update_layout(
-            title="Buffer",
+            title="Buffer Management",
             showlegend=True,
             xaxis_tickformat='f',
             yaxis=dict(
@@ -2116,15 +2121,30 @@ def graph_it():
             # hovermode='x',
             # shapes=shapes,
         )
-        fig.show()
+        # fig.show()
 
         # bufmgr_get_df.leak = bufmgr_get_df.leak.replace(0,np.nan)
         buf_summary_df = (bufmgr_get_df.groupby('owner').count()).reset_index()[['owner', 'frt_dec', 'rel_frt', 'leak']]
         buf_summary_df.rename(columns={'frt_dec': 'buf_claim', 'rel_frt': 'buf_release', 'leak': 'buf_leak'}, inplace=True)
-        # fig.add_trace(go.Bar(x=buf_summary_df.owner, y=buf_summary_df[["frt_dec"]]), row=2, col=1)
-        fig = px.bar(buf_summary_df, x="owner", y=["buf_claim", "buf_release", "buf_leak"],
-                     barmode='group',
-                     )
+        # fig = px.bar(buf_summary_df, x="owner", y=["buf_claim", "buf_release", "buf_leak"],
+        #              barmode='group', row=2, col=1
+        #              )
+        fig.add_trace(
+            go.Bar(x=buf_summary_df.owner, y=buf_summary_df["buf_claim"], name="buf_claim",text=buf_summary_df["buf_claim"],
+            textposition='auto',),
+            row=2, col=1
+        )
+        fig.add_trace(
+            go.Bar(x=buf_summary_df.owner, y=buf_summary_df["buf_release"], name="buf_release",text=buf_summary_df["buf_release"],
+            textposition='auto',),
+            row=2, col=1
+        )
+        fig.add_trace(
+            go.Bar(x=buf_summary_df.owner, y=buf_summary_df["buf_leak"], name="buf_leak",text=buf_summary_df["buf_leak"],
+            textposition='auto',),
+            row=2, col=1
+        )
+
         # # print(fig)
         fig.update_layout(barmode='group')
         fig.show()
