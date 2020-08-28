@@ -15,7 +15,7 @@ glob = {
     'QUIT': False,
 }
 
-MIN_A7_VER = (10,0,488)
+MIN_A7_VER = (10, 0, 488)
 
 OS_POSIX = "posix"
 OS_WIN = "nt"
@@ -1514,9 +1514,9 @@ def graph_it():
             y=3.5,
             text="Transmissions",
             font=dict(
-            family="Courier New, monospace",
-            size=16,
-            color="red"
+                family="Courier New, monospace",
+                size=16,
+                color="red"
             ),
             showarrow=False,)
         fig.add_annotation(
@@ -1524,9 +1524,9 @@ def graph_it():
             y=-4,
             text="Receptions",
             font=dict(
-            family="Courier New, monospace",
-            size=16,
-            color="green"
+                family="Courier New, monospace",
+                size=16,
+                color="green"
             ),
             showarrow=False,)
 
@@ -1666,7 +1666,7 @@ def graph_it():
 
         timings_df = timings_df.assign(rxend2txcall=pd.Series(np.nan))
         timings_df.rxend2txcall = timings_df.apply(lambda x: x.dummy_frt-x.frt_val if x.rxend_col == 'rxEnd' and x.dummy == 'beforeTx' and x.cl_id == x.dummy_cl_id else np.nan, axis=1)
-        timings_df.drop(columns=['dummy', 'dummy_frt','dummy_cl_id'], inplace=True)
+        timings_df.drop(columns=['dummy', 'dummy_frt', 'dummy_cl_id'], inplace=True)
         # freq
         rxend2txcall_df = timings_df[['byte', 'rxend2txcall']].groupby('rxend2txcall').agg('count').rename(columns={'byte': 'freq'}).reset_index()
         rxend2txcall_df = rxend2txcall_df.astype({'rxend2txcall': int})
@@ -1708,11 +1708,10 @@ def graph_it():
         # rxcall2rxPHR
         timings_df['dummy_frt'] = timings_df.ts_rxstart.shift(-1)
         timings_df = timings_df.assign(afterRx2rxPHR=pd.Series(np.nan))
-        timings_df.afterRx2rxPHR = timings_df.apply(lambda x: x.dummy_frt - x.frt_dec if x.afterrx_col == 'afterRx' and x.dummy_frt !=np.nan else np.nan, axis =1)
+        timings_df.afterRx2rxPHR = timings_df.apply(lambda x: x.dummy_frt - x.frt_dec if x.afterrx_col == 'afterRx' and x.dummy_frt != np.nan else np.nan, axis=1)
 
         # drop values higher than 3sec
-        timings_df.afterRx2rxPHR = timings_df.apply(lambda x:np.nan if x.afterRx2rxPHR == np.nan or x.afterRx2rxPHR > 3000.0 else x.afterRx2rxPHR,axis=1 )
-
+        timings_df.afterRx2rxPHR = timings_df.apply(lambda x: np.nan if np.isnan([x.afterRx2rxPHR]) or x.afterRx2rxPHR > 3000.0 else x.afterRx2rxPHR, axis=1)
 
         # PLOT THE TIMING DIAGRAM
         # A list of Matplotlib releases and their dates
@@ -1731,7 +1730,7 @@ def graph_it():
             'EndTxTime': "EndTxTime",
             'rxStart_beforeCall': "rxStart\nbeforeCall",
             'rxStart_afterCall': "rxStart\nafterCall",
-            'rxPHR':"rx PHR",
+            'rxPHR': "rx PHR",
             'rxEnd': "rxEnd",
             'WrapperCall2': "WrapperCall",
             'TargetTx2': "TargetTx",
@@ -1761,7 +1760,7 @@ def graph_it():
             'EndTxTime': 'crimson',
             'rxStart_beforeCall': 'LightSeaGreen',
             'rxStart_afterCall': 'LightSeaGreen',
-            'rxPHR':'LightSeaGreen',
+            'rxPHR': 'LightSeaGreen',
             'rxEnd': 'LightSeaGreen',
             'WrapperCall2': 'royalblue',
             'TargetTx2': 'crimson',
@@ -2061,16 +2060,19 @@ def graph_it():
 
         bufmgr_get_df['rel_frt'] = bufmgr_get_df.apply(buf_filter, axis=1)
         bufmgr_get_df['frt_diff'] = (bufmgr_get_df['rel_frt'] - bufmgr_get_df['frt_dec'])
-        bufmgr_get_df['frt_diff'] = bufmgr_get_df['frt_diff'].astype('str')
+        bufmgr_get_df['info'] = "<br><b>"+bufmgr_get_df.owner + "</b></br>" + " 0x" + bufmgr_get_df.buffer + " " + bufmgr_get_df.frt_diff.astype(str) + "us"
+        # check if there are any leaks
+        bufmgr_leak_df = bufmgr_get_df[bufmgr_get_df.isna().any(axis=1)]
+        bufmgr_get_unleaked_df = bufmgr_get_df.dropna()
+        print(bufmgr_get_df[bufmgr_get_df.isna().any(axis=1)])
+        bufmgr_get_df['leak'] = bufmgr_get_df.apply(lambda x: 1 if np.isnan([x.rel_frt]) else np.nan, axis=1)
 
-        bufmgr_get_df['info'] = bufmgr_get_df.owner + " 0x" + bufmgr_get_df.buffer + " " + bufmgr_get_df.frt_diff.astype(str) + "us"
-        # bufmgr_get_df['frt_diff']
-
-        unique_owners = bufmgr_get_df.owner.unique()
+        # print(bufmgr_leak_df.tail(30))
+        unique_owners = bufmgr_get_unleaked_df.owner.unique()
 
         buf_owner_dic = dict()
         for owner in unique_owners:
-            buf_owner_dic[owner] = (bufmgr_get_df[bufmgr_get_df['owner'].str.match(owner)])[['frt_dec', 'owner', 'buffer_dec', 'rel_frt', 'info']]
+            buf_owner_dic[owner] = (bufmgr_get_unleaked_df[bufmgr_get_unleaked_df['owner'].str.match(owner)])[['frt_dec', 'owner', 'buffer_dec', 'rel_frt', 'frt_diff', 'info']]
 
         # print(px.colors.qualitative.Dark24)
         buff_colors = px.colors.qualitative.Dark24
@@ -2084,47 +2086,43 @@ def graph_it():
         # per owner graphing
         for key, owner_df in buf_owner_dic.items():
             # print(key, owner_df)
-
-            # draw a scatter
-            fig.add_scatter(
-                x=owner_df['frt_dec'], y=owner_df['buffer_dec'],
-                mode="markers",
-                hoverinfo='text',
-                hovertext=owner_df['info'],
+            # draw a rectangle
+            fig.add_bar(
+                x=owner_df.frt_dec,
+                y=owner_df.buffer_dec,
+                width=owner_df.frt_diff,
                 name=key,
+                text=owner_df['info'] + "<br>FRT start:" + owner_df.frt_dec.astype(str) + "<br> FRT end: " + owner_df.rel_frt.astype(str),
+                # hoverinfo='text',
+                # hovertext="FRT start:" + owner_df.frt_dec.astype(str) +"<br> FRT end: " +owner_df.rel_frt.astype(str) +"<br>" + owner_df['info'],
+                textposition="inside",
+                hovertemplate='%{text}',            # hoverinfo="none",
                 marker=dict(
                     color=buff_colors[i],
-                    line=dict(width=1,
-                              ))
+                    opacity=0.7,
+                    line=dict(width=0.5,
+                              color=buff_colors[i]))
             )
-
-            # draw a rectangle
-            tuple_val = list(zip(owner_df.frt_dec, owner_df.rel_frt, owner_df.buffer_dec))
-            for get_frt, rel_frt, height in tuple_val:
-                shapes.append({'type': 'rect',
-                               'x0': get_frt,
-                               'y0': 0,
-                               'x1': rel_frt,
-                               'y1': height,
-                               # 'fillcolor':colors_list[i+1],
-                               'fillcolor': buff_colors[i],
-                               'opacity': 0.5
-                               })
-
             i = i+1
 
         fig.update_layout(
             title="Buffer",
             showlegend=True,
+            xaxis_tickformat='f',
+            yaxis=dict(
+                # visible=False,
+                fixedrange=True,
+            ),
             # hovermode='x',
-            shapes=shapes,
+            # shapes=shapes,
         )
         fig.show()
 
-        buf_summary_df = (bufmgr_get_df.groupby('owner').count()).reset_index()[['owner', 'frt_dec', 'rel_frt']]
-        # fig.add_trace(go.bar(buf_summary_df, x="owner", y=["frt_dec","rel_frt"], barmode='group',), row=2, col=1)
+        # bufmgr_get_df.leak = bufmgr_get_df.leak.replace(0,np.nan)
+        buf_summary_df = (bufmgr_get_df.groupby('owner').count()).reset_index()[['owner', 'frt_dec', 'rel_frt', 'leak']]
+        buf_summary_df.rename(columns={'frt_dec': 'buf_claim', 'rel_frt': 'buf_release', 'leak': 'buf_leak'}, inplace=True)
         # fig.add_trace(go.Bar(x=buf_summary_df.owner, y=buf_summary_df[["frt_dec"]]), row=2, col=1)
-        fig = px.bar(buf_summary_df, x="owner", y=["frt_dec", "rel_frt"],
+        fig = px.bar(buf_summary_df, x="owner", y=["buf_claim", "buf_release", "buf_leak"],
                      barmode='group',
                      )
         # # print(fig)
@@ -2357,9 +2355,9 @@ if __name__ == "__main__":
     print('')
     print(outputVer)
     a7_ver_list = outputVer.split('\n')[2:5]
-    a7_major = int(a7_ver_list[0].split(':',2)[1],10)
-    a7_minor = int(a7_ver_list[1].split(':',2)[1],10)
-    a7_build = int(a7_ver_list[2].split(':',2)[1],10)
+    a7_major = int(a7_ver_list[0].split(':', 2)[1], 10)
+    a7_minor = int(a7_ver_list[1].split(':', 2)[1], 10)
+    a7_build = int(a7_ver_list[2].split(':', 2)[1], 10)
     a7_ver = (a7_major, a7_minor, a7_build)
     if(a7_ver < MIN_A7_VER):
         print("\n\n*** The node Version A7 {} is not compatible. Minimum Required {}".format(a7_ver, MIN_A7_VER))
