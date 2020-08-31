@@ -15,7 +15,7 @@ glob = {
     'QUIT': False,
 }
 
-MIN_A7_VER = (10, 0, 488)
+MIN_A7_VER = (10, 0, 519)
 
 OS_POSIX = "posix"
 OS_WIN = "nt"
@@ -1241,6 +1241,9 @@ def graph_it():
     csv_df = csv_df.assign(cl_id=pd.Series(np.nan))
 
     csv_df['cl_id'] = csv_df["trace_info"].apply(lambda x: x.split()[4] if "CL_OUT_CNF" in x or "CL_START" in x else np.nan)
+    csv_df['cl_mac'] = csv_df.apply(lambda x: x.trace_info.split('>', 2)[1].strip() if x.tracecode_dec == 147 else np.nan, axis=1)
+    csv_df['txrx_param'] = csv_df.apply(lambda x: x.trace_info.split(')', 2)[1].strip() if x.tracecode_dec == 140 or x.tracecode_dec == 141 else np.nan, axis=1)
+
     # csv_df['cl_id'].ffill()
     # csv_df = csv_df.replace("", np.nan).ffill()
 
@@ -1423,22 +1426,30 @@ def graph_it():
         }
         # rx
         timeline_rx_df = pd.DataFrame()
-        timeline_rx_df = timings_df[['byte', 'owner', 'nextcli', 'cl_id', 'ts_rxstart', 'ts_rxend']]
+        timeline_rx_df = timings_df[['byte', 'owner', 'nextcli', 'cl_id', 'cl_mac', 'txrx_param', 'ts_rxstart', 'ts_rxend']]
         timeline_rx_df = timeline_rx_df.assign(ts_rxend=timeline_rx_df.ts_rxend.shift(-1))
         timeline_rx_df.dropna(subset=['ts_rxstart', 'ts_rxend'], inplace=True)
         timeline_rx_df['rx_dur'] = timeline_rx_df.ts_rxend - timeline_rx_df.ts_rxstart
         timeline_rx_df['color'] = timeline_rx_df.owner.apply(lambda x: timeline_color[x])
-        timeline_rx_df['hoverinfo'] = "~~~ " + timeline_rx_df.owner + " ~~~<br>" + "<b>CL ID </b>" + timeline_rx_df.cl_id.astype(str) + ", <b>dur</b> " + timeline_rx_df.rx_dur.astype(
-            int).astype(str) + "usec"+"<br><b>Start:</b>"+timeline_rx_df.ts_rxstart.astype(str)+"<br><b>End:</b>" + timeline_rx_df.ts_rxend.astype(str) + "<br>" + timeline_rx_df.nextcli
+        timeline_rx_df['hoverinfo'] = "~~~ " + timeline_rx_df.owner + " ~~~<br>" + \
+            "<b>CL ID </b>" + timeline_rx_df.cl_id.astype(str) + ", <b>dur</b> " + timeline_rx_df.rx_dur.astype(int).astype(str) + "usec"+ \
+            "<br>" + timeline_rx_df.cl_mac + "<br>" + \
+            timeline_rx_df.txrx_param + "<br>" + \
+            timeline_rx_df.nextcli+ "<br>" + \
+            "<br><b>Start:</b>"+timeline_rx_df.ts_rxstart.astype(str)+"<br><b>End:</b>" + timeline_rx_df.ts_rxend.astype(str)
 
         # tx
-        timeline_tx_df = timings_df[['byte', 'owner', 'nextcli', 'cl_id', 'ts_txstart', 'ts_txend']]
+        timeline_tx_df = timings_df[['byte', 'owner', 'nextcli', 'cl_id', 'cl_mac', 'txrx_param', 'ts_txstart', 'ts_txend']]
         timeline_tx_df = timeline_tx_df.assign(ts_txend=timeline_tx_df.ts_txend.shift(-1))
         timeline_tx_df.dropna(subset=['ts_txstart', 'ts_txend'], inplace=True)
         timeline_tx_df['tx_dur'] = timeline_tx_df.ts_txend - timeline_tx_df.ts_txstart
         timeline_tx_df['color'] = timeline_tx_df.owner.apply(lambda x: timeline_color[x])
-        timeline_tx_df['hoverinfo'] = "~~~ " + timeline_tx_df.owner + " ~~~<br>" + "<b>CL ID </b>" + timeline_tx_df.cl_id.astype(str) + ", <b>dur</b> " + timeline_tx_df.tx_dur.astype(
-            int).astype(str) + "usec"+"<br><b>Start:</b>"+timeline_tx_df.ts_txstart.astype(str)+"<br><b>End:</b>" + timeline_tx_df.ts_txend.astype(str) + "<br>" + timeline_tx_df.nextcli
+        timeline_tx_df['hoverinfo'] = "~~~ " + timeline_tx_df.owner + " ~~~<br>" + \
+            "<b>CL ID </b>" + timeline_tx_df.cl_id.astype(str) + ", <b>dur</b> " + timeline_tx_df.tx_dur.astype(int).astype(str) + "usec"+ \
+            "<br>" + timeline_tx_df.cl_mac + "<br>" + \
+             timeline_tx_df.txrx_param + "<br>" + \
+            timeline_tx_df.nextcli + "<br>" + \
+            "<br><b>Start:</b>"+timeline_tx_df.ts_txstart.astype(str)+"<br><b>End:</b>" + timeline_tx_df.ts_txend.astype(str)
 
         timeline_tx_df = timeline_tx_df[timeline_tx_df.tx_dur <= 500000]
 
@@ -1556,7 +1567,7 @@ def graph_it():
                 fixedrange=True,
                 showticklabels=False,
             ),
-            legend=dict(orientation='h',yanchor='top',xanchor='center',y=1,x=0.5)
+            legend=dict(orientation='h', yanchor='top', xanchor='center', y=1, x=0.5)
             # hovermode='x',
             # shapes=shapes,
         )
@@ -2079,9 +2090,9 @@ def graph_it():
         # buff_colors = get_n_colors(len(unique_owners));
 
         fig = go.Figure()
-        fig = make_subplots(rows=2, cols=1,subplot_titles=("Buffer claimed and released Timeline",
-                                            "Buffer claims, releases and leaks stats",),
-                                            )
+        fig = make_subplots(rows=2, cols=1, subplot_titles=("Buffer claimed and released Timeline",
+                                                            "Buffer claims, releases and leaks stats",),
+                            )
 
         shapes = list()
         i = 0
@@ -2130,18 +2141,18 @@ def graph_it():
         #              barmode='group', row=2, col=1
         #              )
         fig.add_trace(
-            go.Bar(x=buf_summary_df.owner, y=buf_summary_df["buf_claim"], name="buf_claim",text=buf_summary_df["buf_claim"],
-            textposition='auto',),
+            go.Bar(x=buf_summary_df.owner, y=buf_summary_df["buf_claim"], name="buf_claim", text=buf_summary_df["buf_claim"],
+                   textposition='auto',),
             row=2, col=1
         )
         fig.add_trace(
-            go.Bar(x=buf_summary_df.owner, y=buf_summary_df["buf_release"], name="buf_release",text=buf_summary_df["buf_release"],
-            textposition='auto',),
+            go.Bar(x=buf_summary_df.owner, y=buf_summary_df["buf_release"], name="buf_release", text=buf_summary_df["buf_release"],
+                   textposition='auto',),
             row=2, col=1
         )
         fig.add_trace(
-            go.Bar(x=buf_summary_df.owner, y=buf_summary_df["buf_leak"], name="buf_leak",text=buf_summary_df["buf_leak"],
-            textposition='auto',),
+            go.Bar(x=buf_summary_df.owner, y=buf_summary_df["buf_leak"], name="buf_leak", text=buf_summary_df["buf_leak"],
+                   textposition='auto',),
             row=2, col=1
         )
 
