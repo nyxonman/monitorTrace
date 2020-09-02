@@ -19,7 +19,7 @@ MIN_A7_VER = (10, 0, 519)
 
 OS_POSIX = "posix"
 OS_WIN = "nt"
-__VERSION__ = "2.0"
+__VERSION__ = "2.1"
 APP_VERSION = __VERSION__ + " {OS: " + os.name + "}"
 OUTPUT_FILE_NAME = "lastdecodedTraces"
 OUTPUT_FILE_EXT = ".log"
@@ -1198,6 +1198,10 @@ def get_colors(n):
 
 
 # x, y, c, s = rand(4, 100)
+def show_required_traces(trace_list):
+    print(trace_list)
+    for trace in trace_list:
+        print(trace, " => ", tracing_events_num_str[trace])
 
 
 def graph_it():
@@ -1251,8 +1255,12 @@ def graph_it():
 
     # add owner id
     csv_df = csv_df.assign(owner=pd.Series(np.nan))
-    csv_df['owner'] = csv_df.apply(lambda x: x.trace_info.split('LMSM_')[1].split('(', 2)[0] if x.tracecode_dec == 68 else "", axis=1)
-    csv_df = csv_df.replace("", np.nan).ffill()
+    csv_df['owner'] = csv_df.apply(lambda x: x.trace_info.split('LMSM_')[1].split('(', 2)[0] if x.tracecode_dec == 68 else np.nan, axis=1)
+    csv_df = csv_df.ffill()
+
+    csv_df['tx_seq_ctrl'] = csv_df.apply(lambda x: x.trace_info.split('SeqNum')[1].strip() if x.tracecode_dec == 144 and "TX" in x.trace_info.upper() else np.nan, axis=1)
+    csv_df['rx_seq_ctrl'] = csv_df.apply(lambda x: x.trace_info.split('SeqNum')[1].strip() if x.tracecode_dec == 144 and "RX" in x.trace_info.upper() else np.nan, axis=1)
+    csv_df = csv_df.bfill()
 
     # FRT_trace_val
     csv_df['frt32_val'] = csv_df.apply(lambda x: (x.trace_info[-8:]) if x.tracecode_dec in [6, 121, 122, 123, 124, 129, 130] else np.nan, axis=1)
@@ -1293,6 +1301,7 @@ def graph_it():
         trace_list = list(set(list(fast_link_df.tracecode_dec)))
         if sorted(trace_list) != sorted(filter_list):
             print("\n**** All required traces {} are not present {}. Cannot draw the graph".format(filter_list, trace_list))
+            show_required_traces(filter_list)
             return
 
         if not fast_link_df.empty:
@@ -1360,6 +1369,7 @@ def graph_it():
         trace_list = list(set(list(timings_df.tracecode_dec)))
         if not set(filter_list).issubset(trace_list):
             print("\n**** All required traces {} are not present. {}  Cannot draw the graph".format(filter_list, trace_list))
+            show_required_traces(filter_list)
             return
 
         # nextCLI
@@ -1415,42 +1425,56 @@ def graph_it():
 
             "TOP": colors_list[0],
             "IDLE": colors_list[1],
-            "FH": 'orange',
-            "RXB": 'blue',
+            "FH": 'coral',
+            "RXB": 'cornflowerblue',
             "TXB": 'green',
-            "CL": 'red',
+            "CL": 'crimson',
             "BCAST": 'purple',
             "SA": colors_list[7],
             "LLS": colors_list[8],
             "ELG": colors_list[9],
         }
+
+        def hoverinfo(x, type):
+
+            if type == "rx":
+                seqinfo = str(x.rx_seq_ctrl)
+                ts_start = str(x.ts_rxstart)
+                ts_end = str(x.ts_rxend)
+                dur = str(x.rx_dur/1000).strip()
+            else:
+                seqinfo = str(x.tx_seq_ctrl)
+                ts_start = str(x.ts_txstart)
+                ts_end = str(x.ts_txend)
+                dur = str(x.tx_dur/1000).strip()
+
+            ret = ""
+            ret = "~~~( " + x.owner + " )~~~<br>"
+            if(x.owner == "CL"):
+                ret = ret + "<b>CLId </b>" + str(x.cl_id) + ", " + x.cl_mac + "<br>" + \
+                    x.txrx_param + "<br>" + \
+                    "<b>seqctrl:</b> " + seqinfo + "<br>"
+            if(x.owner == 'CL' or x.owner == 'FH'):
+                ret = ret + str(x.nextcli) + "<br>"
+            ret = ret + "<br><b>Start:</b>" + ts_start + "<br><b>End:</b>" + ts_end + "<br><b>dur: </b>" + dur + " msec"
+            return ret
+
         # rx
         timeline_rx_df = pd.DataFrame()
-        timeline_rx_df = timings_df[['byte', 'owner', 'nextcli', 'cl_id', 'cl_mac', 'txrx_param', 'ts_rxstart', 'ts_rxend']]
+        timeline_rx_df = timings_df[['byte', 'owner', 'nextcli', 'cl_id', 'cl_mac', 'rx_seq_ctrl', 'txrx_param', 'ts_rxstart', 'ts_rxend']]
         timeline_rx_df = timeline_rx_df.assign(ts_rxend=timeline_rx_df.ts_rxend.shift(-1))
         timeline_rx_df.dropna(subset=['ts_rxstart', 'ts_rxend'], inplace=True)
         timeline_rx_df['rx_dur'] = timeline_rx_df.ts_rxend - timeline_rx_df.ts_rxstart
         timeline_rx_df['color'] = timeline_rx_df.owner.apply(lambda x: timeline_color[x])
-        timeline_rx_df['hoverinfo'] = "~~~ " + timeline_rx_df.owner + " ~~~<br>" + \
-            "<b>CL ID </b>" + timeline_rx_df.cl_id.astype(str) + ", <b>dur</b> " + timeline_rx_df.rx_dur.astype(int).astype(str) + "usec"+ \
-            "<br>" + timeline_rx_df.cl_mac + "<br>" + \
-            timeline_rx_df.txrx_param + "<br>" + \
-            timeline_rx_df.nextcli+ "<br>" + \
-            "<br><b>Start:</b>"+timeline_rx_df.ts_rxstart.astype(str)+"<br><b>End:</b>" + timeline_rx_df.ts_rxend.astype(str)
+        timeline_rx_df['hoverinfo'] = timeline_rx_df.apply(lambda x: hoverinfo(x, "rx"), axis=1)
 
         # tx
-        timeline_tx_df = timings_df[['byte', 'owner', 'nextcli', 'cl_id', 'cl_mac', 'txrx_param', 'ts_txstart', 'ts_txend']]
+        timeline_tx_df = timings_df[['byte', 'owner', 'nextcli', 'cl_id', 'cl_mac', 'tx_seq_ctrl', 'txrx_param', 'ts_txstart', 'ts_txend']]
         timeline_tx_df = timeline_tx_df.assign(ts_txend=timeline_tx_df.ts_txend.shift(-1))
         timeline_tx_df.dropna(subset=['ts_txstart', 'ts_txend'], inplace=True)
         timeline_tx_df['tx_dur'] = timeline_tx_df.ts_txend - timeline_tx_df.ts_txstart
         timeline_tx_df['color'] = timeline_tx_df.owner.apply(lambda x: timeline_color[x])
-        timeline_tx_df['hoverinfo'] = "~~~ " + timeline_tx_df.owner + " ~~~<br>" + \
-            "<b>CL ID </b>" + timeline_tx_df.cl_id.astype(str) + ", <b>dur</b> " + timeline_tx_df.tx_dur.astype(int).astype(str) + "usec"+ \
-            "<br>" + timeline_tx_df.cl_mac + "<br>" + \
-             timeline_tx_df.txrx_param + "<br>" + \
-            timeline_tx_df.nextcli + "<br>" + \
-            "<br><b>Start:</b>"+timeline_tx_df.ts_txstart.astype(str)+"<br><b>End:</b>" + timeline_tx_df.ts_txend.astype(str)
-
+        timeline_tx_df['hoverinfo'] = timeline_tx_df.apply(lambda x: hoverinfo(x, "tx"), axis=1)
         timeline_tx_df = timeline_tx_df[timeline_tx_df.tx_dur <= 500000]
 
         # PHY INDICATIONS and CALLs
@@ -2047,6 +2071,7 @@ def graph_it():
         trace_list = list(set(list(bufmgr_df.tracecode_dec)))
         if not set(filter_list).issubset(trace_list):
             print("\n**** All required traces {} are not present. Cannot draw the graph".format(filter_list))
+            show_required_traces(filter_list)
             return
         bufmgr_df = bufmgr_df.assign(buffer=bufmgr_df.trace_info.str[-4:])
         bufmgr_df['buffer_dec'] = bufmgr_df.buffer.apply(int, base=16)
@@ -2173,6 +2198,7 @@ if __name__ == "__main__":
     graph_ans_list = []
     REACHABLE = False
     glob["QUIT"] = False
+    lastseqinfo = ""
 
     # verify we have python atleast 3.x+
     assert sys.version_info >= (3, 0), "Requires Python 3.x+. Current Version is {}".format(sys.version.split(" ", 2)[0])
