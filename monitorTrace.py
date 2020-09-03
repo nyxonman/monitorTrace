@@ -607,6 +607,71 @@ prim_code_str = {
 
 }
 
+mode_str = {
+    0: "ILLEGAL",
+    1: "100KBPS_MSK",
+    2: "150KBPS_MSK",
+    3: "150KBPS_GMSK",
+    4: "200KBPS_GMSK",
+    5: "300KBPS_GMSK",
+    6: "DEPRECATED1",
+    7: "100KBPS_GMSK",
+    8: "4G_50KBPS_2FSK_M1",
+    9: "4G_100KBPS_MSK",
+    10: "4G_150KBPS_GMSK",
+    11: "4G_200KBPS_GMSK",
+    12: "4G_50KBPS_2FSK_M1_FEC",
+    13: "4G_100KBPS_MSK_FEC",
+    14: "4G_150KBPS_GMSK_FEC",
+    15: "4G_200KBPS_GMSK_FEC",
+    16: "4G_100KBPS_2FSK_M1",
+    17: "4G_100KBPS_2FSK_M1_FEC",
+    18: "250KBPS_GMSK",
+    19: "500KBPS_GMSK",
+    20: "DEPRECATED2",
+    21: "4G_200KBPS_MSK_M1",
+    22: "4G_300KBPS_GMSK",
+    23: "4G_200KBPS_MSK_M1_FEC",
+    24: "4G_300KBPS_GMSK_FEC",
+    25: "4G_50KBPS_OFDM4",
+    26: "4G_100KBPS_OFDM4",
+    27: "4G_150KBPS_OFDM4",
+    28: "4G_200KBPS_OFDM4",
+    29: "4G_300KBPS_OFDM4",
+    30: "4G_50KBPS_OFDM3",
+    31: "4G_100KBPS_OFDM3",
+    32: "4G_200KBPS_OFDM3",
+    33: "4G_300KBPS_OFDM3",
+    34: "4G_400KBPS_OFDM3",
+    35: "4G_600KBPS_OFDM3",
+    36: "4G_50KBPS_OFDM2",
+    37: "4G_100KBPS_OFDM2",
+    38: "4G_200KBPS_OFDM2",
+    39: "4G_400KBPS_OFDM2",
+    40: "4G_600KBPS_OFDM2",
+    41: "4G_800KBPS_OFDM2",
+    42: "4G_1200KBPS_OFDM2",
+    43: "4G_100KBPS_OFDM1",
+    44: "4G_200KBPS_OFDM1",
+    45: "4G_400KBPS_OFDM1",
+    46: "4G_800KBPS_OFDM1",
+    47: "4G_1200KBPS_OFDM1",
+    48: "4G_1600KBPS_OFDM1",
+    49: "4G_2400KBPS_OFDM1",
+    50: "4G_6250BPS_OQPSK100",
+    51: "4G_12500BPS_OQPSK100",
+    52: "4G_25KBPS_OQPSK100",
+    53: "4G_50KBPS_OQPSK100",
+    54: "HAN_250KBPS_OQPSK2000",
+    55: "300KBPS_GMSK_800",
+    56: "50KBPS_GFSK",
+    57: "100KBPS_GFSK",
+    58: "4G_50KBPS_GFSK",
+    59: "4G_25KBPS_OQPSK200",
+    60: "4G_50KBPS_OQPSK200",
+    61: "4G_100KBPS_OQPSK200",
+}
+
 colors_list = [
     "#000000", "#FFFF00", "#1CE6FF", "#FF34FF", "#FF4A46", "#008941", "#006FA6", "#A30059",
     "#FFDBE5", "#7A4900", "#0000A6", "#63FFAC", "#B79762", "#004D43", "#8FB0FF", "#997D87",
@@ -1275,9 +1340,9 @@ def graph_it():
     csv_df = csv_df[csv_df.dup == 0]
     csv_df.drop(columns=['frt32_val', 'dummy', 'dummy_frt', 'dup'], inplace=True)
 
-    stat_total = csv_df.groupby('tracecode_dec').count().reset_index().astype({"tracecode_dec": int})
-    stat_total = stat_total[['tracecode_dec', 'byte']]
-    stat_total = stat_total.merge(traceCodeMap_df, how='inner', on="tracecode_dec").sort_values(by=['tracecode_dec']).reset_index()
+    # stat_total = csv_df.groupby('tracecode_dec').count().reset_index().astype({"tracecode_dec": int})
+    # stat_total = stat_total[['tracecode_dec', 'byte']]
+    # stat_total = stat_total.merge(traceCodeMap_df, how='inner', on="tracecode_dec").sort_values(by=['tracecode_dec']).reset_index()
 
     cl_csv_df = csv_df.loc[(csv_df['tracecode_dec'] > 120) & (csv_df['tracecode_dec'] <= 151) | (csv_df.tracecode_dec <= 6)]
     cl_csv_df = cl_csv_df.drop(columns=['tracecode_hex'])
@@ -1421,15 +1486,28 @@ def graph_it():
         timings_df['ts_txend'] = timings_df.apply(lambda x: x.frt_val if x.tracecode_dec == tracing_events_str_num['FRT32_TX_END'] else np.nan, axis=1)
 
     if '0' in graph_ans_list or '3' in graph_ans_list:
-        timeline_color = {
+        timeline_tx_color = {
 
             "TOP": colors_list[0],
             "IDLE": colors_list[1],
-            "FH": 'coral',
-            "RXB": 'cornflowerblue',
-            "TXB": 'green',
-            "CL": 'crimson',
-            "BCAST": 'purple',
+            "FH": 'cornflowerblue',
+            "RXB": 'RoyalBlue',
+            "TXB": 'crimson',
+            "CL": 'darksalmon',
+            "BCAST": 'Violet',
+            "SA": colors_list[7],
+            "LLS": colors_list[8],
+            "ELG": colors_list[9],
+        }
+        timeline_rx_color = {
+
+            "TOP": colors_list[0],
+            "IDLE": colors_list[1],
+            "FH": 'LightSeaGreen',
+            "RXB": 'RoyalBlue',
+            "TXB": 'crimson',
+            "CL": 'darkseagreen',
+            "BCAST": 'Violet',
             "SA": colors_list[7],
             "LLS": colors_list[8],
             "ELG": colors_list[9],
@@ -1465,7 +1543,7 @@ def graph_it():
         timeline_rx_df = timeline_rx_df.assign(ts_rxend=timeline_rx_df.ts_rxend.shift(-1))
         timeline_rx_df.dropna(subset=['ts_rxstart', 'ts_rxend'], inplace=True)
         timeline_rx_df['rx_dur'] = timeline_rx_df.ts_rxend - timeline_rx_df.ts_rxstart
-        timeline_rx_df['color'] = timeline_rx_df.owner.apply(lambda x: timeline_color[x])
+        timeline_rx_df['color'] = timeline_rx_df.owner.apply(lambda x: timeline_rx_color[x])
         timeline_rx_df['hoverinfo'] = timeline_rx_df.apply(lambda x: hoverinfo(x, "rx"), axis=1)
 
         # tx
@@ -1473,7 +1551,7 @@ def graph_it():
         timeline_tx_df = timeline_tx_df.assign(ts_txend=timeline_tx_df.ts_txend.shift(-1))
         timeline_tx_df.dropna(subset=['ts_txstart', 'ts_txend'], inplace=True)
         timeline_tx_df['tx_dur'] = timeline_tx_df.ts_txend - timeline_tx_df.ts_txstart
-        timeline_tx_df['color'] = timeline_tx_df.owner.apply(lambda x: timeline_color[x])
+        timeline_tx_df['color'] = timeline_tx_df.owner.apply(lambda x: timeline_tx_color[x])
         timeline_tx_df['hoverinfo'] = timeline_tx_df.apply(lambda x: hoverinfo(x, "tx"), axis=1)
         timeline_tx_df = timeline_tx_df[timeline_tx_df.tx_dur <= 500000]
 
@@ -1483,12 +1561,15 @@ def graph_it():
         timeline_phycallind_df = cl_csv_df[cl_csv_df.tracecode_dec.isin(filter_list)]
         timeline_phycallind_df = timeline_phycallind_df.assign(y1=pd.Series(np.nan))
 
-        y0 = 0
-        y1 = 3
-        timeline_phycallind_df['y1'] = timeline_phycallind_df.tracecode_dec.apply(lambda x: -y1 if x in [1, 2, 3, 4, 141] else y1)
-        timeline_phycallind_df['y0'] = timeline_phycallind_df.tracecode_dec.apply(lambda x: -y0 if x in [1, 2, 3, 4, 141] else y0)
         timeline_phycallind_df['color'] = timeline_phycallind_df.tracecode_dec.apply(lambda x: colors_list[x])
         timeline_phycallind_df.drop(columns=['frt_hex'], inplace=True)
+
+        # CL Traces
+        filter_list = [131, 132, 133, 134, 135, 136, 137, 138, 139, 142, 143, 144, 145, 146, 147, 150]
+        timeline_cl_df = pd.DataFrame()
+        timeline_cl_df = cl_csv_df[cl_csv_df.tracecode_dec.isin(filter_list)]
+        timeline_cl_df = timeline_cl_df.assign(color=pd.Series(np.nan))
+        timeline_cl_df['color'] = timeline_cl_df.tracecode_dec.apply(lambda x: colors_list[x+64])
 
         fig = go.Figure()
 
@@ -1505,9 +1586,10 @@ def graph_it():
             # offset=-timeline_tx_df.tx_dur/2,
             # hoverinfo="none",
             marker=dict(
-                color='darksalmon',
+                # color='darksalmon',
+                color=timeline_tx_df['color'],
                 opacity=1,
-                line=dict(width=0.5,
+                line=dict(width=1,
                           color=timeline_tx_df['color']))
         )
 
@@ -1521,8 +1603,9 @@ def graph_it():
             textposition="inside",
             hovertemplate='%{text}',            # hoverinfo="none",
             marker=dict(
-                color='darkseagreen',
-                line=dict(width=0.5,
+                # color='darkseagreen',
+                color=timeline_rx_df['color'],
+                line=dict(width=1,
                           color=timeline_rx_df['color']))
         )
 
@@ -1530,7 +1613,7 @@ def graph_it():
 
         fig.add_scatter(
             x=timeline_phycallind_df.frt_dec,
-            y=timeline_phycallind_df.y0,
+            y=[0]*len(timeline_phycallind_df.index),
             mode="markers",
             name="Internal Controls/Indications",
             text="<b>CL_ID:</b> " + timeline_phycallind_df.cl_id + "<br>" + timeline_phycallind_df.trace_info,
@@ -1541,6 +1624,22 @@ def graph_it():
                 color='white',
                 line=dict(width=1,
                           color=timeline_phycallind_df.color))
+        )
+
+        # add CL traces
+        fig.add_scatter(
+            x=timeline_cl_df.frt_dec,
+            y=[0]*len(timeline_cl_df.index),
+            mode="markers",
+            name="CL Traces",
+            text="<b>CL_ID:</b> " + timeline_cl_df.cl_id + "<br>" + timeline_cl_df.trace_info,
+            hovertemplate="<b>FRT:</b>%{x}<br>%{text}",
+            visible="legendonly",
+            # hoverinfo="none",
+            marker=dict(
+                color='white',
+                line=dict(width=1,
+                          color=timeline_cl_df.color))
         )
 
         # add annotations for tx and rx
@@ -2187,6 +2286,40 @@ def graph_it():
 
         # count of buffers get and released
 
+    # mode stats
+    if '0' in graph_ans_list or '5' in graph_ans_list:
+
+        mode_df = pd.DataFrame()
+        filter_list = [140, 141]
+        mode_df = csv_df[csv_df.tracecode_dec.isin(filter_list)][['byte', 'txrx_param', 'tracecode_dec']]
+        trace_list = list(set(list(mode_df.tracecode_dec)))
+        if not set(filter_list).issubset(trace_list):
+            print("\n**** All required traces {} are not present. Cannot draw the graph".format(filter_list))
+            show_required_traces(filter_list)
+            return
+        mode_df[['del1', 'mode', 'del2', 'chan']] = mode_df.txrx_param.str.split(expand=True)
+        mode_df.drop(columns=['del1', 'del2', 'txrx_param'], inplace=True)
+        mode_df['mode'] = mode_df['mode'].apply(lambda x: mode_str[int(x, 10)])
+
+        mode_tx_df = mode_df[mode_df.tracecode_dec == 140]
+        mode_rx_df = mode_df[mode_df.tracecode_dec == 141]
+        modestats_tx_df = mode_tx_df[['byte', 'mode']].groupby(['mode']).agg('count').rename(columns={'byte': 'count'}).reset_index()
+        modestats_rx_df = mode_rx_df[['byte', 'mode']].groupby(['mode']).agg('count').rename(columns={'byte': 'count'}).reset_index()
+
+        fig = go.Figure()
+
+        fig.add_bar(x=modestats_tx_df['mode'], y=modestats_tx_df['count'], name="TX", opacity=0.7, textposition="inside", text=modestats_tx_df['count'])
+        fig.add_bar(x=modestats_rx_df['mode'], y=modestats_rx_df['count'], name="RX", opacity=0.7, textposition="inside", text=modestats_rx_df['count'])
+
+        fig.update_layout(
+            title="Mode Usage",
+            xaxis_title="Mode",
+            yaxis_title="Count",
+            xaxis={"type": "category"},
+
+        )
+        fig.show()
+
 
 cl_id = 0
 
@@ -2361,6 +2494,7 @@ if __name__ == "__main__":
             2: "CL Timings",
             3: "Timeline Visualizer",
             4: "Buffer Get/Release",
+            5: "Mode Stats",
         }
 
         for key, val in graph_dic.items():
