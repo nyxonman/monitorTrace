@@ -1614,7 +1614,7 @@ def graph_cl_timings():
         x1=stop, y1=0,
         line=dict(
             color="grey",
-            width=1,
+            width=2,
         ),
     )
 
@@ -1883,16 +1883,15 @@ def graph_timeline_visualiser():
     timeline_cl_df = timeline_cl_df.assign(color=pd.Series(np.nan))
     timeline_cl_df['color'] = timeline_cl_df.tracecode_dec.apply(lambda x: colors_list[x+64])
 
-    #CL start END
-    filter_list = [131,132]
-    timeline_cl_start_df = cl_csv_df[cl_csv_df.tracecode_dec==131][['byte','frt_dec', 'cl_id']].rename(columns={'frt_dec':'clstart'})
-    timeline_cl_end_df = cl_csv_df[cl_csv_df.tracecode_dec==132][['byte','frt_dec', 'cl_id']].rename(columns={'frt_dec':'clend'})
+    # CL start END
+    filter_list = [131, 132]
+    timeline_cl_start_df = cl_csv_df[cl_csv_df.tracecode_dec == 131][['byte', 'frt_dec', 'cl_id']].rename(columns={'frt_dec': 'clstart'})
+    timeline_cl_end_df = cl_csv_df[cl_csv_df.tracecode_dec == 132][['byte', 'frt_dec', 'cl_id']].rename(columns={'frt_dec': 'clend'})
 
     timeline_cl_startend_df = timeline_cl_start_df.merge(timeline_cl_end_df, on='cl_id', how='left')
     timeline_cl_startend_df['cldiff'] = timeline_cl_startend_df.clend - timeline_cl_startend_df.clstart
     timeline_cl_startend_df = timeline_cl_startend_df.dropna()
     timeline_cl_startend_df['hoverinfo'] = "CL " + timeline_cl_startend_df.cl_id.astype(str) + ", " + (timeline_cl_startend_df.cldiff/1000).astype(int).astype(str) + "msec"
-
 
     print("Done...Graphing...", flush=True, end='')
 
