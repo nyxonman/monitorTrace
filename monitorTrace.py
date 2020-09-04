@@ -19,7 +19,7 @@ MIN_A7_VER = (10, 0, 519)
 
 OS_POSIX = "posix"
 OS_WIN = "nt"
-__VERSION__ = "2.1"
+__VERSION__ = "2.2"
 APP_VERSION = __VERSION__ + " {OS: " + os.name + "}"
 OUTPUT_FILE_NAME = "lastdecodedTraces"
 OUTPUT_FILE_EXT = ".log"
@@ -1269,6 +1269,925 @@ def show_required_traces(trace_list):
         print(trace, " => ", tracing_events_num_str[trace])
 
 
+def graph_fastlink():
+    filter_list = [149, 148]
+
+    fast_link_df = cl_csv_df[(cl_csv_df.tracecode_dec.isin(filter_list))][['byte', 'frt_dec', 'tracecode_dec', 'sts', 'cl_id']]
+    trace_list = list(set(list(fast_link_df.tracecode_dec)))
+    if sorted(trace_list) != sorted(filter_list):
+        print("\n**** All required traces {} are not present {}. Cannot draw the graph".format(filter_list, trace_list))
+        show_required_traces(filter_list)
+        return
+
+    if not fast_link_df.empty:
+        fast_link_df['A_dif'] = fast_link_df['frt_dec'].diff()
+        fast_link_df['shifted_frt'] = fast_link_df['frt_dec'].shift()
+        fast_link_df['prev_trace'] = fast_link_df['tracecode_dec'].shift()
+        fast_link_df['diff'] = fast_link_df.apply(lambda x: np.NaN if (x['tracecode_dec'] == x['prev_trace'] or x['tracecode_dec'] == 148) else x['A_dif'], axis=1)
+        fast_link_df.drop(columns=['A_dif', 'shifted_frt', 'prev_trace'], inplace=True)
+
+        # obtain rtt_df
+        rtt_df = fast_link_df[['byte', 'diff']].dropna()
+        rtt_df = rtt_df.groupby('diff').agg(
+            'count').rename(columns={'byte': 'freq'})
+
+        # PDF
+        rtt_df['pdf'] = rtt_df['freq'] / sum(rtt_df['freq'])
+        # CDF
+        rtt_df['cdf'] = rtt_df['pdf'].cumsum()
+        rtt_df = rtt_df.reset_index()
+        rtt_df = rtt_df.astype({'diff': int})
+        print("Done...graphing...", flush=True, end='')
+
+        # Create figure with secondary y-axisspecs
+        if(graphs['rtt'] == {}):
+            graphs['rtt'] = make_subplots(specs=[[{"secondary_y": True}]])
+
+            # Add traces
+            graphs['rtt'].add_bar(x=rtt_df['diff'], y=rtt_df['freq'], name="Count", opacity=0.5)
+            graphs['rtt'].add_scatter(x=rtt_df['diff'], y=rtt_df['pdf'], name="PDF", secondary_y=True)
+            graphs['rtt'].add_scatter(x=rtt_df['diff'], y=rtt_df['cdf'], name="CDF", secondary_y=True)
+            # graphs['rtt'].add_trace(go.Bar(x=rtt_df['diff'], y=rtt_df['freq'], name="Count", opacity=0.5,
+            #                      ), secondary_y=True)
+            # graphs['rtt'].add_trace(go.Scatter(x=rtt_df['diff'], y=rtt_df['pdf'], name="PDF"))
+            # graphs['rtt'].add_trace(go.Scatter(x=rtt_df['diff'], y=rtt_df['cdf'], name='CDF'))
+            graphs['rtt'].update_layout(
+                # template="plotly_dark",
+                title="Round Trip time in usec",
+                xaxis_title="RTT (usecs)",
+                yaxis_title="Count",
+                yaxis2_title="PDF & CDF",
+                hovermode='x',
+
+            )
+            graphs['rtt'].show()
+            print("Done", flush=True)
+
+        else:
+            print(graphs['rtt'])
+            graphs['rtt'].data[0].x = list(rtt_df['diff'])
+            graphs['rtt'].data[0].y = list(rtt_df['freq'])
+
+            graphs['rtt'].data[1].x = list(rtt_df['diff'])
+            graphs['rtt'].data[1].y = list(rtt_df['pdf'])
+
+            graphs['rtt'].data[2].x = list(rtt_df['diff'])
+            graphs['rtt'].data[2].y = list(rtt_df['cdf'])
+
+
+def graph_cl_timings():
+    # target2txphr
+    global timings_df
+
+    timings_df['dummy'] = timings_df.dc_col.shift(-2)
+    timings_df['dummy_frt'] = timings_df.frt_val.shift(-2)
+    timings_df['target2txphr'] = np.where(((timings_df.beforetx_col == 'beforeTx') & (timings_df.dummy == 'dc')), timings_df.dummy_frt-timings_df.frt_val, np.nan)
+    timings_df.drop(columns=['dummy', 'dummy_frt'], inplace=True)
+
+    # freq
+    target2txphr_df = timings_df[['byte', 'target2txphr']].groupby('target2txphr').agg('count').rename(columns={'byte': 'freq'}).reset_index()
+    target2txphr_df = target2txphr_df.astype({'target2txphr': int})
+    # PDF
+    target2txphr_df['pdf'] = target2txphr_df['freq'] / sum(target2txphr_df['freq'])
+    # CDF
+    target2txphr_df['cdf'] = target2txphr_df['pdf'].cumsum()
+    target2txphr_df = target2txphr_df.reset_index()
+    # target2txphr_df = target2txphr_df.astype({'target2txphr': 'int64'})
+
+    # txend2rxstart
+    timings_df['dummy'] = timings_df.beforerx_col.shift(-1)
+    timings_df['dummy_frt'] = timings_df.frt_dec.shift(-1)
+    timings_df['txend2rxstart'] = np.where(((timings_df.txend_col == 'txEnd') & (timings_df.dummy == 'beforeRx')), timings_df.dummy_frt-timings_df.frt_val, np.nan)
+    timings_df.drop(columns=['dummy', 'dummy_frt'], inplace=True)
+    # freq
+    txend2rxstart_df = timings_df[['byte', 'txend2rxstart']].groupby('txend2rxstart').agg('count').rename(columns={'byte': 'freq'}).reset_index()
+    txend2rxstart_df = txend2rxstart_df.astype({'txend2rxstart': int})
+    # PDF
+    txend2rxstart_df['pdf'] = txend2rxstart_df['freq'] / sum(txend2rxstart_df['freq'])
+    # CDF
+    txend2rxstart_df['cdf'] = txend2rxstart_df['pdf'].cumsum()
+    txend2rxstart_df = txend2rxstart_df.reset_index()
+
+    # rxend2targettime
+    timings_df['dummy'] = timings_df.beforetx_col.shift(-1)
+    timings_df['dummy_frt'] = timings_df.frt_val.shift(-1)
+    timings_df['dummy_cl_id'] = timings_df.cl_id.shift(-1)
+    timings_df['rxend2targettime'] = np.where(((timings_df.rxend_col == 'rxEnd') & (timings_df.dummy == 'beforeTx') & (
+        timings_df.cl_id == timings_df.dummy_cl_id)), timings_df.dummy_frt-timings_df.frt_val, np.nan)
+    timings_df.drop(columns=['dummy', 'dummy_frt', 'dummy_cl_id'], inplace=True)
+    # freq
+    rxend2targettime_df = timings_df[['byte', 'rxend2targettime']].groupby('rxend2targettime').agg('count').rename(columns={'byte': 'freq'}).reset_index()
+    rxend2targettime_df = rxend2targettime_df.astype({'rxend2targettime': int})
+    # PDF
+    rxend2targettime_df['pdf'] = rxend2targettime_df['freq'] / sum(rxend2targettime_df['freq'])
+    # CDF
+    rxend2targettime_df['cdf'] = rxend2targettime_df['pdf'].cumsum()
+    rxend2targettime_df = rxend2targettime_df.reset_index()
+
+    # rxend2txtime
+    timings_df['dummy'] = timings_df.dc_col.shift(-3)
+    timings_df['dummy_frt'] = timings_df.frt_val.shift(-3)
+    timings_df['dummy_cl_id'] = timings_df.cl_id.shift(-3)
+    timings_df['rxend2txtime'] = np.where(((timings_df.rxend_col == 'rxEnd') & (timings_df.dummy == 'dc') & (
+        timings_df.cl_id == timings_df.dummy_cl_id)), timings_df.dummy_frt-timings_df.frt_val, np.nan)
+    timings_df.drop(columns=['dummy', 'dummy_frt', 'dummy_cl_id'], inplace=True)
+    # freq
+    rxend2txtime_df = timings_df[['byte', 'rxend2txtime']].groupby('rxend2txtime').agg('count').rename(columns={'byte': 'freq'}).reset_index()
+    rxend2txtime_df = rxend2txtime_df.astype({'rxend2txtime': int})
+    # PDF
+    rxend2txtime_df['pdf'] = rxend2txtime_df['freq'] / sum(rxend2txtime_df['freq'])
+    # CDF
+    rxend2txtime_df['cdf'] = rxend2txtime_df['pdf'].cumsum()
+    rxend2txtime_df = rxend2txtime_df.reset_index()
+
+    # txcall2targettime
+    timings_df['txcall2targettime'] = np.where(((timings_df.beforetx_col == 'beforeTx')), timings_df.frt_val-timings_df.frt_dec, np.nan)
+    # freq
+    txcall2targettime_df = timings_df[['byte', 'txcall2targettime']].groupby('txcall2targettime').agg('count').rename(columns={'byte': 'freq'}).reset_index()
+    txcall2targettime_df = txcall2targettime_df.astype({'txcall2targettime': int})
+    # PDF
+    txcall2targettime_df['pdf'] = txcall2targettime_df['freq'] / sum(txcall2targettime_df['freq'])
+    # CDF
+    txcall2targettime_df['cdf'] = txcall2targettime_df['pdf'].cumsum()
+    txcall2targettime_df = txcall2targettime_df.reset_index()
+
+    # txcall2aftertx
+    timings_df['dummy'] = timings_df.aftertx_col.shift(-1)
+    timings_df['dummy_frt'] = timings_df.frt_dec.shift(-1)
+    timings_df['txcall2aftertx'] = np.where(((timings_df.beforetx_col == 'beforeTx') & (timings_df.dummy == 'afterTx')), timings_df.dummy_frt-timings_df.frt_dec, np.nan)
+    timings_df.drop(columns=['dummy', 'dummy_frt'], inplace=True)
+    # freq
+    txcall2aftertx_df = timings_df[['byte', 'txcall2aftertx']].groupby('txcall2aftertx').agg('count').rename(columns={'byte': 'freq'}).reset_index()
+    txcall2aftertx_df = txcall2aftertx_df.astype({'txcall2aftertx': int})
+    # PDF
+    txcall2aftertx_df['pdf'] = txcall2aftertx_df['freq'] / sum(txcall2aftertx_df['freq'])
+    # CDF
+    txcall2aftertx_df['cdf'] = txcall2aftertx_df['pdf'].cumsum()
+    txcall2aftertx_df = txcall2aftertx_df.reset_index()
+
+    # rxend2txcall
+    timings_df['dummy'] = timings_df.beforetx_col.shift(-1)
+    timings_df['dummy_frt'] = timings_df.frt_dec.shift(-1)
+    timings_df['dummy_cl_id'] = timings_df.cl_id.shift(-1)
+    timings_df['rxend2txcall'] = np.where(((timings_df.rxend_col == 'rxEnd') & (timings_df.dummy == 'beforeTx') & (
+        timings_df.cl_id == timings_df.dummy_cl_id)), timings_df.dummy_frt-timings_df.frt_val, np.nan)
+    timings_df.drop(columns=['dummy', 'dummy_frt', 'dummy_cl_id'], inplace=True)
+    # freq
+    rxend2txcall_df = timings_df[['byte', 'rxend2txcall']].groupby('rxend2txcall').agg('count').rename(columns={'byte': 'freq'}).reset_index()
+    rxend2txcall_df = rxend2txcall_df.astype({'rxend2txcall': int})
+    # PDF
+    rxend2txcall_df['pdf'] = rxend2txcall_df['freq'] / sum(rxend2txcall_df['freq'])
+    # CDF
+    rxend2txcall_df['cdf'] = rxend2txcall_df['pdf'].cumsum()
+    rxend2txcall_df = rxend2txcall_df.reset_index()
+
+    # rxcall2afterrx
+    timings_df['dummy'] = timings_df.afterrx_col.shift(-1)
+    timings_df['dummy_frt'] = timings_df.frt_dec.shift(-1)
+    timings_df = timings_df.assign(rxcall2afterrx=pd.Series(np.nan))
+    timings_df.rxcall2afterrx = timings_df.apply(lambda x: x.dummy_frt-x.frt_dec if x.beforerx_col == 'beforeRx' and x.dummy == 'afterRx' else np.nan, axis=1)
+    timings_df['rxcall2afterrx'] = np.where(((timings_df.beforerx_col == 'beforeRx') & (timings_df.dummy == 'afterRx')), timings_df.dummy_frt-timings_df.frt_dec, np.nan)
+    timings_df.drop(columns=['dummy', 'dummy_frt'], inplace=True)
+    # freq
+    rxcall2afterrx_df = timings_df[['byte', 'rxcall2afterrx']].groupby('rxcall2afterrx').agg('count').rename(columns={'byte': 'freq'}).reset_index()
+    rxcall2afterrx_df = rxcall2afterrx_df.astype({'rxcall2afterrx': int})
+    # PDF
+    rxcall2afterrx_df['pdf'] = rxcall2afterrx_df['freq'] / sum(rxcall2afterrx_df['freq'])
+    # CDF
+    rxcall2afterrx_df['cdf'] = rxcall2afterrx_df['pdf'].cumsum()
+    rxcall2afterrx_df = rxcall2afterrx_df.reset_index()
+
+    cl_dur_df = cl_csv_df[cl_csv_df['tracecode_dec'] == 132][['byte', 'sts', 'trace_info']]
+    if not cl_dur_df.empty:
+        cl_dur_df['dur_ms'] = cl_dur_df.apply(lambda x: x['trace_info'].split(' ')[3].split('msec')[0], axis=1)
+        cl_dur_df.drop(columns=['trace_info', 'sts'], inplace=True)
+        cl_dur_df['dur_ms'] = cl_dur_df['dur_ms'].astype(int)
+        # cl_dur_df = cl_dur_df.sort_values(by='dur_ms')
+        cl_dur_df = cl_dur_df.groupby('dur_ms').agg(
+            'count').rename(columns={'byte': 'freq'}).reset_index()
+        # PDF
+        cl_dur_df['pdf'] = cl_dur_df['freq'] / sum(cl_dur_df['freq'])
+        # CDF
+        cl_dur_df['cdf'] = cl_dur_df['pdf'].cumsum()
+        cl_dur_df = cl_dur_df.reset_index()
+
+    # rxcall2rxPHR
+    timings_df['dummy_frt'] = timings_df.ts_rxstart.shift(-1)
+    timings_df = timings_df.assign(afterRx2rxPHR=pd.Series(np.nan))
+    timings_df.afterRx2rxPHR = timings_df.apply(lambda x: x.dummy_frt - x.frt_dec if x.afterrx_col == 'afterRx' and x.dummy_frt != np.nan else np.nan, axis=1)
+    timings_df.drop(columns=['dummy_frt'], inplace=True)
+
+    # drop values higher than 3sec
+    timings_df.afterRx2rxPHR = timings_df.apply(lambda x: np.nan if np.isnan([x.afterRx2rxPHR]) or x.afterRx2rxPHR > 3000.0 else x.afterRx2rxPHR, axis=1)
+
+    print("Done...Graphing...Report...", flush=True, end='')
+
+    # PLOT THE TIMING DIAGRAM
+    # A list of Matplotlib releases and their dates
+    # Taken from https://api.github.com/repos/matplotlib/matplotlib/releases
+    names = ['WrapperCall1', 'WrapperReturn', 'TargetTx1', 'TxPHR1', 'EndTxTime', 'rxStart_beforeCall', 'rxStart_afterCall', 'rxPHR',
+             'rxEnd', 'WrapperCall2', 'TargetTx2', 'TxPHR2', ]
+
+    tx_dur = 2000
+    rx_dur = 1500
+
+    names_label_dic = {
+        'WrapperCall1': "WrapperCall",
+        'WrapperReturn': "WrapperReturn",
+        'TargetTx1': "TargetTx",
+        'TxPHR1': "TxPHR",
+        'EndTxTime': "EndTxTime",
+        'rxStart_beforeCall': "rxStart\nbeforeCall",
+        'rxStart_afterCall': "rxStart\nafterCall",
+        'rxPHR': "rx PHR",
+        'rxEnd': "rxEnd",
+        'WrapperCall2': "WrapperCall",
+        'TargetTx2': "TargetTx",
+        'TxPHR2': "TxPHR",
+    }
+
+    levels_dic = {
+        'WrapperCall1': 2,
+        'WrapperReturn': 2,
+        'TargetTx1': 1,
+        'TxPHR1': 2,
+        'EndTxTime': 1,
+        'rxStart_beforeCall': -1.2,
+        'rxStart_afterCall': -2,
+        'rxPHR': -2,
+        'rxEnd': -1,
+        'WrapperCall2': 2,
+        'TargetTx2': 1,
+        'TxPHR2': 1,
+    }
+
+    colors_dic = {
+        'WrapperCall1': 'royalblue',
+        'WrapperReturn': 'royalblue',
+        'TargetTx1': 'crimson',
+        'TxPHR1': 'crimson',
+        'EndTxTime': 'crimson',
+        'rxStart_beforeCall': 'LightSeaGreen',
+        'rxStart_afterCall': 'LightSeaGreen',
+        'rxPHR': 'LightSeaGreen',
+        'rxEnd': 'LightSeaGreen',
+        'WrapperCall2': 'royalblue',
+        'TargetTx2': 'crimson',
+        'TxPHR2': 'crimson',
+    }
+
+    diff_points_dic = {
+        'wrapperCall2Return1': int(timings_df.txcall2aftertx.mean()),
+        'wrapperCall2TargetTx1': int(timings_df.txcall2targettime.mean()),
+        'targetTx2TxPHR1': int(timings_df.target2txphr.mean()),
+        'endTxTime2rxStartbefore': int(timings_df.txend2rxstart.mean()),
+        'rxstartBefore2After': int(timings_df.rxcall2afterrx.mean()),
+        'rxEnd2wrapperCall': int(timings_df.rxend2txcall.mean()),
+        'rxstartAfter2rxPHR': int(timings_df.afterRx2rxPHR.mean()),
+        'wrapperCall2TargetTx2': int(timings_df.txcall2targettime.mean()),
+        'rxEnd2targetTx': int(timings_df.rxend2targettime.mean()),
+        'rxEnd2TxPHR': int(timings_df.rxend2txtime.mean()),
+        'targetTx2TxPHR2': int(timings_df.target2txphr.mean())
+    }
+
+    diff_points_arr = list(diff_points_dic.values())
+
+    points_dic = {}
+    points_dic['WrapperCall1'] = 1
+    points_dic['WrapperReturn'] = points_dic['WrapperCall1'] + diff_points_dic['wrapperCall2Return1']
+    points_dic['TargetTx1'] = points_dic['WrapperCall1'] + diff_points_dic['wrapperCall2TargetTx1']
+    points_dic['TxPHR1'] = points_dic['TargetTx1'] + diff_points_dic['targetTx2TxPHR1']
+    points_dic['EndTxTime'] = points_dic['TxPHR1'] + tx_dur
+    points_dic['rxStart_beforeCall'] = points_dic['EndTxTime'] + diff_points_dic['endTxTime2rxStartbefore']
+    points_dic['rxStart_afterCall'] = points_dic['rxStart_beforeCall'] + diff_points_dic['rxstartBefore2After']
+    points_dic['rxPHR'] = points_dic['rxStart_afterCall'] + diff_points_dic['rxstartAfter2rxPHR']
+    points_dic['rxEnd'] = points_dic['rxPHR'] + rx_dur
+    points_dic['WrapperCall2'] = points_dic['rxEnd'] + diff_points_dic['rxEnd2wrapperCall']
+    points_dic['TargetTx2'] = points_dic['WrapperCall2'] + diff_points_dic['wrapperCall2TargetTx2']
+    points_dic['TxPHR2'] = points_dic['TargetTx2'] + diff_points_dic['targetTx2TxPHR2']
+
+    points = list(points_dic.values())
+
+    arrows_x = [
+        {'x1': points_dic['WrapperCall1'], 'x2':points_dic['WrapperReturn'], 'y': 1.5},
+        {'x1': points_dic['WrapperCall1'], 'x2':points_dic['TargetTx1'], 'y': 0.5},
+        {'x1': points_dic['TargetTx1'], 'x2':points_dic['TxPHR1'], 'y': 0.75},
+        {'x1': points_dic['EndTxTime'], 'x2': points_dic['rxStart_beforeCall'], 'y': -0.5},
+        {'x1': points_dic['EndTxTime'], 'x2': points_dic['EndTxTime']+1000, 'y': 0.5},
+        {'x1': points_dic['rxStart_beforeCall'], 'x2':points_dic['rxStart_afterCall'], 'y': -0.75},
+        {'x1': points_dic['rxStart_afterCall'], 'x2':points_dic['rxPHR'], 'y': -1.5},
+        {'x1': points_dic['rxEnd'], 'x2':points_dic['WrapperCall2'], 'y': 0.5},
+        {'x1': points_dic['rxEnd'], 'x2':points_dic['TargetTx2'], 'y': -0.5},
+        {'x1': points_dic['rxEnd'], 'x2':points_dic['TxPHR2'], 'y': -0.75},
+        {'x1': points_dic['WrapperCall2'], 'x2':points_dic['TargetTx2'], 'y': 0.75},
+        {'x1': points_dic['TargetTx2'], 'x2':points_dic['TxPHR2'], 'y': 0.5},
+    ]
+
+    val_texts = [
+        str(int(timings_df.txcall2aftertx.min()))+'/'+str(int(timings_df.txcall2aftertx.max()))+'/'+str(int(timings_df.txcall2aftertx.mean())),
+        str(int(timings_df.txcall2targettime.min()))+'/'+str(int(timings_df.txcall2targettime.max()))+'/'+str(int(timings_df.txcall2targettime.mean())),
+        str(int(timings_df.target2txphr.min()))+'/'+str(int(timings_df.target2txphr.max()))+'/'+str(int(timings_df.target2txphr.mean())),
+        str(int(timings_df.txend2rxstart.min()))+'/'+str(int(timings_df.txend2rxstart.max()))+'/'+str(int(timings_df.txend2rxstart.mean())),
+        '1000(to have)',
+        str(int(timings_df.rxcall2afterrx.min()))+'/'+str(int(timings_df.rxcall2afterrx.max()))+'/'+str(int(timings_df.rxcall2afterrx.mean())),
+        str(int(timings_df.afterRx2rxPHR.min()))+'/'+str(int(timings_df.afterRx2rxPHR.max()))+'/'+str(int(timings_df.afterRx2rxPHR.mean())),
+        str(int(timings_df.rxend2txcall.min()))+'/'+str(int(timings_df.rxend2txcall.max()))+'/'+str(int(timings_df.rxend2txcall.mean())),
+        str(int(timings_df.rxend2targettime.min()))+'/'+str(int(timings_df.rxend2targettime.max()))+'/'+str(int(timings_df.rxend2targettime.mean())),
+        str(int(timings_df.rxend2txtime.min()))+'/'+str(int(timings_df.rxend2txtime.max()))+'/'+str(int(timings_df.rxend2txtime.mean())),
+        str(int(timings_df.txcall2targettime.min()))+'/'+str(int(timings_df.txcall2targettime.max()))+'/'+str(int(timings_df.txcall2targettime.mean())),
+        str(int(timings_df.target2txphr.min()))+'/'+str(int(timings_df.target2txphr.max()))+'/'+str(int(timings_df.target2txphr.mean())),
+    ]
+
+    # MAKE THE TIMING REPORT
+
+    # Create the base line
+    start = min(points)
+    stop = max(points)
+
+    fig = go.Figure()
+
+    # Add baseline
+    fig.add_shape(
+        # Line Horizontal
+        type="line",
+        x0=start, y0=0,
+        x1=stop, y1=0,
+        line=dict(
+            color="grey",
+            width=1,
+        ),
+    )
+
+    # legend for min/max/avg
+    fig.add_annotation(
+        x=1000, y=-1,
+        xref="x", yref="y",
+        text="min/max/avg",
+        showarrow=False,
+        font=dict(
+            family="Courier New, monospace",
+            size=16,
+            color="#ffffff"
+        ),
+        align="center",
+        arrowhead=2,
+        arrowsize=1,
+        arrowwidth=2,
+        arrowcolor="#636363",
+        ax=20, ay=-30,
+        bordercolor="#c7c7c7",
+        borderwidth=2,
+        borderpad=4,
+        bgcolor="#ff7f0e",
+        opacity=0.8
+    )
+
+    # add vertical lines
+    for ii, (iname, ipt) in enumerate(zip(names, points)):
+        level = levels_dic[iname]
+        vert = 'top' if level < 0 else 'bottom'
+        # fig.add_scatter(x=target2txphr_df['target2txphr'], y=target2txphr_df['pdf'], name="PDF", secondary_y=True, row=1, col=1)
+        # print(ii, iname, ipt)
+        fig.add_shape(
+            # Line vertical
+            type="line",
+            x0=ipt, y0=0,
+            x1=ipt, y1=level,
+            line=dict(
+                color=colors_dic[iname],
+                width=2,
+            )
+        )
+
+    # add labels to the lines
+    fig.add_trace(go.Scatter(
+        x=points,
+        # y=[i * 1.05 for i in list(levels_dic.values())],
+        y=[i for i in list(levels_dic.values())],
+        text=list(names_label_dic.values()),
+        textposition="top center",
+        mode="text+markers",
+        hoverinfo="none",
+        marker=dict(size=12,
+                    color='white',
+                    line=dict(width=2,
+                              color='black'))
+    ))
+
+    # draw the horizontal lines
+    i = 0
+    for d in arrows_x:
+        x1, x2, y = d.values()
+        fig.add_shape(
+            # Line horizontals for texts
+            type="line",
+            x0=x1, y0=y,
+            x1=x2, y1=y,
+            line=dict(
+                color='DarkOrange',
+                width=2,
+                dash="dot"
+            )
+        )
+
+        i = i+1
+
+    # add the values;labels over the horizontal line.
+    x = [(sub["x1"]+sub["x2"]) / 2 for sub in arrows_x]
+    y = [sub["y"]*1.15 for sub in arrows_x]
+    fig.add_trace(go.Scatter(
+        x=x,
+        y=y,
+        text=val_texts,
+        mode="text",
+        hoverinfo="none",
+
+    ))
+    # POLL/ACK/DATA
+    rx_dur = points_dic['rxEnd']-(points_dic['rxPHR'])
+    txdiff = points_dic['TxPHR1'] - points_dic['TargetTx1']
+    fig.add_bar(
+        x=[(points_dic['TxPHR1']-txdiff+(tx_dur+txdiff)/2), (points_dic['rxPHR']-txdiff+(rx_dur+txdiff)/2), (points_dic['TxPHR2']-txdiff+(tx_dur+txdiff+100)/2)],
+        y=[0.25, -0.25, 0.25],
+        width=[tx_dur+txdiff, rx_dur+txdiff, (tx_dur+100+txdiff)],
+        text=["POLL", "ACK", "DATA"],
+        textposition="inside",
+        hoverinfo="none",
+        marker=dict(
+            color=['darksalmon', 'darkseagreen', 'darksalmon'],
+            line=dict(width=2,
+                      color='black'))
+    )
+
+    fig.update_layout(
+        title="CL Timing Summary Report",
+        showlegend=False,
+        yaxis=dict(
+            showticklabels=False
+        ),
+
+    )
+
+    fig.show()
+    print("Done... timing...", flush=True, end='')
+
+    # MAKE THE TIMING GRAPHS
+    # plot
+    fig = make_subplots(4, 2,
+                        specs=[[{"secondary_y": True},    {"secondary_y": True}],
+                               [{"secondary_y": True},    {"secondary_y": True}],
+                               [{"secondary_y": True},    {"secondary_y": True}],
+                               [{"secondary_y": True}, {"secondary_y": True}]],
+                        subplot_titles=("Target Time to Tx PHR Time",
+                                        "Tx End to Rx Start",
+                                        "Rx End to Target Time",
+                                        "rxend2txtime",
+                                        "Tx Call to Target Time",
+                                        "Rx End to Tx Call",
+                                        "Rxcall to After Rx",
+                                        "CL duration in msec"),
+                        x_title="time in msec",
+                        y_title="Frequency",
+                        )
+
+    # Add traces
+    fig.add_bar(x=target2txphr_df['target2txphr'], y=target2txphr_df['freq'], name="Count", opacity=0.8, row=1, col=1)
+    fig.add_scatter(x=target2txphr_df['target2txphr'], y=target2txphr_df['pdf'], name="PDF", secondary_y=True, row=1, col=1)
+    fig.add_scatter(x=target2txphr_df['target2txphr'], y=target2txphr_df['cdf'], name="CDF", secondary_y=True, row=1, col=1)
+
+    fig.add_bar(x=txend2rxstart_df['txend2rxstart'], y=txend2rxstart_df['freq'], name="Count", opacity=0.8, row=1, col=2)
+    fig.add_scatter(x=txend2rxstart_df['txend2rxstart'], y=txend2rxstart_df['pdf'], name="PDF", secondary_y=True, row=1, col=2)
+    fig.add_scatter(x=txend2rxstart_df['txend2rxstart'], y=txend2rxstart_df['cdf'], name="CDF", secondary_y=True, row=1, col=2)
+
+    fig.add_bar(x=rxend2targettime_df['rxend2targettime'], y=rxend2targettime_df['freq'], name="Count", opacity=0.8, row=2, col=1)
+    fig.add_scatter(x=rxend2targettime_df['rxend2targettime'], y=rxend2targettime_df['pdf'], name="PDF", secondary_y=True, row=2, col=1)
+    fig.add_scatter(x=rxend2targettime_df['rxend2targettime'], y=rxend2targettime_df['cdf'], name="CDF", secondary_y=True, row=2, col=1)
+
+    fig.add_bar(x=rxend2txtime_df['rxend2txtime'], y=rxend2txtime_df['freq'], name="Count", opacity=0.8, row=2, col=2)
+    fig.add_scatter(x=rxend2txtime_df['rxend2txtime'], y=rxend2txtime_df['pdf'], name="PDF", secondary_y=True, row=2, col=2)
+    fig.add_scatter(x=rxend2txtime_df['rxend2txtime'], y=rxend2txtime_df['cdf'], name="CDF", secondary_y=True, row=2, col=2)
+
+    fig.add_bar(x=txcall2targettime_df['txcall2targettime'], y=txcall2targettime_df['freq'], name="Count", opacity=0.8, row=3, col=1)
+    fig.add_scatter(x=txcall2targettime_df['txcall2targettime'], y=txcall2targettime_df['pdf'], name="PDF", secondary_y=True, row=3, col=1)
+    fig.add_scatter(x=txcall2targettime_df['txcall2targettime'], y=txcall2targettime_df['cdf'], name="CDF", secondary_y=True, row=3, col=1)
+
+    fig.add_bar(x=rxend2txcall_df['rxend2txcall'], y=rxend2txcall_df['freq'], name="Count", opacity=0.8, row=3, col=2)
+    fig.add_scatter(x=rxend2txcall_df['rxend2txcall'], y=rxend2txcall_df['pdf'], name="PDF", secondary_y=True, row=3, col=2)
+    fig.add_scatter(x=rxend2txcall_df['rxend2txcall'], y=rxend2txcall_df['cdf'], name="CDF", secondary_y=True, row=3, col=2)
+
+    fig.add_bar(x=rxcall2afterrx_df['rxcall2afterrx'], y=rxcall2afterrx_df['freq'], name="Count", opacity=0.8, row=4, col=1)
+    fig.add_scatter(x=rxcall2afterrx_df['rxcall2afterrx'], y=rxcall2afterrx_df['pdf'], name="PDF", secondary_y=True, row=4, col=1)
+    fig.add_scatter(x=rxcall2afterrx_df['rxcall2afterrx'], y=rxcall2afterrx_df['cdf'], name="CDF", secondary_y=True, row=4, col=1)
+
+    fig.add_bar(x=cl_dur_df['dur_ms'], y=cl_dur_df['freq'], name="Count", opacity=0.8, row=4, col=2)
+    fig.add_scatter(x=cl_dur_df['dur_ms'], y=cl_dur_df['pdf'], name="PDF", secondary_y=True, row=4, col=2)
+    fig.add_scatter(x=cl_dur_df['dur_ms'], y=cl_dur_df['cdf'], name="CDF", secondary_y=True, row=4, col=2)
+
+    fig.update_layout(
+        title="CL Timings",
+        showlegend=False,
+        hovermode='x',
+        yaxis2=dict(
+            title='PDF/CDF',
+        )
+
+    )
+
+    fig.show()
+    print("Done", flush=True, end='\n')
+
+
+def graph_timeline_visualiser():
+    timeline_tx_color = {
+
+        "TOP": colors_list[0],
+        "IDLE": colors_list[1],
+        "FH": 'cornflowerblue',
+        "RXB": 'RoyalBlue',
+        "TXB": 'crimson',
+        "CL": 'darksalmon',
+        "BCAST": 'Violet',
+        "SA": colors_list[7],
+        "LLS": colors_list[8],
+        "ELG": colors_list[9],
+    }
+    timeline_rx_color = {
+
+        "TOP": colors_list[0],
+        "IDLE": colors_list[1],
+        "FH": 'LightSeaGreen',
+        "RXB": 'RoyalBlue',
+        "TXB": 'crimson',
+        "CL": 'darkseagreen',
+        "BCAST": 'Violet',
+        "SA": colors_list[7],
+        "LLS": colors_list[8],
+        "ELG": colors_list[9],
+    }
+
+    def hoverinfo(x, type):
+
+        if type == "rx":
+            seqinfo = str(x.rx_seq_ctrl)
+            ts_start = str(x.ts_rxstart)
+            ts_end = str(x.ts_rxend)
+            dur = str(x.rx_dur/1000).strip()
+        else:
+            seqinfo = str(x.tx_seq_ctrl)
+            ts_start = str(x.ts_txstart)
+            ts_end = str(x.ts_txend)
+            dur = str(x.tx_dur/1000).strip()
+
+        ret = ""
+        ret = "~~~( " + x.owner + " )~~~<br>"
+        if(x.owner == "CL"):
+            ret = ret + "<b>CLId </b>" + str(x.cl_id) + ", " + x.cl_mac + "<br>" + \
+                x.txrx_param + "<br>" + \
+                "<b>seqctrl:</b> " + seqinfo + "<br>"
+        if(x.owner == 'CL' or x.owner == 'FH'):
+            ret = ret + str(x.nextcli) + "<br>"
+        ret = ret + "<br><b>Start:</b>" + ts_start + "<br><b>End:</b>" + ts_end + "<br><b>dur: </b>" + dur + " msec"
+        return ret
+
+    # rx
+    timeline_rx_df = pd.DataFrame()
+    timeline_rx_df = timings_df[['byte', 'owner', 'nextcli', 'cl_id', 'cl_mac', 'rx_seq_ctrl', 'txrx_param', 'ts_rxstart', 'ts_rxend']]
+    timeline_rx_df = timeline_rx_df.assign(ts_rxend=timeline_rx_df.ts_rxend.shift(-1))
+    timeline_rx_df.dropna(subset=['ts_rxstart', 'ts_rxend'], inplace=True)
+    timeline_rx_df['rx_dur'] = timeline_rx_df.ts_rxend - timeline_rx_df.ts_rxstart
+    timeline_rx_df['color'] = timeline_rx_df.owner.apply(lambda x: timeline_rx_color[x])
+    timeline_rx_df['hoverinfo'] = timeline_rx_df.apply(lambda x: hoverinfo(x, "rx"), axis=1)
+
+    # tx
+    timeline_tx_df = timings_df[['byte', 'owner', 'nextcli', 'cl_id', 'cl_mac', 'tx_seq_ctrl', 'txrx_param', 'ts_txstart', 'ts_txend']]
+    timeline_tx_df = timeline_tx_df.assign(ts_txend=timeline_tx_df.ts_txend.shift(-1))
+    timeline_tx_df.dropna(subset=['ts_txstart', 'ts_txend'], inplace=True)
+    timeline_tx_df['tx_dur'] = timeline_tx_df.ts_txend - timeline_tx_df.ts_txstart
+    timeline_tx_df['color'] = timeline_tx_df.owner.apply(lambda x: timeline_tx_color[x])
+    timeline_tx_df['hoverinfo'] = timeline_tx_df.apply(lambda x: hoverinfo(x, "tx"), axis=1)
+    timeline_tx_df = timeline_tx_df[timeline_tx_df.tx_dur <= 500000]
+
+    # PHY INDICATIONS and CALLs
+    filter_list = [1, 2, 3, 4, 6, 140, 141, 148, 149]
+    timeline_phycallind_df = pd.DataFrame()
+    timeline_phycallind_df = cl_csv_df[cl_csv_df.tracecode_dec.isin(filter_list)]
+    timeline_phycallind_df = timeline_phycallind_df.assign(y1=pd.Series(np.nan))
+
+    timeline_phycallind_df['color'] = timeline_phycallind_df.tracecode_dec.apply(lambda x: colors_list[x])
+    timeline_phycallind_df.drop(columns=['frt_hex'], inplace=True)
+
+    # CL Traces
+    filter_list = [131, 132, 133, 134, 135, 136, 137, 138, 139, 142, 143, 144, 145, 146, 147, 150]
+    timeline_cl_df = pd.DataFrame()
+    timeline_cl_df = cl_csv_df[cl_csv_df.tracecode_dec.isin(filter_list)]
+    timeline_cl_df = timeline_cl_df.assign(color=pd.Series(np.nan))
+    timeline_cl_df['color'] = timeline_cl_df.tracecode_dec.apply(lambda x: colors_list[x+64])
+
+    print("Done...Graphing...", flush=True, end='')
+
+    fig = go.Figure()
+
+    # add TXs
+    fig.add_bar(
+        x=timeline_tx_df.ts_txstart + timeline_tx_df.tx_dur/2,
+        y=[2]*len(timeline_tx_df.index),
+        width=timeline_tx_df.tx_dur,
+        # base=1,
+        name="TX",
+        text=timeline_tx_df.hoverinfo,
+        textposition="inside",
+        hovertemplate='%{text}',            # hoverinfo="none",
+        # offset=-timeline_tx_df.tx_dur/2,
+        # hoverinfo="none",
+        marker=dict(
+            # color='darksalmon',
+            color=timeline_tx_df['color'],
+            opacity=1,
+            line=dict(width=1,
+                      color=timeline_tx_df['color']))
+    )
+
+    # add RXs
+    fig.add_bar(
+        x=timeline_rx_df.ts_rxstart + timeline_rx_df.rx_dur/2,
+        y=[-2]*len(timeline_rx_df.index),
+        width=timeline_rx_df.rx_dur,
+        name="RX",
+        text=timeline_rx_df.hoverinfo,
+        textposition="inside",
+        hovertemplate='%{text}',            # hoverinfo="none",
+        marker=dict(
+            # color='darkseagreen',
+            color=timeline_rx_df['color'],
+            line=dict(width=1,
+                      color=timeline_rx_df['color']))
+    )
+
+    # add PHY Indications and calls
+
+    fig.add_scatter(
+        x=timeline_phycallind_df.frt_dec,
+        y=[0]*len(timeline_phycallind_df.index),
+        mode="markers",
+        name="Internal Controls/Indications",
+        text="<b>CL_ID:</b> " + timeline_phycallind_df.cl_id + "<br>" + timeline_phycallind_df.trace_info,
+        hovertemplate="<b>FRT:</b>%{x}<br>%{text}",
+        visible="legendonly",
+        # hoverinfo="none",
+        marker=dict(
+            color='white',
+            line=dict(width=1,
+                      color=timeline_phycallind_df.color))
+    )
+
+    # add CL traces
+    fig.add_scatter(
+        x=timeline_cl_df.frt_dec,
+        y=[0]*len(timeline_cl_df.index),
+        mode="markers",
+        name="CL Traces",
+        text="<b>CL_ID:</b> " + timeline_cl_df.cl_id + "<br>" + timeline_cl_df.trace_info,
+        hovertemplate="<b>FRT:</b>%{x}<br>%{text}",
+        visible="legendonly",
+        # hoverinfo="none",
+        marker=dict(
+            color='white',
+            line=dict(width=1,
+                      color=timeline_cl_df.color))
+    )
+
+    # add annotations for tx and rx
+    fig.add_annotation(
+        x=min(timeline_tx_df.ts_txend),
+        y=3.5,
+        text="Transmissions",
+        font=dict(
+            family="Courier New, monospace",
+            size=16,
+            color="red"
+        ),
+        showarrow=False,)
+    fig.add_annotation(
+        x=min(timeline_rx_df.ts_rxend),
+        y=-4,
+        text="Receptions",
+        font=dict(
+            family="Courier New, monospace",
+            size=16,
+            color="green"
+        ),
+        showarrow=False,)
+
+    # # add tx-rx start/end
+    # fig.add_scatter(
+    #     x=timeline_tx_df.ts_txstart.append(timeline_tx_df.ts_txend).append(timeline_rx_df.ts_rxstart).append(timeline_rx_df.ts_rxend),
+    #     # x=pandas.concat(timeline_tx_df.ts_txstart,timeline_tx_df.ts_txend, timeline_rx_df.ts_rxstart,timeline_rx_df.ts_rxend),
+    #     y=[0]*(len(timeline_tx_df.index)*2 + len(timeline_tx_df.index)*2),
+    #     mode="markers",
+    #     name="TX/RX Start/End",
+    #     hovertemplate="<b>FRT:</b>%{x}",
+    #     visible="legendonly",
+    #     # hoverinfo="none",
+    #     marker=dict(
+    #         color='red',
+    #         line=dict(width=1,
+    #                   color="black"))
+    # )
+
+    fig.update_layout(
+        title="Timeline Visualizer",
+        showlegend=True,
+        xaxis_tickformat='f',
+        yaxis=dict(
+            # visible=False,
+            range=[-8, 8],
+            fixedrange=True,
+            showticklabels=False,
+        ),
+        legend=dict(orientation='h', yanchor='top', xanchor='center', y=1, x=0.5)
+        # hovermode='x',
+        # shapes=shapes,
+    )
+    fig.update_xaxes(rangeslider_visible=True, title="FRT usec",)
+    fig.update_yaxes(zeroline=True, zerolinewidth=1, zerolinecolor='grey')
+
+    fig.show()
+    print("Done", flush=True, end='\n')
+
+
+def graph_buf_mgr():
+    bufmgr_df = pd.DataFrame()
+    filter_list = [19, 20]
+    bufmgr_df = csv_df[csv_df.tracecode_dec.isin(filter_list)]
+
+    trace_list = list(set(list(bufmgr_df.tracecode_dec)))
+    if not set(filter_list).issubset(trace_list):
+        print("\n**** All required traces {} are not present. Cannot draw the graph".format(filter_list))
+        show_required_traces(filter_list)
+        return
+    bufmgr_df = bufmgr_df.assign(buffer=bufmgr_df.trace_info.str[-4:])
+    bufmgr_df['buffer_dec'] = bufmgr_df.buffer.apply(int, base=16)
+
+    bufmgr_get_df = bufmgr_df[bufmgr_df["tracecode_dec"] == 19][['byte', 'frt_dec', 'trace_info', 'buffer', 'buffer_dec']]
+
+    bufmgr_get_df['owner'] = bufmgr_get_df.trace_info.str.split().str[2].str.split("(").str[0]
+    bufmgr_get_df['owner'] = bufmgr_get_df.owner.str[4:]
+    bufmgr_get_df['subfunc'] = bufmgr_get_df.trace_info.str.split().str[4]
+    bufmgr_get_df.reset_index(inplace=True)
+
+    # to get the rel frt
+    def buf_filter(x):
+        mydf = bufmgr_df[bufmgr_df.frt_dec > x.frt_dec]
+        index = mydf[mydf.buffer == x.buffer].first_valid_index()
+
+        if index:
+            return mydf.at[index, 'frt_dec']
+        else:
+            return np.nan
+
+    bufmgr_get_df['rel_frt'] = bufmgr_get_df.apply(buf_filter, axis=1)
+    bufmgr_get_df['frt_diff'] = (bufmgr_get_df['rel_frt'] - bufmgr_get_df['frt_dec'])
+    bufmgr_get_df['info'] = "<br><b>"+bufmgr_get_df.owner + "</b></br>" + " 0x" + bufmgr_get_df.buffer + " " + bufmgr_get_df.frt_diff.astype(str) + "us"
+
+    # check if there are any leaks
+    bufmgr_leak_df = bufmgr_get_df[bufmgr_get_df.isna().any(axis=1)]
+    bufmgr_get_unleaked_df = bufmgr_get_df.dropna()
+    bufmgr_get_df['leak'] = bufmgr_get_df.apply(lambda x: 1 if np.isnan([x.rel_frt]) else np.nan, axis=1)
+
+    # print(bufmgr_leak_df.tail(30))
+    unique_owners = bufmgr_get_unleaked_df.owner.unique()
+
+    buf_owner_dic = dict()
+    for owner in unique_owners:
+        buf_owner_dic[owner] = (bufmgr_get_unleaked_df[bufmgr_get_unleaked_df['owner'].str.match(owner)])[['frt_dec', 'owner', 'buffer_dec', 'rel_frt', 'frt_diff', 'info']]
+
+    print("Done...Graphing...", flush=True, end='')
+
+    # print(px.colors.qualitative.Dark24)
+    buff_colors = px.colors.qualitative.Dark24
+    # buff_colors = get_n_colors(len(unique_owners));
+
+    fig = go.Figure()
+    fig = make_subplots(rows=2, cols=1, subplot_titles=("Buffer claimed and released Timeline",
+                                                        "Buffer claims, releases and leaks stats",),
+                        )
+
+    shapes = list()
+    i = 0
+
+    # per owner graphing
+    for key, owner_df in buf_owner_dic.items():
+        # print(key, owner_df)
+        # draw a rectangle
+        fig.add_bar(
+            x=owner_df.frt_dec,
+            y=owner_df.buffer_dec,
+            width=owner_df.frt_diff,
+            name=key,
+            text=owner_df['info'] + "<br>FRT start:" + owner_df.frt_dec.astype(str) + "<br> FRT end: " + owner_df.rel_frt.astype(str),
+            # hoverinfo='text',
+            # hovertext="FRT start:" + owner_df.frt_dec.astype(str) +"<br> FRT end: " +owner_df.rel_frt.astype(str) +"<br>" + owner_df['info'],
+            textposition="inside",
+            hovertemplate='%{text}',            # hoverinfo="none",
+            row=1,
+            col=1,
+            marker=dict(
+                color=buff_colors[i],
+                opacity=0.7,
+                line=dict(width=0.5,
+                          color=buff_colors[i]))
+        )
+        i = i+1
+
+    fig.update_layout(
+        title="Buffer Management",
+        showlegend=True,
+        xaxis_tickformat='f',
+        yaxis=dict(
+            # visible=False,
+            fixedrange=True,
+        ),
+        # hovermode='x',
+        # shapes=shapes,
+    )
+    # fig.show()
+
+    # bufmgr_get_df.leak = bufmgr_get_df.leak.replace(0,np.nan)
+    buf_summary_df = (bufmgr_get_df.groupby('owner').count()).reset_index()[['owner', 'frt_dec', 'rel_frt', 'leak']]
+    buf_summary_df.rename(columns={'frt_dec': 'buf_claim', 'rel_frt': 'buf_release', 'leak': 'buf_leak'}, inplace=True)
+    # fig = px.bar(buf_summary_df, x="owner", y=["buf_claim", "buf_release", "buf_leak"],
+    #              barmode='group', row=2, col=1
+    #              )
+    fig.add_trace(
+        go.Bar(x=buf_summary_df.owner, y=buf_summary_df["buf_claim"], name="buf_claim", text=buf_summary_df["buf_claim"],
+               textposition='auto',),
+        row=2, col=1
+    )
+    fig.add_trace(
+        go.Bar(x=buf_summary_df.owner, y=buf_summary_df["buf_release"], name="buf_release", text=buf_summary_df["buf_release"],
+               textposition='auto',),
+        row=2, col=1
+    )
+    fig.add_trace(
+        go.Bar(x=buf_summary_df.owner, y=buf_summary_df["buf_leak"], name="buf_leak", text=buf_summary_df["buf_leak"],
+               textposition='auto',),
+        row=2, col=1
+    )
+
+    # # print(fig)
+    fig.update_layout(barmode='group')
+    fig.show()
+
+    print("Done", flush=True, end='\n')
+
+
+def graph_mode_chan():
+    modechan_df = pd.DataFrame()
+    filter_list = [140, 141]
+    modechan_df = csv_df[csv_df.tracecode_dec.isin(filter_list)][['byte', 'txrx_param', 'tracecode_dec']]
+    trace_list = list(set(list(modechan_df.tracecode_dec)))
+    if not set(filter_list).issubset(trace_list):
+        print("\n**** All required traces {} are not present. Cannot draw the graph".format(filter_list))
+        show_required_traces(filter_list)
+        return
+    modechan_df[['del1', 'mode', 'del2', 'chan']] = modechan_df.txrx_param.str.split(expand=True)
+    modechan_df.drop(columns=['del1', 'del2', 'txrx_param'], inplace=True)
+    modechan_df['mode'] = modechan_df['mode'].apply(lambda x: mode_str[int(x, 10)] + "("+x+")")
+
+    modechan_tx_df = modechan_df[modechan_df.tracecode_dec == 140]
+    modechan_rx_df = modechan_df[modechan_df.tracecode_dec == 141]
+
+    modestats_tx_df = modechan_tx_df[['byte', 'mode']].groupby(['mode']).agg('count').rename(columns={'byte': 'count'}).reset_index()
+    modestats_rx_df = modechan_rx_df[['byte', 'mode']].groupby(['mode']).agg('count').rename(columns={'byte': 'count'}).reset_index()
+
+    chanstats_tx_df = modechan_tx_df[['byte', 'chan']].groupby(['chan']).agg('count').rename(columns={'byte': 'count'}).reset_index()
+    chanstats_rx_df = modechan_rx_df[['byte', 'chan']].groupby(['chan']).agg('count').rename(columns={'byte': 'count'}).reset_index()
+
+    print("Done...Graphing...", flush=True, end='')
+
+    fig = go.Figure()
+    fig = make_subplots(rows=2, cols=1, subplot_titles=("Mode Usage",
+                                                        "Channel Usage",),
+                        x_title="Channel",
+                        )
+
+    fig.add_bar(x=modestats_rx_df['mode'], y=modestats_rx_df['count'], name="MODE RX", opacity=0.7, textposition="outside", text=modestats_rx_df['count'], row=1, col=1,)
+    fig.add_bar(x=modestats_tx_df['mode'], y=modestats_tx_df['count'], name="MODE TX", opacity=0.7, textposition="outside", text=modestats_tx_df['count'], row=1, col=1,)
+
+    fig.add_bar(x=chanstats_rx_df['chan'], y=chanstats_rx_df['count'], name="CHAN RX", opacity=0.7, textposition="outside", text=chanstats_rx_df['count'], row=2, col=1,)
+    fig.add_bar(x=chanstats_tx_df['chan'], y=chanstats_tx_df['count'], name="CHAN TX", opacity=0.7, textposition="outside", text=chanstats_tx_df['count'], row=2, col=1,)
+
+    fig.update_layout(
+        title="Mode Channel Usage",
+        yaxis_title="Count",
+        xaxis_title="Modes",
+        xaxis={"type": "category"},
+
+    )
+    fig.show()
+    print("Done", flush=True, end='\n')
+
+
 def graph_it():
 
     if not os.path.isfile(graph_file):
@@ -1276,6 +2195,12 @@ def graph_it():
         return
 
     check_and_install_package(["pandas", "plotly==4.9.0"])
+    global pd
+    global np
+    global px
+    global go
+    global make_subplots
+    global py
 
     try:
         import pandas as pd
@@ -1295,8 +2220,10 @@ def graph_it():
     # plt.style.use('ggplot')
 
     print("showing graph {} from '{}'".format(graph_ans_list, graph_file))
-
     # plt.show()
+    global csv_df
+    global cl_csv_df
+    global timings_df
 
     csv_df = pd.read_csv(sep=',', skiprows=1, names=['byte', "frt_dec", 'frt_hex', 'trace_code', 'trace_info'], filepath_or_buffer=graph_file)
     # csv_df[['tracecode_dec','tracecode_hex']] = df.Name.str.split(expand=True)
@@ -1309,33 +2236,53 @@ def graph_it():
     csv_df = csv_df.astype({'tracecode_dec': int})
     csv_df = csv_df.assign(cl_id=pd.Series(np.nan))
 
-    csv_df['cl_id'] = csv_df["trace_info"].apply(lambda x: x.split()[4] if "CL_OUT_CNF" in x or "CL_START" in x else np.nan)
-    csv_df['cl_mac'] = csv_df.apply(lambda x: x.trace_info.split('>', 2)[1].strip() if x.tracecode_dec == 147 else np.nan, axis=1)
-    csv_df['txrx_param'] = csv_df.apply(lambda x: x.trace_info.split(')', 2)[1].strip() if x.tracecode_dec == 140 or x.tracecode_dec == 141 else np.nan, axis=1)
+    csv_df['cl_id'] = csv_df["trace_info"].apply(lambda x: x.split(' ', 5)[4] if "CL_OUT_CNF" in x or "CL_START" in x else np.nan)
 
-    # csv_df['cl_id'].ffill()
-    # csv_df = csv_df.replace("", np.nan).ffill()
+    # csv_df['cl_mac'] = csv_df.apply(lambda x: x.trace_info.split('>', 2)[1].strip() if x.tracecode_dec == 147 else np.nan, axis=1)
+    cl_mac_df = csv_df[csv_df.tracecode_dec == 147][['byte', 'trace_info']]
+    cl_mac_df.rename(columns={'trace_info': 'cl_mac'}, inplace=True)
+    cl_mac_df.cl_mac = cl_mac_df.cl_mac.str.split('>', 2, expand=True).drop([0], axis=1)
+    csv_df = csv_df.merge(cl_mac_df, on='byte', how='left')
+
+    # csv_df['txrx_param'] = csv_df.apply(lambda x: x.trace_info.split(')', 2)[1].strip() if x.tracecode_dec == 140 else np.nan, axis=1)
+    tx_param = csv_df[csv_df.tracecode_dec == 140][['byte', 'trace_info']]
+    rx_param = csv_df[csv_df.tracecode_dec == 141][['byte', 'trace_info']]
+    txrx_param_df = pd.concat([tx_param, rx_param]).sort_values(by=['byte']).rename(columns={'trace_info': 'txrx_param'})
+    txrx_param_df.txrx_param = txrx_param_df.txrx_param.str.split(')', 2, expand=True).drop([0], axis=1)
+    csv_df = csv_df.merge(txrx_param_df, on='byte', how='left')
 
     traceCodeMap_df = pd.DataFrame(tracing_events_num_str.items(), columns=['tracecode_dec', 'trace_str'])
 
     # add owner id
-    csv_df = csv_df.assign(owner=pd.Series(np.nan))
-    csv_df['owner'] = csv_df.apply(lambda x: x.trace_info.split('LMSM_')[1].split('(', 2)[0] if x.tracecode_dec == 68 else np.nan, axis=1)
+    owner_df = csv_df[csv_df.tracecode_dec == 68][['byte', 'trace_info']].rename(columns={'trace_info': 'owner'})
+    owner_df.owner = owner_df.owner.str.split('LMSM_', 2, expand=True).drop([0], axis=1)
+    owner_df.owner = owner_df.owner.str.split('(', 2, expand=True).drop([1], axis=1)
+    csv_df = csv_df.merge(owner_df, on='byte', how='left')
     csv_df = csv_df.ffill()
 
-    csv_df['tx_seq_ctrl'] = csv_df.apply(lambda x: x.trace_info.split('SeqNum')[1].strip() if x.tracecode_dec == 144 and "TX" in x.trace_info.upper() else np.nan, axis=1)
-    csv_df['rx_seq_ctrl'] = csv_df.apply(lambda x: x.trace_info.split('SeqNum')[1].strip() if x.tracecode_dec == 144 and "RX" in x.trace_info.upper() else np.nan, axis=1)
+    # seq contrl
+    tx_seq_ctrl_df = csv_df[(csv_df.tracecode_dec == 144) & (csv_df.trace_info.str.contains("TX"))][['byte', 'trace_info']].rename(columns={'trace_info': 'tx_seq_ctrl'})
+    rx_seq_ctrl_df = csv_df[(csv_df.tracecode_dec == 144) & (csv_df.trace_info.str.contains("RX"))][['byte', 'trace_info']].rename(columns={'trace_info': 'rx_seq_ctrl'})
+    tx_seq_ctrl_df.tx_seq_ctrl = tx_seq_ctrl_df.tx_seq_ctrl.str.strip().str.split('SeqNum', 2, expand=True).drop([0], axis=1)
+    rx_seq_ctrl_df.rx_seq_ctrl = rx_seq_ctrl_df.rx_seq_ctrl.str.strip().str.split('SeqNum', 2, expand=True).drop([0], axis=1)
+    csv_df = csv_df.merge(tx_seq_ctrl_df, on='byte', how='left')
+    csv_df = csv_df.merge(rx_seq_ctrl_df, on='byte', how='left')
     csv_df = csv_df.bfill()
 
     # FRT_trace_val
-    csv_df['frt32_val'] = csv_df.apply(lambda x: (x.trace_info[-8:]) if x.tracecode_dec in [6, 121, 122, 123, 124, 129, 130] else np.nan, axis=1)
+    # csv_df['frt32_val'] = csv_df.apply(lambda x: (x.trace_info[-8:]) if x.tracecode_dec in [6, 121, 122, 123, 124, 129, 130] else np.nan, axis=1)
+    frt32_val_df = csv_df[csv_df.tracecode_dec.isin([6, 121, 122, 123, 124, 129, 130])][['byte', 'trace_info']]
+    frt32_val_df.trace_info = frt32_val_df.trace_info.str[-8:]
+    frt32_val_df.rename(columns={'trace_info': 'frt32_val'}, inplace=True)
+    csv_df = csv_df.merge(frt32_val_df, on='byte', how='left')
 
     csv_df['dummy'] = csv_df.tracecode_dec.shift(1)
     csv_df['dummy_frt'] = csv_df.frt32_val.shift(-1)
-    csv_df['dup'] = csv_df.apply(lambda x: 1 if x.tracecode_dec == x.dummy else 0, axis=1)
+    csv_df['dup'] = np.where((csv_df.tracecode_dec == csv_df.dummy), 1, 0)
 
     csv_df['frt_val'] = csv_df.dummy_frt + csv_df.frt32_val
     csv_df['frt_val'] = csv_df.frt_val.apply(lambda x: int(x, 16) if type(x) == str else np.nan)
+
     # csv_df.frt_val = csv_df.frt_val.apply(lambda x: "hello" if x!=np.nan else np.nan)
     csv_df = csv_df[csv_df.dup == 0]
     csv_df.drop(columns=['frt32_val', 'dummy', 'dummy_frt', 'dup'], inplace=True)
@@ -1356,73 +2303,16 @@ def graph_it():
         ['tracecode_dec', 'trace_str', 'sts', ]).count()
     cl_stats = cl_stats['byte']
 
+    # print(time.process_time() - start, flush=True)
+    start = time.process_time()
+
     print(cl_stats)
 
     # obtain fastlink df
     if '0' in graph_ans_list or '1' in graph_ans_list:
-        filter_list = [149, 148]
+        print("\nFastLink...Data Processing...", flush=True, end='')
 
-        fast_link_df = cl_csv_df[(cl_csv_df.tracecode_dec.isin(filter_list))][['byte', 'frt_dec', 'tracecode_dec', 'sts', 'cl_id']]
-        trace_list = list(set(list(fast_link_df.tracecode_dec)))
-        if sorted(trace_list) != sorted(filter_list):
-            print("\n**** All required traces {} are not present {}. Cannot draw the graph".format(filter_list, trace_list))
-            show_required_traces(filter_list)
-            return
-
-        if not fast_link_df.empty:
-            fast_link_df['A_dif'] = fast_link_df['frt_dec'].diff()
-            fast_link_df['shifted_frt'] = fast_link_df['frt_dec'].shift()
-            fast_link_df['prev_trace'] = fast_link_df['tracecode_dec'].shift()
-            fast_link_df['diff'] = fast_link_df.apply(lambda x: np.NaN if (x['tracecode_dec'] == x['prev_trace'] or x['tracecode_dec'] == 148) else x['A_dif'], axis=1)
-            fast_link_df.drop(columns=['A_dif', 'shifted_frt', 'prev_trace'], inplace=True)
-
-            # obtain rtt_df
-            rtt_df = fast_link_df[['byte', 'diff']].dropna()
-            rtt_df = rtt_df.groupby('diff').agg(
-                'count').rename(columns={'byte': 'freq'})
-
-            # PDF
-            rtt_df['pdf'] = rtt_df['freq'] / sum(rtt_df['freq'])
-            # CDF
-            rtt_df['cdf'] = rtt_df['pdf'].cumsum()
-            rtt_df = rtt_df.reset_index()
-            rtt_df = rtt_df.astype({'diff': int})
-
-            # Create figure with secondary y-axisspecs
-            if(graphs['rtt'] == {}):
-                graphs['rtt'] = make_subplots(specs=[[{"secondary_y": True}]])
-
-                # Add traces
-                graphs['rtt'].add_bar(x=rtt_df['diff'], y=rtt_df['freq'], name="Count", opacity=0.5)
-                graphs['rtt'].add_scatter(x=rtt_df['diff'], y=rtt_df['pdf'], name="PDF", secondary_y=True)
-                graphs['rtt'].add_scatter(x=rtt_df['diff'], y=rtt_df['cdf'], name="CDF", secondary_y=True)
-                # graphs['rtt'].add_trace(go.Bar(x=rtt_df['diff'], y=rtt_df['freq'], name="Count", opacity=0.5,
-                #                      ), secondary_y=True)
-                # graphs['rtt'].add_trace(go.Scatter(x=rtt_df['diff'], y=rtt_df['pdf'], name="PDF"))
-                # graphs['rtt'].add_trace(go.Scatter(x=rtt_df['diff'], y=rtt_df['cdf'], name='CDF'))
-                graphs['rtt'].update_layout(
-                    # template="plotly_dark",
-                    title="Round Trip time in usec",
-                    xaxis_title="RTT (usecs)",
-                    yaxis_title="Count",
-                    yaxis2_title="PDF & CDF",
-                    hovermode='x',
-
-                )
-                graphs['rtt'].show()
-
-            else:
-                print(graphs['rtt'])
-                graphs['rtt'].data[0].x = list(rtt_df['diff'])
-                graphs['rtt'].data[0].y = list(rtt_df['freq'])
-
-                graphs['rtt'].data[1].x = list(rtt_df['diff'])
-                graphs['rtt'].data[1].y = list(rtt_df['pdf'])
-
-                graphs['rtt'].data[2].x = list(rtt_df['diff'])
-                graphs['rtt'].data[2].y = list(rtt_df['cdf'])
-
-            # fig.show()
+        graph_fastlink()
 
     if '0' in graph_ans_list or '2' in graph_ans_list or '3' in graph_ans_list:
 
@@ -1438,41 +2328,36 @@ def graph_it():
             return
 
         # nextCLI
-        timings_df = timings_df.assign(nextcli=pd.Series(np.nan))
-        timings_df.nextcli = timings_df.apply(lambda x: "CLI(" + x.trace_info.split(' ')[4] + ", " + x.trace_info.split(' ')
-                                              [2][:-1] + ")" if x.tracecode_dec == tracing_events_str_num['CL_NEXT_CLI'] else np.nan, axis=1)
+
+        nextcli_df = timings_df[timings_df.tracecode_dec == tracing_events_str_num['CL_NEXT_CLI']][['byte', 'trace_info']].rename(columns={'trace_info': 'nextcli'})
+        nextcli_df[['rx', 'tx']] = nextcli_df.nextcli.str.split(' ', expand=True).drop(columns=[0, 1, 3], axis=1)
+        nextcli_df.nextcli = "CLI(" + nextcli_df.rx + nextcli_df.tx + ")"
+        nextcli_df.drop(columns=['rx', 'tx'], inplace=True)
+
+        timings_df = timings_df.merge(nextcli_df, on='byte', how='left')
         timings_df.nextcli = timings_df.nextcli.fillna(method='bfill')
         timings_df = timings_df[timings_df.tracecode_dec != tracing_events_str_num['CL_NEXT_CLI']]
 
-        # aftertxcol
-        timings_df = timings_df.assign(aftertx_col=pd.Series(np.nan))
-        timings_df['aftertx_col'] = timings_df.apply(lambda x: "afterTx" if x['tracecode_dec'] == tracing_events_str_num['CL_TX'] else np.nan, axis=1)
-        timings_df.afertx_col = np.zeros
+        # # aftertxcol
+        timings_df['aftertx_col'] = np.where((timings_df.tracecode_dec == tracing_events_str_num['CL_TX']), "afterTx", np.nan)
 
         # beforetxcol
-        timings_df = timings_df.assign(beforetx_col=pd.Series(np.nan))
-        timings_df.beforetx_col = timings_df.tracecode_dec.apply(lambda x: "beforeTx" if x == tracing_events_str_num['CL_FRT32_TX_CALL'] else np.nan)
+        timings_df['beforetx_col'] = np.where((timings_df.tracecode_dec == tracing_events_str_num['CL_FRT32_TX_CALL']), "beforeTx", np.nan)
 
         # dc
-        timings_df['dummy'] = timings_df.aftertx_col.shift(1)
-        timings_df = timings_df.assign(dc_col=pd.Series(np.nan))
-        timings_df.dc_col = timings_df.apply(lambda x: "dc" if x.tracecode_dec == tracing_events_str_num['LMMGR_DATA_CONF'] else np.nan, axis=1)
-        timings_df.drop(columns=['dummy'], inplace=True)
+        timings_df['dc_col'] = np.where((timings_df.tracecode_dec == tracing_events_str_num['LMMGR_DATA_CONF']), "dc", np.nan)
 
         # txend
-        timings_df = timings_df.assign(txend_col=pd.Series(np.nan))
-        timings_df.txend_col = timings_df.apply(lambda x: "txEnd" if x.tracecode_dec == tracing_events_str_num['FRT32_TX_END'] else np.nan, axis=1)
+        timings_df['txend_col'] = np.where((timings_df.tracecode_dec == tracing_events_str_num['FRT32_TX_END']), "txEnd", np.nan)
+
         # afterRx
-        timings_df = timings_df.assign(afterrx_col=pd.Series(np.nan))
-        timings_df.afterrx_col = timings_df.apply(lambda x: "afterRx" if x.tracecode_dec == tracing_events_str_num['CL_RX'] else np.nan, axis=1)
+        timings_df['afterrx_col'] = np.where((timings_df.tracecode_dec == tracing_events_str_num['CL_RX']), "afterRx", np.nan)
 
         # beforeRx
-        timings_df = timings_df.assign(beforerx_col=pd.Series(np.nan))
-        timings_df.beforerx_col = timings_df.apply(lambda x: "beforeRx" if x.tracecode_dec == tracing_events_str_num['CL_FRT32_RX_CALL'] else np.nan, axis=1)
+        timings_df['beforerx_col'] = np.where((timings_df.tracecode_dec == tracing_events_str_num['CL_FRT32_RX_CALL']), "beforeRx", np.nan)
 
         # rxend
-        timings_df = timings_df.assign(rxend_col=pd.Series(np.nan))
-        timings_df.rxend_col = timings_df.apply(lambda x: "rxEnd" if x.tracecode_dec == tracing_events_str_num['FRT32_RX_END'] else np.nan, axis=1)
+        timings_df['rxend_col'] = np.where((timings_df.tracecode_dec == tracing_events_str_num['FRT32_RX_END']), "rxEnd", np.nan)
 
         # # FRT_dec
         # timings_df['frt_dec'] = timings_df.apply(lambda x: int(x.frt_hex[-min(len(x.frt_hex)-2, 8):], 16), axis=1)
@@ -1480,845 +2365,30 @@ def graph_it():
         timings_df.drop(columns=['frt_hex'], inplace=True)
 
         # timestamps for tx rx start and end
-        timings_df['ts_rxstart'] = timings_df.apply(lambda x: x.frt_val if x.tracecode_dec == tracing_events_str_num['FRT32_RX_START'] else np.nan, axis=1)
-        timings_df['ts_rxend'] = timings_df.apply(lambda x: x.frt_val if x.tracecode_dec == tracing_events_str_num['FRT32_RX_END'] else np.nan, axis=1)
-        timings_df['ts_txstart'] = timings_df.apply(lambda x: x.frt_val if x.dc_col == "dc" else np.nan, axis=1)
-        timings_df['ts_txend'] = timings_df.apply(lambda x: x.frt_val if x.tracecode_dec == tracing_events_str_num['FRT32_TX_END'] else np.nan, axis=1)
-
-    if '0' in graph_ans_list or '3' in graph_ans_list:
-        timeline_tx_color = {
-
-            "TOP": colors_list[0],
-            "IDLE": colors_list[1],
-            "FH": 'cornflowerblue',
-            "RXB": 'RoyalBlue',
-            "TXB": 'crimson',
-            "CL": 'darksalmon',
-            "BCAST": 'Violet',
-            "SA": colors_list[7],
-            "LLS": colors_list[8],
-            "ELG": colors_list[9],
-        }
-        timeline_rx_color = {
-
-            "TOP": colors_list[0],
-            "IDLE": colors_list[1],
-            "FH": 'LightSeaGreen',
-            "RXB": 'RoyalBlue',
-            "TXB": 'crimson',
-            "CL": 'darkseagreen',
-            "BCAST": 'Violet',
-            "SA": colors_list[7],
-            "LLS": colors_list[8],
-            "ELG": colors_list[9],
-        }
-
-        def hoverinfo(x, type):
-
-            if type == "rx":
-                seqinfo = str(x.rx_seq_ctrl)
-                ts_start = str(x.ts_rxstart)
-                ts_end = str(x.ts_rxend)
-                dur = str(x.rx_dur/1000).strip()
-            else:
-                seqinfo = str(x.tx_seq_ctrl)
-                ts_start = str(x.ts_txstart)
-                ts_end = str(x.ts_txend)
-                dur = str(x.tx_dur/1000).strip()
-
-            ret = ""
-            ret = "~~~( " + x.owner + " )~~~<br>"
-            if(x.owner == "CL"):
-                ret = ret + "<b>CLId </b>" + str(x.cl_id) + ", " + x.cl_mac + "<br>" + \
-                    x.txrx_param + "<br>" + \
-                    "<b>seqctrl:</b> " + seqinfo + "<br>"
-            if(x.owner == 'CL' or x.owner == 'FH'):
-                ret = ret + str(x.nextcli) + "<br>"
-            ret = ret + "<br><b>Start:</b>" + ts_start + "<br><b>End:</b>" + ts_end + "<br><b>dur: </b>" + dur + " msec"
-            return ret
-
-        # rx
-        timeline_rx_df = pd.DataFrame()
-        timeline_rx_df = timings_df[['byte', 'owner', 'nextcli', 'cl_id', 'cl_mac', 'rx_seq_ctrl', 'txrx_param', 'ts_rxstart', 'ts_rxend']]
-        timeline_rx_df = timeline_rx_df.assign(ts_rxend=timeline_rx_df.ts_rxend.shift(-1))
-        timeline_rx_df.dropna(subset=['ts_rxstart', 'ts_rxend'], inplace=True)
-        timeline_rx_df['rx_dur'] = timeline_rx_df.ts_rxend - timeline_rx_df.ts_rxstart
-        timeline_rx_df['color'] = timeline_rx_df.owner.apply(lambda x: timeline_rx_color[x])
-        timeline_rx_df['hoverinfo'] = timeline_rx_df.apply(lambda x: hoverinfo(x, "rx"), axis=1)
-
-        # tx
-        timeline_tx_df = timings_df[['byte', 'owner', 'nextcli', 'cl_id', 'cl_mac', 'tx_seq_ctrl', 'txrx_param', 'ts_txstart', 'ts_txend']]
-        timeline_tx_df = timeline_tx_df.assign(ts_txend=timeline_tx_df.ts_txend.shift(-1))
-        timeline_tx_df.dropna(subset=['ts_txstart', 'ts_txend'], inplace=True)
-        timeline_tx_df['tx_dur'] = timeline_tx_df.ts_txend - timeline_tx_df.ts_txstart
-        timeline_tx_df['color'] = timeline_tx_df.owner.apply(lambda x: timeline_tx_color[x])
-        timeline_tx_df['hoverinfo'] = timeline_tx_df.apply(lambda x: hoverinfo(x, "tx"), axis=1)
-        timeline_tx_df = timeline_tx_df[timeline_tx_df.tx_dur <= 500000]
-
-        # PHY INDICATIONS and CALLs
-        filter_list = [1, 2, 3, 4, 6, 140, 141, 148, 149]
-        timeline_phycallind_df = pd.DataFrame()
-        timeline_phycallind_df = cl_csv_df[cl_csv_df.tracecode_dec.isin(filter_list)]
-        timeline_phycallind_df = timeline_phycallind_df.assign(y1=pd.Series(np.nan))
-
-        timeline_phycallind_df['color'] = timeline_phycallind_df.tracecode_dec.apply(lambda x: colors_list[x])
-        timeline_phycallind_df.drop(columns=['frt_hex'], inplace=True)
-
-        # CL Traces
-        filter_list = [131, 132, 133, 134, 135, 136, 137, 138, 139, 142, 143, 144, 145, 146, 147, 150]
-        timeline_cl_df = pd.DataFrame()
-        timeline_cl_df = cl_csv_df[cl_csv_df.tracecode_dec.isin(filter_list)]
-        timeline_cl_df = timeline_cl_df.assign(color=pd.Series(np.nan))
-        timeline_cl_df['color'] = timeline_cl_df.tracecode_dec.apply(lambda x: colors_list[x+64])
-
-        fig = go.Figure()
-
-        # add TXs
-        fig.add_bar(
-            x=timeline_tx_df.ts_txstart + timeline_tx_df.tx_dur/2,
-            y=[2]*len(timeline_tx_df.index),
-            width=timeline_tx_df.tx_dur,
-            # base=1,
-            name="TX",
-            text=timeline_tx_df.hoverinfo,
-            textposition="inside",
-            hovertemplate='%{text}',            # hoverinfo="none",
-            # offset=-timeline_tx_df.tx_dur/2,
-            # hoverinfo="none",
-            marker=dict(
-                # color='darksalmon',
-                color=timeline_tx_df['color'],
-                opacity=1,
-                line=dict(width=1,
-                          color=timeline_tx_df['color']))
-        )
-
-        # add RXs
-        fig.add_bar(
-            x=timeline_rx_df.ts_rxstart + timeline_rx_df.rx_dur/2,
-            y=[-2]*len(timeline_rx_df.index),
-            width=timeline_rx_df.rx_dur,
-            name="RX",
-            text=timeline_rx_df.hoverinfo,
-            textposition="inside",
-            hovertemplate='%{text}',            # hoverinfo="none",
-            marker=dict(
-                # color='darkseagreen',
-                color=timeline_rx_df['color'],
-                line=dict(width=1,
-                          color=timeline_rx_df['color']))
-        )
-
-        # add PHY Indications and calls
-
-        fig.add_scatter(
-            x=timeline_phycallind_df.frt_dec,
-            y=[0]*len(timeline_phycallind_df.index),
-            mode="markers",
-            name="Internal Controls/Indications",
-            text="<b>CL_ID:</b> " + timeline_phycallind_df.cl_id + "<br>" + timeline_phycallind_df.trace_info,
-            hovertemplate="<b>FRT:</b>%{x}<br>%{text}",
-            visible="legendonly",
-            # hoverinfo="none",
-            marker=dict(
-                color='white',
-                line=dict(width=1,
-                          color=timeline_phycallind_df.color))
-        )
-
-        # add CL traces
-        fig.add_scatter(
-            x=timeline_cl_df.frt_dec,
-            y=[0]*len(timeline_cl_df.index),
-            mode="markers",
-            name="CL Traces",
-            text="<b>CL_ID:</b> " + timeline_cl_df.cl_id + "<br>" + timeline_cl_df.trace_info,
-            hovertemplate="<b>FRT:</b>%{x}<br>%{text}",
-            visible="legendonly",
-            # hoverinfo="none",
-            marker=dict(
-                color='white',
-                line=dict(width=1,
-                          color=timeline_cl_df.color))
-        )
-
-        # add annotations for tx and rx
-        fig.add_annotation(
-            x=min(timeline_tx_df.ts_txend),
-            y=3.5,
-            text="Transmissions",
-            font=dict(
-                family="Courier New, monospace",
-                size=16,
-                color="red"
-            ),
-            showarrow=False,)
-        fig.add_annotation(
-            x=min(timeline_rx_df.ts_rxend),
-            y=-4,
-            text="Receptions",
-            font=dict(
-                family="Courier New, monospace",
-                size=16,
-                color="green"
-            ),
-            showarrow=False,)
-
-        # # add tx-rx start/end
-        # fig.add_scatter(
-        #     x=timeline_tx_df.ts_txstart.append(timeline_tx_df.ts_txend).append(timeline_rx_df.ts_rxstart).append(timeline_rx_df.ts_rxend),
-        #     # x=pandas.concat(timeline_tx_df.ts_txstart,timeline_tx_df.ts_txend, timeline_rx_df.ts_rxstart,timeline_rx_df.ts_rxend),
-        #     y=[0]*(len(timeline_tx_df.index)*2 + len(timeline_tx_df.index)*2),
-        #     mode="markers",
-        #     name="TX/RX Start/End",
-        #     hovertemplate="<b>FRT:</b>%{x}",
-        #     visible="legendonly",
-        #     # hoverinfo="none",
-        #     marker=dict(
-        #         color='red',
-        #         line=dict(width=1,
-        #                   color="black"))
-        # )
-
-        fig.update_layout(
-            title="Timeline Visualizer",
-            showlegend=True,
-            xaxis_tickformat='f',
-            yaxis=dict(
-                # visible=False,
-                range=[-8, 8],
-                fixedrange=True,
-                showticklabels=False,
-            ),
-            legend=dict(orientation='h', yanchor='top', xanchor='center', y=1, x=0.5)
-            # hovermode='x',
-            # shapes=shapes,
-        )
-        fig.update_xaxes(rangeslider_visible=True, title="FRT usec",)
-        fig.update_yaxes(zeroline=True, zerolinewidth=1, zerolinecolor='grey')
-
-        fig.show()
+        timings_df['ts_rxstart'] = np.where((timings_df.tracecode_dec == tracing_events_str_num['FRT32_RX_START']), timings_df.frt_val, np.nan)
+        timings_df['ts_rxend'] = np.where((timings_df.tracecode_dec == tracing_events_str_num['FRT32_RX_END']), timings_df.frt_val, np.nan)
+        timings_df['ts_txstart'] = np.where((timings_df.dc_col == "dc"), timings_df.frt_val, np.nan)
+        timings_df['ts_txend'] = np.where((timings_df.tracecode_dec == tracing_events_str_num['FRT32_TX_END']), timings_df.frt_val, np.nan)
+        print("Done...", flush=True, end='')
 
         # exit(0)
     if '0' in graph_ans_list or '2' in graph_ans_list:
+        print("\nCL Timings...Data Processing...", flush=True, end='')
+        graph_cl_timings()
 
-        # target2txphr
-
-        timings_df['dummy'] = timings_df.dc_col.shift(-2)
-        timings_df['dummy_frt'] = timings_df.frt_val.shift(-2)
-        timings_df = timings_df.assign(target2txphr=pd.Series(np.nan))
-        timings_df.target2txphr = timings_df.apply(lambda x: x.dummy_frt-x.frt_val if x.beforetx_col == 'beforeTx' and x.dummy == 'dc' else np.nan, axis=1)
-        timings_df.drop(columns=['dummy', 'dummy_frt'], inplace=True)
-        # freq
-        target2txphr_df = timings_df[['byte', 'target2txphr']].groupby('target2txphr').agg('count').rename(columns={'byte': 'freq'}).reset_index()
-        target2txphr_df = target2txphr_df.astype({'target2txphr': int})
-        # PDF
-        target2txphr_df['pdf'] = target2txphr_df['freq'] / sum(target2txphr_df['freq'])
-        # CDF
-        target2txphr_df['cdf'] = target2txphr_df['pdf'].cumsum()
-        target2txphr_df = target2txphr_df.reset_index()
-        # target2txphr_df = target2txphr_df.astype({'target2txphr': 'int64'})
-
-        # txend2rxstart
-        timings_df['dummy'] = timings_df.beforerx_col.shift(-1)
-        timings_df['dummy_frt'] = timings_df.frt_dec.shift(-1)
-        timings_df = timings_df.assign(txend2rxstart=pd.Series(np.nan))
-        timings_df.txend2rxstart = timings_df.apply(lambda x: x.dummy_frt-x.frt_val if x.txend_col == 'txEnd' and x.dummy == 'beforeRx' else np.nan, axis=1)
-        timings_df.drop(columns=['dummy', 'dummy_frt'], inplace=True)
-        # freq
-        txend2rxstart_df = timings_df[['byte', 'txend2rxstart']].groupby('txend2rxstart').agg('count').rename(columns={'byte': 'freq'}).reset_index()
-        txend2rxstart_df = txend2rxstart_df.astype({'txend2rxstart': int})
-        # PDF
-        txend2rxstart_df['pdf'] = txend2rxstart_df['freq'] / sum(txend2rxstart_df['freq'])
-        # CDF
-        txend2rxstart_df['cdf'] = txend2rxstart_df['pdf'].cumsum()
-        txend2rxstart_df = txend2rxstart_df.reset_index()
-
-        # rxend2targettime
-        timings_df['dummy'] = timings_df.beforetx_col.shift(-1)
-        timings_df['dummy_frt'] = timings_df.frt_val.shift(-1)
-        timings_df['dummy_cl_id'] = timings_df.cl_id.shift(-1)
-
-        timings_df = timings_df.assign(rxend2targettime=pd.Series(np.nan))
-
-        timings_df.rxend2targettime = timings_df.apply(lambda x: x.dummy_frt-x.frt_val if x.rxend_col == 'rxEnd' and x.dummy == 'beforeTx' and x.cl_id == x.dummy_cl_id else np.nan, axis=1)
-        timings_df.drop(columns=['dummy', 'dummy_frt', 'dummy_cl_id'], inplace=True)
-        # freq
-        rxend2targettime_df = timings_df[['byte', 'rxend2targettime']].groupby('rxend2targettime').agg('count').rename(columns={'byte': 'freq'}).reset_index()
-        rxend2targettime_df = rxend2targettime_df.astype({'rxend2targettime': int})
-        # PDF
-        rxend2targettime_df['pdf'] = rxend2targettime_df['freq'] / sum(rxend2targettime_df['freq'])
-        # CDF
-        rxend2targettime_df['cdf'] = rxend2targettime_df['pdf'].cumsum()
-        rxend2targettime_df = rxend2targettime_df.reset_index()
-
-        # rxend2txtime
-        timings_df['dummy'] = timings_df.dc_col.shift(-3)
-        timings_df['dummy_frt'] = timings_df.frt_val.shift(-3)
-        timings_df['dummy_cl_id'] = timings_df.cl_id.shift(-3)
-        timings_df = timings_df.assign(rxend2txtime=pd.Series(np.nan))
-        timings_df.rxend2txtime = timings_df.apply(lambda x: x.dummy_frt-x.frt_val if x.rxend_col == 'rxEnd' and x.dummy == 'dc' and x.cl_id == x.dummy_cl_id else np.nan, axis=1)
-        timings_df.drop(columns=['dummy', 'dummy_frt', 'dummy_cl_id'], inplace=True)
-        # freq
-        rxend2txtime_df = timings_df[['byte', 'rxend2txtime']].groupby('rxend2txtime').agg('count').rename(columns={'byte': 'freq'}).reset_index()
-        rxend2txtime_df = rxend2txtime_df.astype({'rxend2txtime': int})
-        # PDF
-        rxend2txtime_df['pdf'] = rxend2txtime_df['freq'] / sum(rxend2txtime_df['freq'])
-        # CDF
-        rxend2txtime_df['cdf'] = rxend2txtime_df['pdf'].cumsum()
-        rxend2txtime_df = rxend2txtime_df.reset_index()
-
-        # txcall2targettime
-        timings_df = timings_df.assign(txcall2targettime=pd.Series(np.nan))
-        timings_df.txcall2targettime = timings_df.apply(lambda x: x.frt_val-x.frt_dec if x.beforetx_col == 'beforeTx' else np.nan, axis=1)
-        # freq
-        txcall2targettime_df = timings_df[['byte', 'txcall2targettime']].groupby('txcall2targettime').agg('count').rename(columns={'byte': 'freq'}).reset_index()
-        txcall2targettime_df = txcall2targettime_df.astype({'txcall2targettime': int})
-        # PDF
-        txcall2targettime_df['pdf'] = txcall2targettime_df['freq'] / sum(txcall2targettime_df['freq'])
-        # CDF
-        txcall2targettime_df['cdf'] = txcall2targettime_df['pdf'].cumsum()
-        txcall2targettime_df = txcall2targettime_df.reset_index()
-        # txcall2aftertx
-        timings_df['dummy'] = timings_df.aftertx_col.shift(-1)
-        timings_df['dummy_frt'] = timings_df.frt_dec.shift(-1)
-        timings_df = timings_df.assign(txcall2aftertx=pd.Series(np.nan))
-        timings_df.txcall2aftertx = timings_df.apply(lambda x: x.dummy_frt-x.frt_dec if x.beforetx_col == 'beforeTx' and x.dummy == 'afterTx' else np.nan, axis=1)
-        timings_df.drop(columns=['dummy', 'dummy_frt'], inplace=True)
-        # freq
-        txcall2aftertx_df = timings_df[['byte', 'txcall2aftertx']].groupby('txcall2aftertx').agg('count').rename(columns={'byte': 'freq'}).reset_index()
-        txcall2aftertx_df = txcall2aftertx_df.astype({'txcall2aftertx': int})
-        # PDF
-        txcall2aftertx_df['pdf'] = txcall2aftertx_df['freq'] / sum(txcall2aftertx_df['freq'])
-        # CDF
-        txcall2aftertx_df['cdf'] = txcall2aftertx_df['pdf'].cumsum()
-        txcall2aftertx_df = txcall2aftertx_df.reset_index()
-
-        # rxend2txcall
-        timings_df['dummy'] = timings_df.beforetx_col.shift(-1)
-        timings_df['dummy_frt'] = timings_df.frt_dec.shift(-1)
-        timings_df['dummy_cl_id'] = timings_df.cl_id.shift(-1)
-
-        timings_df = timings_df.assign(rxend2txcall=pd.Series(np.nan))
-        timings_df.rxend2txcall = timings_df.apply(lambda x: x.dummy_frt-x.frt_val if x.rxend_col == 'rxEnd' and x.dummy == 'beforeTx' and x.cl_id == x.dummy_cl_id else np.nan, axis=1)
-        timings_df.drop(columns=['dummy', 'dummy_frt', 'dummy_cl_id'], inplace=True)
-        # freq
-        rxend2txcall_df = timings_df[['byte', 'rxend2txcall']].groupby('rxend2txcall').agg('count').rename(columns={'byte': 'freq'}).reset_index()
-        rxend2txcall_df = rxend2txcall_df.astype({'rxend2txcall': int})
-        # PDF
-        rxend2txcall_df['pdf'] = rxend2txcall_df['freq'] / sum(rxend2txcall_df['freq'])
-        # CDF
-        rxend2txcall_df['cdf'] = rxend2txcall_df['pdf'].cumsum()
-        rxend2txcall_df = rxend2txcall_df.reset_index()
-
-        # rxcall2afterrx
-        timings_df['dummy'] = timings_df.afterrx_col.shift(-1)
-        timings_df['dummy_frt'] = timings_df.frt_dec.shift(-1)
-        timings_df = timings_df.assign(rxcall2afterrx=pd.Series(np.nan))
-        timings_df.rxcall2afterrx = timings_df.apply(lambda x: x.dummy_frt-x.frt_dec if x.beforerx_col == 'beforeRx' and x.dummy == 'afterRx' else np.nan, axis=1)
-        timings_df.drop(columns=['dummy', 'dummy_frt'], inplace=True)
-        # freq
-        rxcall2afterrx_df = timings_df[['byte', 'rxcall2afterrx']].groupby('rxcall2afterrx').agg('count').rename(columns={'byte': 'freq'}).reset_index()
-        rxcall2afterrx_df = rxcall2afterrx_df.astype({'rxcall2afterrx': int})
-        # PDF
-        rxcall2afterrx_df['pdf'] = rxcall2afterrx_df['freq'] / sum(rxcall2afterrx_df['freq'])
-        # CDF
-        rxcall2afterrx_df['cdf'] = rxcall2afterrx_df['pdf'].cumsum()
-        rxcall2afterrx_df = rxcall2afterrx_df.reset_index()
-
-        cl_dur_df = cl_csv_df[cl_csv_df['tracecode_dec'] == 132][['byte', 'sts', 'trace_info']]
-        if not cl_dur_df.empty:
-            cl_dur_df['dur_ms'] = cl_dur_df.apply(lambda x: x['trace_info'].split(' ')[3].split('msec')[0], axis=1)
-            cl_dur_df.drop(columns=['trace_info', 'sts'], inplace=True)
-            cl_dur_df['dur_ms'] = cl_dur_df['dur_ms'].astype(int)
-            # cl_dur_df = cl_dur_df.sort_values(by='dur_ms')
-            cl_dur_df = cl_dur_df.groupby('dur_ms').agg(
-                'count').rename(columns={'byte': 'freq'}).reset_index()
-            # PDF
-            cl_dur_df['pdf'] = cl_dur_df['freq'] / sum(cl_dur_df['freq'])
-            # CDF
-            cl_dur_df['cdf'] = cl_dur_df['pdf'].cumsum()
-            cl_dur_df = cl_dur_df.reset_index()
-
-        # rxcall2rxPHR
-        timings_df['dummy_frt'] = timings_df.ts_rxstart.shift(-1)
-        timings_df = timings_df.assign(afterRx2rxPHR=pd.Series(np.nan))
-        timings_df.afterRx2rxPHR = timings_df.apply(lambda x: x.dummy_frt - x.frt_dec if x.afterrx_col == 'afterRx' and x.dummy_frt != np.nan else np.nan, axis=1)
-
-        # drop values higher than 3sec
-        timings_df.afterRx2rxPHR = timings_df.apply(lambda x: np.nan if np.isnan([x.afterRx2rxPHR]) or x.afterRx2rxPHR > 3000.0 else x.afterRx2rxPHR, axis=1)
-
-        # PLOT THE TIMING DIAGRAM
-        # A list of Matplotlib releases and their dates
-        # Taken from https://api.github.com/repos/matplotlib/matplotlib/releases
-        names = ['WrapperCall1', 'WrapperReturn', 'TargetTx1', 'TxPHR1', 'EndTxTime', 'rxStart_beforeCall', 'rxStart_afterCall', 'rxPHR',
-                 'rxEnd', 'WrapperCall2', 'TargetTx2', 'TxPHR2', ]
-
-        tx_dur = 2000
-        rx_dur = 1500
-
-        names_label_dic = {
-            'WrapperCall1': "WrapperCall",
-            'WrapperReturn': "WrapperReturn",
-            'TargetTx1': "TargetTx",
-            'TxPHR1': "TxPHR",
-            'EndTxTime': "EndTxTime",
-            'rxStart_beforeCall': "rxStart\nbeforeCall",
-            'rxStart_afterCall': "rxStart\nafterCall",
-            'rxPHR': "rx PHR",
-            'rxEnd': "rxEnd",
-            'WrapperCall2': "WrapperCall",
-            'TargetTx2': "TargetTx",
-            'TxPHR2': "TxPHR",
-        }
-
-        levels_dic = {
-            'WrapperCall1': 2,
-            'WrapperReturn': 2,
-            'TargetTx1': 1,
-            'TxPHR1': 2,
-            'EndTxTime': 1,
-            'rxStart_beforeCall': -1.2,
-            'rxStart_afterCall': -2,
-            'rxPHR': -2,
-            'rxEnd': -1,
-            'WrapperCall2': 2,
-            'TargetTx2': 1,
-            'TxPHR2': 1,
-        }
-
-        colors_dic = {
-            'WrapperCall1': 'royalblue',
-            'WrapperReturn': 'royalblue',
-            'TargetTx1': 'crimson',
-            'TxPHR1': 'crimson',
-            'EndTxTime': 'crimson',
-            'rxStart_beforeCall': 'LightSeaGreen',
-            'rxStart_afterCall': 'LightSeaGreen',
-            'rxPHR': 'LightSeaGreen',
-            'rxEnd': 'LightSeaGreen',
-            'WrapperCall2': 'royalblue',
-            'TargetTx2': 'crimson',
-            'TxPHR2': 'crimson',
-        }
-
-        diff_points_dic = {
-            'wrapperCall2Return1': int(timings_df.txcall2aftertx.mean()),
-            'wrapperCall2TargetTx1': int(timings_df.txcall2targettime.mean()),
-            'targetTx2TxPHR1': int(timings_df.target2txphr.mean()),
-            'endTxTime2rxStartbefore': int(timings_df.txend2rxstart.mean()),
-            'rxstartBefore2After': int(timings_df.rxcall2afterrx.mean()),
-            'rxEnd2wrapperCall': int(timings_df.rxend2txcall.mean()),
-            'rxstartAfter2rxPHR': int(timings_df.afterRx2rxPHR.mean()),
-            'wrapperCall2TargetTx2': int(timings_df.txcall2targettime.mean()),
-            'rxEnd2targetTx': int(timings_df.rxend2targettime.mean()),
-            'rxEnd2TxPHR': int(timings_df.rxend2txtime.mean()),
-            'targetTx2TxPHR2': int(timings_df.target2txphr.mean())
-        }
-
-        diff_points_arr = list(diff_points_dic.values())
-
-        points_dic = {}
-        points_dic['WrapperCall1'] = 1
-        points_dic['WrapperReturn'] = points_dic['WrapperCall1'] + diff_points_dic['wrapperCall2Return1']
-        points_dic['TargetTx1'] = points_dic['WrapperCall1'] + diff_points_dic['wrapperCall2TargetTx1']
-        points_dic['TxPHR1'] = points_dic['TargetTx1'] + diff_points_dic['targetTx2TxPHR1']
-        points_dic['EndTxTime'] = points_dic['TxPHR1'] + tx_dur
-        points_dic['rxStart_beforeCall'] = points_dic['EndTxTime'] + diff_points_dic['endTxTime2rxStartbefore']
-        points_dic['rxStart_afterCall'] = points_dic['rxStart_beforeCall'] + diff_points_dic['rxstartBefore2After']
-        points_dic['rxPHR'] = points_dic['rxStart_afterCall'] + diff_points_dic['rxstartAfter2rxPHR']
-        points_dic['rxEnd'] = points_dic['rxPHR'] + rx_dur
-        points_dic['WrapperCall2'] = points_dic['rxEnd'] + diff_points_dic['rxEnd2wrapperCall']
-        points_dic['TargetTx2'] = points_dic['WrapperCall2'] + diff_points_dic['wrapperCall2TargetTx2']
-        points_dic['TxPHR2'] = points_dic['TargetTx2'] + diff_points_dic['targetTx2TxPHR2']
-
-        points = list(points_dic.values())
-
-        arrows_x = [
-            {'x1': points_dic['WrapperCall1'], 'x2':points_dic['WrapperReturn'], 'y': 1.5},
-            {'x1': points_dic['WrapperCall1'], 'x2':points_dic['TargetTx1'], 'y': 0.5},
-            {'x1': points_dic['TargetTx1'], 'x2':points_dic['TxPHR1'], 'y': 0.75},
-            {'x1': points_dic['EndTxTime'], 'x2': points_dic['rxStart_beforeCall'], 'y': -0.5},
-            {'x1': points_dic['EndTxTime'], 'x2': points_dic['EndTxTime']+1000, 'y': 0.5},
-            {'x1': points_dic['rxStart_beforeCall'], 'x2':points_dic['rxStart_afterCall'], 'y': -0.75},
-            {'x1': points_dic['rxStart_afterCall'], 'x2':points_dic['rxPHR'], 'y': -1.5},
-            {'x1': points_dic['rxEnd'], 'x2':points_dic['WrapperCall2'], 'y': 0.5},
-            {'x1': points_dic['rxEnd'], 'x2':points_dic['TargetTx2'], 'y': -0.5},
-            {'x1': points_dic['rxEnd'], 'x2':points_dic['TxPHR2'], 'y': -0.75},
-            {'x1': points_dic['WrapperCall2'], 'x2':points_dic['TargetTx2'], 'y': 0.75},
-            {'x1': points_dic['TargetTx2'], 'x2':points_dic['TxPHR2'], 'y': 0.5},
-        ]
-
-        val_texts = [
-            str(int(timings_df.txcall2aftertx.min()))+'/'+str(int(timings_df.txcall2aftertx.max()))+'/'+str(int(timings_df.txcall2aftertx.mean())),
-            str(int(timings_df.txcall2targettime.min()))+'/'+str(int(timings_df.txcall2targettime.max()))+'/'+str(int(timings_df.txcall2targettime.mean())),
-            str(int(timings_df.target2txphr.min()))+'/'+str(int(timings_df.target2txphr.max()))+'/'+str(int(timings_df.target2txphr.mean())),
-            str(int(timings_df.txend2rxstart.min()))+'/'+str(int(timings_df.txend2rxstart.max()))+'/'+str(int(timings_df.txend2rxstart.mean())),
-            '1000(to have)',
-            str(int(timings_df.rxcall2afterrx.min()))+'/'+str(int(timings_df.rxcall2afterrx.max()))+'/'+str(int(timings_df.rxcall2afterrx.mean())),
-            str(int(timings_df.afterRx2rxPHR.min()))+'/'+str(int(timings_df.afterRx2rxPHR.max()))+'/'+str(int(timings_df.afterRx2rxPHR.mean())),
-            str(int(timings_df.rxend2txcall.min()))+'/'+str(int(timings_df.rxend2txcall.max()))+'/'+str(int(timings_df.rxend2txcall.mean())),
-            str(int(timings_df.rxend2targettime.min()))+'/'+str(int(timings_df.rxend2targettime.max()))+'/'+str(int(timings_df.rxend2targettime.mean())),
-            str(int(timings_df.rxend2txtime.min()))+'/'+str(int(timings_df.rxend2txtime.max()))+'/'+str(int(timings_df.rxend2txtime.mean())),
-            str(int(timings_df.txcall2targettime.min()))+'/'+str(int(timings_df.txcall2targettime.max()))+'/'+str(int(timings_df.txcall2targettime.mean())),
-            str(int(timings_df.target2txphr.min()))+'/'+str(int(timings_df.target2txphr.max()))+'/'+str(int(timings_df.target2txphr.mean())),
-        ]
-
-        # MAKE THE TIMING REPORT
-
-        # Create the base line
-        start = min(points)
-        stop = max(points)
-
-        fig = go.Figure()
-
-        # Add baseline
-        fig.add_shape(
-            # Line Horizontal
-            type="line",
-            x0=start, y0=0,
-            x1=stop, y1=0,
-            line=dict(
-                color="grey",
-                width=1,
-            ),
-        )
-
-        # legend for min/max/avg
-        fig.add_annotation(
-            x=1000, y=-1,
-            xref="x", yref="y",
-            text="min/max/avg",
-            showarrow=False,
-            font=dict(
-                family="Courier New, monospace",
-                size=16,
-                color="#ffffff"
-            ),
-            align="center",
-            arrowhead=2,
-            arrowsize=1,
-            arrowwidth=2,
-            arrowcolor="#636363",
-            ax=20, ay=-30,
-            bordercolor="#c7c7c7",
-            borderwidth=2,
-            borderpad=4,
-            bgcolor="#ff7f0e",
-            opacity=0.8
-        )
-
-        # add vertical lines
-        for ii, (iname, ipt) in enumerate(zip(names, points)):
-            level = levels_dic[iname]
-            vert = 'top' if level < 0 else 'bottom'
-            # fig.add_scatter(x=target2txphr_df['target2txphr'], y=target2txphr_df['pdf'], name="PDF", secondary_y=True, row=1, col=1)
-            # print(ii, iname, ipt)
-            fig.add_shape(
-                # Line vertical
-                type="line",
-                x0=ipt, y0=0,
-                x1=ipt, y1=level,
-                line=dict(
-                    color=colors_dic[iname],
-                    width=2,
-                )
-            )
-
-        # add labels to the lines
-        fig.add_trace(go.Scatter(
-            x=points,
-            # y=[i * 1.05 for i in list(levels_dic.values())],
-            y=[i for i in list(levels_dic.values())],
-            text=list(names_label_dic.values()),
-            textposition="top center",
-            mode="text+markers",
-            hoverinfo="none",
-            marker=dict(size=12,
-                        color='white',
-                        line=dict(width=2,
-                                  color='black'))
-        ))
-
-        # draw the horizontal lines
-        i = 0
-        for d in arrows_x:
-            x1, x2, y = d.values()
-            fig.add_shape(
-                # Line horizontals for texts
-                type="line",
-                x0=x1, y0=y,
-                x1=x2, y1=y,
-                line=dict(
-                    color='DarkOrange',
-                    width=2,
-                    dash="dot"
-                )
-            )
-
-            i = i+1
-
-        # add the values;labels over the horizontal line.
-        x = [(sub["x1"]+sub["x2"]) / 2 for sub in arrows_x]
-        y = [sub["y"]*1.15 for sub in arrows_x]
-        fig.add_trace(go.Scatter(
-            x=x,
-            y=y,
-            text=val_texts,
-            mode="text",
-            hoverinfo="none",
-
-        ))
-        # POLL/ACK/DATA
-        rx_dur = points_dic['rxEnd']-(points_dic['rxPHR'])
-        txdiff = points_dic['TxPHR1'] - points_dic['TargetTx1']
-        fig.add_bar(
-            x=[(points_dic['TxPHR1']-txdiff+(tx_dur+txdiff)/2), (points_dic['rxPHR']-txdiff+(rx_dur+txdiff)/2), (points_dic['TxPHR2']-txdiff+(tx_dur+txdiff+100)/2)],
-            y=[0.25, -0.25, 0.25],
-            width=[tx_dur+txdiff, rx_dur+txdiff, (tx_dur+100+txdiff)],
-            text=["POLL", "ACK", "DATA"],
-            textposition="inside",
-            hoverinfo="none",
-            marker=dict(
-                color=['darksalmon', 'darkseagreen', 'darksalmon'],
-                line=dict(width=2,
-                          color='black'))
-        )
-
-        fig.update_layout(
-            title="CL Timing Summary Report",
-            showlegend=False,
-            yaxis=dict(
-                showticklabels=False
-            ),
-
-        )
-
-        fig.show()
-
-        # MAKE THE TIMING GRAPHS
-        # plot
-        fig = make_subplots(4, 2,
-                            specs=[[{"secondary_y": True},    {"secondary_y": True}],
-                                   [{"secondary_y": True},    {"secondary_y": True}],
-                                   [{"secondary_y": True},    {"secondary_y": True}],
-                                   [{"secondary_y": True}, {"secondary_y": True}]],
-                            subplot_titles=("Target Time to Tx PHR Time",
-                                            "Tx End to Rx Start",
-                                            "Rx End to Target Time",
-                                            "rxend2txtime",
-                                            "Tx Call to Target Time",
-                                            "Rx End to Tx Call",
-                                            "Rxcall to After Rx",
-                                            "CL duration in msec"),
-                            x_title="time in msec",
-                            y_title="Frequency",
-                            )
-
-        # Add traces
-        fig.add_bar(x=target2txphr_df['target2txphr'], y=target2txphr_df['freq'], name="Count", opacity=0.8, row=1, col=1)
-        fig.add_scatter(x=target2txphr_df['target2txphr'], y=target2txphr_df['pdf'], name="PDF", secondary_y=True, row=1, col=1)
-        fig.add_scatter(x=target2txphr_df['target2txphr'], y=target2txphr_df['cdf'], name="CDF", secondary_y=True, row=1, col=1)
-
-        fig.add_bar(x=txend2rxstart_df['txend2rxstart'], y=txend2rxstart_df['freq'], name="Count", opacity=0.8, row=1, col=2)
-        fig.add_scatter(x=txend2rxstart_df['txend2rxstart'], y=txend2rxstart_df['pdf'], name="PDF", secondary_y=True, row=1, col=2)
-        fig.add_scatter(x=txend2rxstart_df['txend2rxstart'], y=txend2rxstart_df['cdf'], name="CDF", secondary_y=True, row=1, col=2)
-
-        fig.add_bar(x=rxend2targettime_df['rxend2targettime'], y=rxend2targettime_df['freq'], name="Count", opacity=0.8, row=2, col=1)
-        fig.add_scatter(x=rxend2targettime_df['rxend2targettime'], y=rxend2targettime_df['pdf'], name="PDF", secondary_y=True, row=2, col=1)
-        fig.add_scatter(x=rxend2targettime_df['rxend2targettime'], y=rxend2targettime_df['cdf'], name="CDF", secondary_y=True, row=2, col=1)
-
-        fig.add_bar(x=rxend2txtime_df['rxend2txtime'], y=rxend2txtime_df['freq'], name="Count", opacity=0.8, row=2, col=2)
-        fig.add_scatter(x=rxend2txtime_df['rxend2txtime'], y=rxend2txtime_df['pdf'], name="PDF", secondary_y=True, row=2, col=2)
-        fig.add_scatter(x=rxend2txtime_df['rxend2txtime'], y=rxend2txtime_df['cdf'], name="CDF", secondary_y=True, row=2, col=2)
-
-        fig.add_bar(x=txcall2targettime_df['txcall2targettime'], y=txcall2targettime_df['freq'], name="Count", opacity=0.8, row=3, col=1)
-        fig.add_scatter(x=txcall2targettime_df['txcall2targettime'], y=txcall2targettime_df['pdf'], name="PDF", secondary_y=True, row=3, col=1)
-        fig.add_scatter(x=txcall2targettime_df['txcall2targettime'], y=txcall2targettime_df['cdf'], name="CDF", secondary_y=True, row=3, col=1)
-
-        fig.add_bar(x=rxend2txcall_df['rxend2txcall'], y=rxend2txcall_df['freq'], name="Count", opacity=0.8, row=3, col=2)
-        fig.add_scatter(x=rxend2txcall_df['rxend2txcall'], y=rxend2txcall_df['pdf'], name="PDF", secondary_y=True, row=3, col=2)
-        fig.add_scatter(x=rxend2txcall_df['rxend2txcall'], y=rxend2txcall_df['cdf'], name="CDF", secondary_y=True, row=3, col=2)
-
-        fig.add_bar(x=rxcall2afterrx_df['rxcall2afterrx'], y=rxcall2afterrx_df['freq'], name="Count", opacity=0.8, row=4, col=1)
-        fig.add_scatter(x=rxcall2afterrx_df['rxcall2afterrx'], y=rxcall2afterrx_df['pdf'], name="PDF", secondary_y=True, row=4, col=1)
-        fig.add_scatter(x=rxcall2afterrx_df['rxcall2afterrx'], y=rxcall2afterrx_df['cdf'], name="CDF", secondary_y=True, row=4, col=1)
-
-        fig.add_bar(x=cl_dur_df['dur_ms'], y=cl_dur_df['freq'], name="Count", opacity=0.8, row=4, col=2)
-        fig.add_scatter(x=cl_dur_df['dur_ms'], y=cl_dur_df['pdf'], name="PDF", secondary_y=True, row=4, col=2)
-        fig.add_scatter(x=cl_dur_df['dur_ms'], y=cl_dur_df['cdf'], name="CDF", secondary_y=True, row=4, col=2)
-
-        fig.update_layout(
-            title="CL Timings",
-            showlegend=False,
-            hovermode='x',
-            yaxis2=dict(
-                title='PDF/CDF',
-            )
-
-        )
-
-        fig.show()
+    if '0' in graph_ans_list or '3' in graph_ans_list:
+        print("\nTimelineVisualizer...Data Processing...", flush=True, end='')
+        graph_timeline_visualiser()
 
     # buffer get/release
     if '0' in graph_ans_list or '4' in graph_ans_list:
-
-        bufmgr_df = pd.DataFrame()
-        filter_list = [19, 20]
-        bufmgr_df = csv_df[csv_df.tracecode_dec.isin(filter_list)]
-
-        trace_list = list(set(list(bufmgr_df.tracecode_dec)))
-        if not set(filter_list).issubset(trace_list):
-            print("\n**** All required traces {} are not present. Cannot draw the graph".format(filter_list))
-            show_required_traces(filter_list)
-            return
-        bufmgr_df = bufmgr_df.assign(buffer=bufmgr_df.trace_info.str[-4:])
-        bufmgr_df['buffer_dec'] = bufmgr_df.buffer.apply(int, base=16)
-        # print(bufmgr_df[['tracecode_dec','buffer']].head(30))
-        # print(bufmgr_df.head(10))
-
-        bufmgr_get_df = bufmgr_df[bufmgr_df["tracecode_dec"] == 19][['byte', 'frt_dec', 'trace_info', 'buffer', 'buffer_dec']]
-
-        bufmgr_get_df['owner'] = bufmgr_get_df.trace_info.str.split().str[2].str.split("(").str[0]
-        bufmgr_get_df['owner'] = bufmgr_get_df.owner.str[4:]
-        bufmgr_get_df['subfunc'] = bufmgr_get_df.trace_info.str.split().str[4]
-        bufmgr_get_df.reset_index(inplace=True)
-
-        # to get the rel frt
-        def buf_filter(x):
-            mydf = bufmgr_df[bufmgr_df.frt_dec > x.frt_dec]
-            index = mydf[mydf.buffer == x.buffer].first_valid_index()
-
-            if index:
-                return mydf.at[index, 'frt_dec']
-            else:
-                return np.nan
-
-        bufmgr_get_df['rel_frt'] = bufmgr_get_df.apply(buf_filter, axis=1)
-        bufmgr_get_df['frt_diff'] = (bufmgr_get_df['rel_frt'] - bufmgr_get_df['frt_dec'])
-        bufmgr_get_df['info'] = "<br><b>"+bufmgr_get_df.owner + "</b></br>" + " 0x" + bufmgr_get_df.buffer + " " + bufmgr_get_df.frt_diff.astype(str) + "us"
-        # check if there are any leaks
-        bufmgr_leak_df = bufmgr_get_df[bufmgr_get_df.isna().any(axis=1)]
-        bufmgr_get_unleaked_df = bufmgr_get_df.dropna()
-        bufmgr_get_df['leak'] = bufmgr_get_df.apply(lambda x: 1 if np.isnan([x.rel_frt]) else np.nan, axis=1)
-
-        # print(bufmgr_leak_df.tail(30))
-        unique_owners = bufmgr_get_unleaked_df.owner.unique()
-
-        buf_owner_dic = dict()
-        for owner in unique_owners:
-            buf_owner_dic[owner] = (bufmgr_get_unleaked_df[bufmgr_get_unleaked_df['owner'].str.match(owner)])[['frt_dec', 'owner', 'buffer_dec', 'rel_frt', 'frt_diff', 'info']]
-
-        # print(px.colors.qualitative.Dark24)
-        buff_colors = px.colors.qualitative.Dark24
-        # buff_colors = get_n_colors(len(unique_owners));
-
-        fig = go.Figure()
-        fig = make_subplots(rows=2, cols=1, subplot_titles=("Buffer claimed and released Timeline",
-                                                            "Buffer claims, releases and leaks stats",),
-                            )
-
-        shapes = list()
-        i = 0
-
-        # per owner graphing
-        for key, owner_df in buf_owner_dic.items():
-            # print(key, owner_df)
-            # draw a rectangle
-            fig.add_bar(
-                x=owner_df.frt_dec,
-                y=owner_df.buffer_dec,
-                width=owner_df.frt_diff,
-                name=key,
-                text=owner_df['info'] + "<br>FRT start:" + owner_df.frt_dec.astype(str) + "<br> FRT end: " + owner_df.rel_frt.astype(str),
-                # hoverinfo='text',
-                # hovertext="FRT start:" + owner_df.frt_dec.astype(str) +"<br> FRT end: " +owner_df.rel_frt.astype(str) +"<br>" + owner_df['info'],
-                textposition="inside",
-                hovertemplate='%{text}',            # hoverinfo="none",
-                row=1,
-                col=1,
-                marker=dict(
-                    color=buff_colors[i],
-                    opacity=0.7,
-                    line=dict(width=0.5,
-                              color=buff_colors[i]))
-            )
-            i = i+1
-
-        fig.update_layout(
-            title="Buffer Management",
-            showlegend=True,
-            xaxis_tickformat='f',
-            yaxis=dict(
-                # visible=False,
-                fixedrange=True,
-            ),
-            # hovermode='x',
-            # shapes=shapes,
-        )
-        # fig.show()
-
-        # bufmgr_get_df.leak = bufmgr_get_df.leak.replace(0,np.nan)
-        buf_summary_df = (bufmgr_get_df.groupby('owner').count()).reset_index()[['owner', 'frt_dec', 'rel_frt', 'leak']]
-        buf_summary_df.rename(columns={'frt_dec': 'buf_claim', 'rel_frt': 'buf_release', 'leak': 'buf_leak'}, inplace=True)
-        # fig = px.bar(buf_summary_df, x="owner", y=["buf_claim", "buf_release", "buf_leak"],
-        #              barmode='group', row=2, col=1
-        #              )
-        fig.add_trace(
-            go.Bar(x=buf_summary_df.owner, y=buf_summary_df["buf_claim"], name="buf_claim", text=buf_summary_df["buf_claim"],
-                   textposition='auto',),
-            row=2, col=1
-        )
-        fig.add_trace(
-            go.Bar(x=buf_summary_df.owner, y=buf_summary_df["buf_release"], name="buf_release", text=buf_summary_df["buf_release"],
-                   textposition='auto',),
-            row=2, col=1
-        )
-        fig.add_trace(
-            go.Bar(x=buf_summary_df.owner, y=buf_summary_df["buf_leak"], name="buf_leak", text=buf_summary_df["buf_leak"],
-                   textposition='auto',),
-            row=2, col=1
-        )
-
-        # # print(fig)
-        fig.update_layout(barmode='group')
-        fig.show()
-
-        # count of buffers get and released
+        print("\nBufMgr...Data Processing...", flush=True, end='')
+        graph_buf_mgr()
 
     # mode stats
     if '0' in graph_ans_list or '5' in graph_ans_list:
-
-        mode_df = pd.DataFrame()
-        filter_list = [140, 141]
-        mode_df = csv_df[csv_df.tracecode_dec.isin(filter_list)][['byte', 'txrx_param', 'tracecode_dec']]
-        trace_list = list(set(list(mode_df.tracecode_dec)))
-        if not set(filter_list).issubset(trace_list):
-            print("\n**** All required traces {} are not present. Cannot draw the graph".format(filter_list))
-            show_required_traces(filter_list)
-            return
-        mode_df[['del1', 'mode', 'del2', 'chan']] = mode_df.txrx_param.str.split(expand=True)
-        mode_df.drop(columns=['del1', 'del2', 'txrx_param'], inplace=True)
-        mode_df['mode'] = mode_df['mode'].apply(lambda x: mode_str[int(x, 10)])
-
-        mode_tx_df = mode_df[mode_df.tracecode_dec == 140]
-        mode_rx_df = mode_df[mode_df.tracecode_dec == 141]
-        modestats_tx_df = mode_tx_df[['byte', 'mode']].groupby(['mode']).agg('count').rename(columns={'byte': 'count'}).reset_index()
-        modestats_rx_df = mode_rx_df[['byte', 'mode']].groupby(['mode']).agg('count').rename(columns={'byte': 'count'}).reset_index()
-
-        fig = go.Figure()
-
-        fig.add_bar(x=modestats_tx_df['mode'], y=modestats_tx_df['count'], name="TX", opacity=0.7, textposition="inside", text=modestats_tx_df['count'])
-        fig.add_bar(x=modestats_rx_df['mode'], y=modestats_rx_df['count'], name="RX", opacity=0.7, textposition="inside", text=modestats_rx_df['count'])
-
-        fig.update_layout(
-            title="Mode Usage",
-            xaxis_title="Mode",
-            yaxis_title="Count",
-            xaxis={"type": "category"},
-
-        )
-        fig.show()
+        print("\nModeChan Stats...Data Processing...", flush=True, end='')
+        graph_mode_chan()
 
 
 cl_id = 0
@@ -2494,7 +2564,7 @@ if __name__ == "__main__":
             2: "CL Timings",
             3: "Timeline Visualizer",
             4: "Buffer Get/Release",
-            5: "Mode Stats",
+            5: "CL Mode/Channel Stats",
         }
 
         for key, val in graph_dic.items():
