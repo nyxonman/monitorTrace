@@ -19,7 +19,7 @@ MIN_A7_VER = (10, 0, 519)
 
 OS_POSIX = "posix"
 OS_WIN = "nt"
-__VERSION__ = "2.2"
+__VERSION__ = "2.3"
 APP_VERSION = __VERSION__ + " {OS: " + os.name + "}"
 OUTPUT_FILE_NAME = "lastdecodedTraces"
 OUTPUT_FILE_EXT = ".log"
@@ -2271,9 +2271,13 @@ def graph_it():
            ] = csv_df['trace_code'].str.split(expand=True)
     csv_df.drop(columns=['trace_code'], inplace=True)
     csv_df = csv_df.astype({'tracecode_dec': int})
-    csv_df = csv_df.assign(cl_id=pd.Series(np.nan))
+    # csv_df = csv_df.assign(cl_id=pd.Series(np.nan))
 
-    csv_df['cl_id'] = csv_df["trace_info"].apply(lambda x: x.split(' ', 5)[4] if "CL_OUT_CNF" in x or "CL_START" in x else np.nan)
+    # csv_df['cl_id'] = csv_df["trace_info"].apply(lambda x: x.split(' ', 5)[4] if "CL_OUT_CNF" in x or "CL_START" in x else np.nan)
+    cl_id_df = csv_df[(csv_df.tracecode_dec == 134) | (csv_df.tracecode_dec == 136)][['byte', 'trace_info']]
+    cl_id_df.rename(columns={'trace_info': 'cl_id'}, inplace=True)
+    cl_id_df.cl_id = cl_id_df.cl_id.str.rsplit(' ', 1, expand=True).drop([0], axis=1)
+    csv_df = csv_df.merge(cl_id_df, on='byte', how='left')
 
     # csv_df['cl_mac'] = csv_df.apply(lambda x: x.trace_info.split('>', 2)[1].strip() if x.tracecode_dec == 147 else np.nan, axis=1)
     cl_mac_df = csv_df[csv_df.tracecode_dec == 147][['byte', 'trace_info']]
@@ -2301,6 +2305,7 @@ def graph_it():
     if cl_id_range:
         cl_range_start, cl_range_end = cl_id_range[0].split(':')
         cl_range_start = str(int(cl_range_start)-1) if cl_range_start else '0'
+        cl_range_end = cl_range_end if cl_range_end else str(int(csv_df.cl_id.astype(float).max()))
         csv_df = csv_df[(csv_df.cl_id >= cl_range_start) & (csv_df.cl_id <=cl_range_end)]
 
     # seq contrl
@@ -2629,7 +2634,6 @@ if __name__ == "__main__":
 
         graph_ans_list = graph_ans.split(',')
         result = all(int(elem, 10) in list(graph_dic.keys()) for elem in graph_ans_list)
-        print(response, graph_ans_list, cl_id_range)
         if not result:
             print("Invalid entry {}. Choose from {}".format(graph_ans, list(graph_dic.keys())))
             exit(0)
