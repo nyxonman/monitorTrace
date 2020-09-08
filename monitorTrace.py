@@ -1297,7 +1297,7 @@ def graph_fastlink():
         rtt_df['cdf'] = rtt_df['pdf'].cumsum()
         rtt_df = rtt_df.reset_index()
         rtt_df = rtt_df.astype({'diff': int})
-        print("Done...graphing...", flush=True, end='')
+        print("Done...Rendering graph...", flush=True, end='')
 
         # Create figure with secondary y-axisspecs
         if(graphs['rtt'] == {}):
@@ -1480,7 +1480,7 @@ def graph_cl_timings():
     # drop values higher than 3sec
     timings_df.afterRx2rxPHR = timings_df.apply(lambda x: np.nan if np.isnan([x.afterRx2rxPHR]) or x.afterRx2rxPHR > 3000.0 else x.afterRx2rxPHR, axis=1)
 
-    print("Done...Graphing...Report...", flush=True, end='')
+    print("Done...Rendering Graph...Report...", flush=True, end='')
 
     # PLOT THE TIMING DIAGRAM
     # A list of Matplotlib releases and their dates
@@ -1914,6 +1914,8 @@ def graph_timeline_visualiser():
         print(err_df.head())
         print(err_df.shape)
 
+    print("Done...Rendering Graph...", flush=True, end='')
+
     fig = go.Figure()
 
     # add clstart end
@@ -2093,7 +2095,7 @@ def graph_buf_mgr():
     for owner in unique_owners:
         buf_owner_dic[owner] = (bufmgr_get_unleaked_df[bufmgr_get_unleaked_df['owner'].str.match(owner)])[['frt_dec', 'owner', 'buffer_dec', 'rel_frt', 'frt_diff', 'info']]
 
-    print("Done...Graphing...", flush=True, end='')
+    print("Done...Rendering Graph...", flush=True, end='')
 
     # print(px.colors.qualitative.Dark24)
     buff_colors = px.colors.qualitative.Dark24
@@ -2195,7 +2197,7 @@ def graph_mode_chan():
     chanstats_tx_df = modechan_tx_df[['byte', 'chan']].groupby(['chan']).agg('count').rename(columns={'byte': 'count'}).reset_index()
     chanstats_rx_df = modechan_rx_df[['byte', 'chan']].groupby(['chan']).agg('count').rename(columns={'byte': 'count'}).reset_index()
 
-    print("Done...Graphing...", flush=True, end='')
+    print("Done...Rendering Graph...", flush=True, end='')
 
     fig = go.Figure()
     fig = make_subplots(rows=2, cols=1, subplot_titles=("Mode Usage",
@@ -2304,10 +2306,18 @@ def graph_it():
     # seq contrl
     tx_seq_ctrl_df = csv_df[(csv_df.tracecode_dec == 144) & (csv_df.trace_info.str.contains("TX"))][['byte', 'trace_info']].rename(columns={'trace_info': 'tx_seq_ctrl'})
     rx_seq_ctrl_df = csv_df[(csv_df.tracecode_dec == 144) & (csv_df.trace_info.str.contains("RX"))][['byte', 'trace_info']].rename(columns={'trace_info': 'rx_seq_ctrl'})
-    tx_seq_ctrl_df.tx_seq_ctrl = tx_seq_ctrl_df.tx_seq_ctrl.str.strip().str.split('SeqNum', 2, expand=True).drop([0], axis=1)
-    rx_seq_ctrl_df.rx_seq_ctrl = rx_seq_ctrl_df.rx_seq_ctrl.str.strip().str.split('SeqNum', 2, expand=True).drop([0], axis=1)
+
+    if not tx_seq_ctrl_df.empty:
+        tx_seq_ctrl_df.tx_seq_ctrl = tx_seq_ctrl_df.tx_seq_ctrl.str.strip().str.split('SeqNum', 2, expand=True).drop([0], axis=1)
+    if not rx_seq_ctrl_df.empty:
+        rx_seq_ctrl_df.rx_seq_ctrl = rx_seq_ctrl_df.rx_seq_ctrl.str.strip().str.split('SeqNum', 2, expand=True).drop([0], axis=1)
+
     csv_df = csv_df.merge(tx_seq_ctrl_df, on='byte', how='left')
     csv_df = csv_df.merge(rx_seq_ctrl_df, on='byte', how='left')
+
+    csv_df.tx_seq_ctrl = np.where((csv_df.tracecode_dec == tracing_events_str_num['CL_TX']), 'X', csv_df.tx_seq_ctrl)
+    csv_df.rx_seq_ctrl = np.where((csv_df.tracecode_dec == tracing_events_str_num['CL_RX']), 'X', csv_df.rx_seq_ctrl)
+
     csv_df = csv_df.bfill()
 
     # FRT_trace_val
