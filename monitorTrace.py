@@ -1857,6 +1857,13 @@ def graph_timeline_visualiser():
     timeline_rx_df['rx_dur'] = timeline_rx_df.ts_rxend - timeline_rx_df.ts_rxstart
     timeline_rx_df['color'] = timeline_rx_df.owner.apply(lambda x: timeline_rx_color[x])
     timeline_rx_df['hoverinfo'] = timeline_rx_df.apply(lambda x: hoverinfo(x, "rx"), axis=1)
+    err_df = timeline_rx_df[timeline_rx_df.rx_dur <= 0]
+
+    if(not (err_df.empty)):
+        timeline_rx_df= timeline_rx_df[timeline_rx_df.rx_dur > 0]
+        print("\n\n\t\t **** ERROR timeline_rx_df")
+        print(err_df.head())
+        print(err_df.shape)
 
     # tx
     timeline_tx_df = timings_df[['byte', 'owner', 'nextcli', 'cl_id', 'cl_mac', 'tx_seq_ctrl', 'txrx_param', 'ts_txstart', 'ts_txend']]
@@ -1866,6 +1873,13 @@ def graph_timeline_visualiser():
     timeline_tx_df['color'] = timeline_tx_df.owner.apply(lambda x: timeline_tx_color[x])
     timeline_tx_df['hoverinfo'] = timeline_tx_df.apply(lambda x: hoverinfo(x, "tx"), axis=1)
     timeline_tx_df = timeline_tx_df[timeline_tx_df.tx_dur <= 500000]
+    err_df = timeline_tx_df[timeline_tx_df.tx_dur <= 0]
+
+    if(not (err_df.empty)):
+        timeline_tx_df= timeline_tx_df[timeline_tx_df.tx_dur > 0]
+        print("\n\n\t\t **** ERROR timeline_tx_df")
+        print(err_df.head())
+        print(err_df.shape)
 
     # PHY INDICATIONS and CALLs
     filter_list = [1, 2, 3, 4, 6, 140, 141, 148, 149]
@@ -1892,8 +1906,13 @@ def graph_timeline_visualiser():
     timeline_cl_startend_df['cldiff'] = timeline_cl_startend_df.clend - timeline_cl_startend_df.clstart
     timeline_cl_startend_df = timeline_cl_startend_df.dropna()
     timeline_cl_startend_df['hoverinfo'] = "CL " + timeline_cl_startend_df.cl_id.astype(str) + ", " + (timeline_cl_startend_df.cldiff/1000).astype(int).astype(str) + "msec"
+    err_df = timeline_cl_startend_df[timeline_cl_startend_df.cldiff <= 0]
 
-    print("Done...Graphing...", flush=True, end='')
+    if(not (err_df.empty)):
+        timeline_cl_startend_df= timeline_cl_startend_df[timeline_cl_startend_df.cldiff > 0]
+        print("\n\n\t\t **** ERROR timeline_cl_startend_df")
+        print(err_df.head())
+        print(err_df.shape)
 
     fig = go.Figure()
 
@@ -2006,22 +2025,6 @@ def graph_timeline_visualiser():
             color="green"
         ),
         showarrow=False,)
-
-    # # add tx-rx start/end
-    # fig.add_scatter(
-    #     x=timeline_tx_df.ts_txstart.append(timeline_tx_df.ts_txend).append(timeline_rx_df.ts_rxstart).append(timeline_rx_df.ts_rxend),
-    #     # x=pandas.concat(timeline_tx_df.ts_txstart,timeline_tx_df.ts_txend, timeline_rx_df.ts_rxstart,timeline_rx_df.ts_rxend),
-    #     y=[0]*(len(timeline_tx_df.index)*2 + len(timeline_tx_df.index)*2),
-    #     mode="markers",
-    #     name="TX/RX Start/End",
-    #     hovertemplate="<b>FRT:</b>%{x}",
-    #     visible="legendonly",
-    #     # hoverinfo="none",
-    #     marker=dict(
-    #         color='red',
-    #         line=dict(width=1,
-    #                   color="black"))
-    # )
 
     fig.update_layout(
         title="Timeline Visualizer",
@@ -2398,7 +2401,6 @@ def graph_it():
         timings_df['ts_rxend'] = np.where((timings_df.tracecode_dec == tracing_events_str_num['FRT32_RX_END']), timings_df.frt_val, np.nan)
         timings_df['ts_txstart'] = np.where((timings_df.dc_col == "dc"), timings_df.frt_val, np.nan)
         timings_df['ts_txend'] = np.where((timings_df.tracecode_dec == tracing_events_str_num['FRT32_TX_END']), timings_df.frt_val, np.nan)
-        print("Done...", flush=True, end='')
 
         # exit(0)
     if '0' in graph_ans_list or '2' in graph_ans_list:
