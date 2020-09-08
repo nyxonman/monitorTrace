@@ -2250,8 +2250,11 @@ def graph_it():
 
     # plt.style.use('seaborn-deep')
     # plt.style.use('ggplot')
+    if(cl_id_range):
+        print("showing graph {} CLs {} from '{}'".format(graph_ans_list, cl_id_range, graph_file))
+    else:
+        print("showing graph {} from '{}'".format(graph_ans_list, graph_file))
 
-    print("showing graph {} from '{}'".format(graph_ans_list, graph_file))
     # plt.show()
     global csv_df
     global cl_csv_df
@@ -2291,6 +2294,12 @@ def graph_it():
     owner_df.owner = owner_df.owner.str.split('(', 2, expand=True).drop([1], axis=1)
     csv_df = csv_df.merge(owner_df, on='byte', how='left')
     csv_df = csv_df.ffill()
+
+    # filter for clId Ranges
+    if cl_id_range:
+        cl_range_start, cl_range_end = cl_id_range[0].split(':')
+        cl_range_start = str(int(cl_range_start)-1) if cl_range_start else '0'
+        csv_df = csv_df[(csv_df.cl_id >= cl_range_start) & (csv_df.cl_id <=cl_range_end)]
 
     # seq contrl
     tx_seq_ctrl_df = csv_df[(csv_df.tracecode_dec == 144) & (csv_df.trace_info.str.contains("TX"))][['byte', 'trace_info']].rename(columns={'trace_info': 'tx_seq_ctrl'})
@@ -2600,9 +2609,17 @@ if __name__ == "__main__":
 
         for key, val in graph_dic.items():
             print("\t{} : {}".format(key, val))
-        graph_ans = input("Which graph (use a single number or list like 1,2) ")
+        print("Hint: Use a single number or list like 1,2")
+        print("Hint: Add cl id range in the format start:end like 1:10 ")
+        print("Example: graph 1 and 2 for cl ids 5 to 15 -> 1,2;5:15")
+        response = input("Which graph (use a single number or list like 1,2) ")
+        countsemi = response.count(';')
+
+        graph_ans, *cl_id_range = response.split(';',2)
+
         graph_ans_list = graph_ans.split(',')
         result = all(int(elem, 10) in list(graph_dic.keys()) for elem in graph_ans_list)
+        print(response, graph_ans_list, cl_id_range)
         if not result:
             print("Invalid entry {}. Choose from {}".format(graph_ans, list(graph_dic.keys())))
             exit(0)
