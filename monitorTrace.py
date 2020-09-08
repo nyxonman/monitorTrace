@@ -1897,11 +1897,12 @@ def graph_timeline_visualiser():
 
     fig = go.Figure()
 
+    # add clstart end
     fig.add_bar(
         x=timeline_cl_startend_df.clstart + timeline_cl_startend_df.cldiff/2,
-        y=[3]*len(timeline_tx_df.index),
+        y=[6]*len(timeline_tx_df.index),
         width=timeline_cl_startend_df.cldiff,
-        # base=1,
+        base=-3,
         name="CL",
         text=timeline_cl_startend_df.hoverinfo,
         textposition="outside",
@@ -2359,7 +2360,7 @@ def graph_it():
 
         nextcli_df = timings_df[timings_df.tracecode_dec == tracing_events_str_num['CL_NEXT_CLI']][['byte', 'trace_info']].rename(columns={'trace_info': 'nextcli'})
         nextcli_df[['rx', 'tx']] = nextcli_df.nextcli.str.split(' ', expand=True).drop(columns=[0, 1, 3], axis=1)
-        nextcli_df.nextcli = "CLI(" + nextcli_df.rx + nextcli_df.tx + ")"
+        nextcli_df.nextcli = "CLI(" + nextcli_df.tx + "," + nextcli_df.rx.str[:-1] + ")"
         nextcli_df.drop(columns=['rx', 'tx'], inplace=True)
 
         timings_df = timings_df.merge(nextcli_df, on='byte', how='left')
