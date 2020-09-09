@@ -1264,7 +1264,6 @@ def get_colors(n):
 
 # x, y, c, s = rand(4, 100)
 def show_required_traces(trace_list):
-    print(trace_list)
     for trace in trace_list:
         print(trace, " => ", tracing_events_num_str[trace])
 
@@ -2281,25 +2280,34 @@ def graph_it():
 
     # csv_df['cl_mac'] = csv_df.apply(lambda x: x.trace_info.split('>', 2)[1].strip() if x.tracecode_dec == 147 else np.nan, axis=1)
     cl_mac_df = csv_df[csv_df.tracecode_dec == 147][['byte', 'trace_info']]
-    cl_mac_df.rename(columns={'trace_info': 'cl_mac'}, inplace=True)
-    cl_mac_df.cl_mac = cl_mac_df.cl_mac.str.split('>', 2, expand=True).drop([0], axis=1)
-    csv_df = csv_df.merge(cl_mac_df, on='byte', how='left')
+    if cl_mac_df.empty:
+        csv_df = csv_df.assign(cl_mac=pd.Series(np.nan))
+    else:
+        cl_mac_df.rename(columns={'trace_info': 'cl_mac'}, inplace=True)
+        cl_mac_df.cl_mac = cl_mac_df.cl_mac.str.split('>', 2, expand=True).drop([0], axis=1)
+        csv_df = csv_df.merge(cl_mac_df, on='byte', how='left')
 
     # csv_df['txrx_param'] = csv_df.apply(lambda x: x.trace_info.split(')', 2)[1].strip() if x.tracecode_dec == 140 else np.nan, axis=1)
     tx_param = csv_df[csv_df.tracecode_dec == 140][['byte', 'trace_info']]
     rx_param = csv_df[csv_df.tracecode_dec == 141][['byte', 'trace_info']]
     txrx_param_df = pd.concat([tx_param, rx_param]).sort_values(by=['byte']).rename(columns={'trace_info': 'txrx_param'})
-    txrx_param_df.txrx_param = txrx_param_df.txrx_param.str.split(')', 2, expand=True).drop([0], axis=1)
-    csv_df = csv_df.merge(txrx_param_df, on='byte', how='left')
+    if txrx_param_df.empty:
+        csv_df = csv_df.assign(txrx_param=pd.Series(np.nan))
+    else:
+        txrx_param_df.txrx_param = txrx_param_df.txrx_param.str.split(')', 2, expand=True).drop([0], axis=1)
+        csv_df = csv_df.merge(txrx_param_df, on='byte', how='left')
 
     traceCodeMap_df = pd.DataFrame(tracing_events_num_str.items(), columns=['tracecode_dec', 'trace_str'])
 
     # add owner id
     owner_df = csv_df[csv_df.tracecode_dec == 68][['byte', 'trace_info']].rename(columns={'trace_info': 'owner'})
-    owner_df.owner = owner_df.owner.str.split('LMSM_', 2, expand=True).drop([0], axis=1)
-    owner_df.owner = owner_df.owner.str.split('(', 2, expand=True).drop([1], axis=1)
-    csv_df = csv_df.merge(owner_df, on='byte', how='left')
-    csv_df = csv_df.ffill()
+    if owner_df.empty:
+        csv_df = csv_df.assign(owner=pd.Series(np.nan))
+    else:
+        owner_df.owner = owner_df.owner.str.split('LMSM_', 2, expand=True).drop([0], axis=1)
+        owner_df.owner = owner_df.owner.str.split('(', 2, expand=True).drop([1], axis=1)
+        csv_df = csv_df.merge(owner_df, on='byte', how='left')
+        csv_df = csv_df.ffill()
 
     # filter for clId Ranges
     if cl_id_range:
@@ -2370,70 +2378,74 @@ def graph_it():
 
         graph_fastlink()
 
+    graph23 = True
+
     if '0' in graph_ans_list or '2' in graph_ans_list or '3' in graph_ans_list:
+        while True:
+            timings_df = pd.DataFrame()
+            timings_plot_df = pd.DataFrame()
+            filter_list = [6, 122, 123, 124, 129, 130, 141, 140, 142]
+            timings_df = cl_csv_df[cl_csv_df.tracecode_dec.isin(filter_list)]
 
-        timings_df = pd.DataFrame()
-        timings_plot_df = pd.DataFrame()
-        filter_list = [6, 122, 123, 124, 129, 130, 141, 140, 142]
-        timings_df = cl_csv_df[cl_csv_df.tracecode_dec.isin(filter_list)]
+            trace_list = list(set(list(timings_df.tracecode_dec)))
+            if not set(filter_list).issubset(trace_list):
+                print("\n**** All required traces {} are not present. {}  Cannot draw the graph".format(filter_list, trace_list))
+                show_required_traces(filter_list)
+                break
 
-        trace_list = list(set(list(timings_df.tracecode_dec)))
-        if not set(filter_list).issubset(trace_list):
-            print("\n**** All required traces {} are not present. {}  Cannot draw the graph".format(filter_list, trace_list))
-            show_required_traces(filter_list)
-            return
+            # nextCLI
 
-        # nextCLI
+            nextcli_df = timings_df[timings_df.tracecode_dec == tracing_events_str_num['CL_NEXT_CLI']][['byte', 'trace_info']].rename(columns={'trace_info': 'nextcli'})
+            nextcli_df[['rx', 'tx']] = nextcli_df.nextcli.str.split(' ', expand=True).drop(columns=[0, 1, 3], axis=1)
+            nextcli_df.nextcli = "CLI(" + nextcli_df.tx + "," + nextcli_df.rx.str[:-1] + ")"
+            nextcli_df.drop(columns=['rx', 'tx'], inplace=True)
 
-        nextcli_df = timings_df[timings_df.tracecode_dec == tracing_events_str_num['CL_NEXT_CLI']][['byte', 'trace_info']].rename(columns={'trace_info': 'nextcli'})
-        nextcli_df[['rx', 'tx']] = nextcli_df.nextcli.str.split(' ', expand=True).drop(columns=[0, 1, 3], axis=1)
-        nextcli_df.nextcli = "CLI(" + nextcli_df.tx + "," + nextcli_df.rx.str[:-1] + ")"
-        nextcli_df.drop(columns=['rx', 'tx'], inplace=True)
+            timings_df = timings_df.merge(nextcli_df, on='byte', how='left')
+            timings_df.nextcli = timings_df.nextcli.fillna(method='bfill')
+            timings_df = timings_df[timings_df.tracecode_dec != tracing_events_str_num['CL_NEXT_CLI']]
 
-        timings_df = timings_df.merge(nextcli_df, on='byte', how='left')
-        timings_df.nextcli = timings_df.nextcli.fillna(method='bfill')
-        timings_df = timings_df[timings_df.tracecode_dec != tracing_events_str_num['CL_NEXT_CLI']]
+            # # aftertxcol
+            timings_df['aftertx_col'] = np.where((timings_df.tracecode_dec == tracing_events_str_num['CL_TX']), "afterTx", np.nan)
 
-        # # aftertxcol
-        timings_df['aftertx_col'] = np.where((timings_df.tracecode_dec == tracing_events_str_num['CL_TX']), "afterTx", np.nan)
+            # beforetxcol
+            timings_df['beforetx_col'] = np.where((timings_df.tracecode_dec == tracing_events_str_num['CL_FRT32_TX_CALL']), "beforeTx", np.nan)
 
-        # beforetxcol
-        timings_df['beforetx_col'] = np.where((timings_df.tracecode_dec == tracing_events_str_num['CL_FRT32_TX_CALL']), "beforeTx", np.nan)
+            # dc
+            timings_df['dc_col'] = np.where((timings_df.tracecode_dec == tracing_events_str_num['LMMGR_DATA_CONF']), "dc", np.nan)
 
-        # dc
-        timings_df['dc_col'] = np.where((timings_df.tracecode_dec == tracing_events_str_num['LMMGR_DATA_CONF']), "dc", np.nan)
+            # txend
+            timings_df['txend_col'] = np.where((timings_df.tracecode_dec == tracing_events_str_num['FRT32_TX_END']), "txEnd", np.nan)
 
-        # txend
-        timings_df['txend_col'] = np.where((timings_df.tracecode_dec == tracing_events_str_num['FRT32_TX_END']), "txEnd", np.nan)
+            # afterRx
+            timings_df['afterrx_col'] = np.where((timings_df.tracecode_dec == tracing_events_str_num['CL_RX']), "afterRx", np.nan)
 
-        # afterRx
-        timings_df['afterrx_col'] = np.where((timings_df.tracecode_dec == tracing_events_str_num['CL_RX']), "afterRx", np.nan)
+            # beforeRx
+            timings_df['beforerx_col'] = np.where((timings_df.tracecode_dec == tracing_events_str_num['CL_FRT32_RX_CALL']), "beforeRx", np.nan)
 
-        # beforeRx
-        timings_df['beforerx_col'] = np.where((timings_df.tracecode_dec == tracing_events_str_num['CL_FRT32_RX_CALL']), "beforeRx", np.nan)
+            # rxend
+            timings_df['rxend_col'] = np.where((timings_df.tracecode_dec == tracing_events_str_num['FRT32_RX_END']), "rxEnd", np.nan)
 
-        # rxend
-        timings_df['rxend_col'] = np.where((timings_df.tracecode_dec == tracing_events_str_num['FRT32_RX_END']), "rxEnd", np.nan)
+            # # FRT_dec
+            # timings_df['frt_dec'] = timings_df.apply(lambda x: int(x.frt_hex[-min(len(x.frt_hex)-2, 8):], 16), axis=1)
 
-        # # FRT_dec
-        # timings_df['frt_dec'] = timings_df.apply(lambda x: int(x.frt_hex[-min(len(x.frt_hex)-2, 8):], 16), axis=1)
+            timings_df.drop(columns=['frt_hex'], inplace=True)
 
-        timings_df.drop(columns=['frt_hex'], inplace=True)
-
-        # timestamps for tx rx start and end
-        timings_df['ts_rxstart'] = np.where((timings_df.tracecode_dec == tracing_events_str_num['FRT32_RX_START']), timings_df.frt_val, np.nan)
-        timings_df['ts_rxend'] = np.where((timings_df.tracecode_dec == tracing_events_str_num['FRT32_RX_END']), timings_df.frt_val, np.nan)
-        timings_df['ts_txstart'] = np.where((timings_df.dc_col == "dc"), timings_df.frt_val, np.nan)
-        timings_df['ts_txend'] = np.where((timings_df.tracecode_dec == tracing_events_str_num['FRT32_TX_END']), timings_df.frt_val, np.nan)
+            # timestamps for tx rx start and end
+            timings_df['ts_rxstart'] = np.where((timings_df.tracecode_dec == tracing_events_str_num['FRT32_RX_START']), timings_df.frt_val, np.nan)
+            timings_df['ts_rxend'] = np.where((timings_df.tracecode_dec == tracing_events_str_num['FRT32_RX_END']), timings_df.frt_val, np.nan)
+            timings_df['ts_txstart'] = np.where((timings_df.dc_col == "dc"), timings_df.frt_val, np.nan)
+            timings_df['ts_txend'] = np.where((timings_df.tracecode_dec == tracing_events_str_num['FRT32_TX_END']), timings_df.frt_val, np.nan)
 
         # exit(0)
-    if '0' in graph_ans_list or '2' in graph_ans_list:
-        print("\nCL Timings...Data Processing...", flush=True, end='')
-        graph_cl_timings()
+            if '0' in graph_ans_list or '2' in graph_ans_list:
+                print("\nCL Timings...Data Processing...", flush=True, end='')
+                graph_cl_timings()
 
-    if '0' in graph_ans_list or '3' in graph_ans_list:
-        print("\nTimelineVisualizer...Data Processing...", flush=True, end='')
-        graph_timeline_visualiser()
+            if '0' in graph_ans_list or '3' in graph_ans_list:
+                print("\nTimelineVisualizer...Data Processing...", flush=True, end='')
+                graph_timeline_visualiser()
+
+            break
 
     # buffer get/release
     if '0' in graph_ans_list or '4' in graph_ans_list:
