@@ -19,7 +19,7 @@ MIN_A7_VER = (10, 0, 519)
 
 OS_POSIX = "posix"
 OS_WIN = "nt"
-__VERSION__ = "2.3"
+__VERSION__ = "2.4"
 APP_VERSION = __VERSION__ + " {OS: " + os.name + "}"
 OUTPUT_FILE_NAME = "lastdecodedTraces"
 OUTPUT_FILE_EXT = ".log"
@@ -66,7 +66,7 @@ graphs = {
 }
 
 tracing_events_num_str = {
-        0: "LMMGR_PRE_IND",
+    0: "LMMGR_PRE_IND",
     1: "LMMGR_PHR_IND",
     2: "LMMGR_FC_IND",
     3: "LMMGR_EDI_IND",
@@ -197,7 +197,7 @@ tracing_events_num_str = {
     142: "CL_NEXT_CLI",
     143: "CL_NEXT_RX_TX",
     144: "CL_SEQ_CTRL",
-	145: "CL_CANCEL_SCH",
+    145: "CL_CANCEL_SCH",
     146: "CL_PDLL_FLAGS",
     147: "CL_PEER_MAC_ADDR",
     148: "CL_DATA_REQ",
@@ -264,6 +264,7 @@ tracing_events_num_str = {
     271: "ELG",
     272: "ELG_TIMER",
     273: "ELG_EVENT",
+    274: "ELG_IRQ",
     290: "ELG_RESERVED",
 
 
@@ -1042,7 +1043,7 @@ def process_one_trace(code, infoArr):
                        infoArr[14] + infoArr[13], 16)
         info = "ptr 0x{:08X}".format(field_32)
     # elg
-    elif code == tracing_events_str_num["ELG"] or code == tracing_events_str_num["ELG_TIMER"] or code == tracing_events_str_num["ELG_EVENT"]:
+    elif code == tracing_events_str_num["ELG"] or code == tracing_events_str_num["ELG_TIMER"] or code == tracing_events_str_num["ELG_EVENT"] or code == tracing_events_str_num["ELG_IRQ"]:
         field_32 = int(infoArr[16] + infoArr[15] +
                        infoArr[14] + infoArr[13], 16)
         if (code == tracing_events_str_num["ELG_EVENT"]):
@@ -1867,7 +1868,7 @@ def graph_timeline_visualiser():
     err_df = timeline_rx_df[timeline_rx_df.rx_dur <= 0]
 
     if(not (err_df.empty)):
-        timeline_rx_df= timeline_rx_df[timeline_rx_df.rx_dur > 0]
+        timeline_rx_df = timeline_rx_df[timeline_rx_df.rx_dur > 0]
         print("\n\n\t\t **** ERROR timeline_rx_df")
         print(err_df.head())
         print(err_df.shape)
@@ -1883,7 +1884,7 @@ def graph_timeline_visualiser():
     err_df = timeline_tx_df[timeline_tx_df.tx_dur <= 0]
 
     if(not (err_df.empty)):
-        timeline_tx_df= timeline_tx_df[timeline_tx_df.tx_dur > 0]
+        timeline_tx_df = timeline_tx_df[timeline_tx_df.tx_dur > 0]
         print("\n\n\t\t **** ERROR timeline_tx_df")
         print(err_df.head())
         print(err_df.shape)
@@ -1916,7 +1917,7 @@ def graph_timeline_visualiser():
     err_df = timeline_cl_startend_df[timeline_cl_startend_df.cldiff <= 0]
 
     if(not (err_df.empty)):
-        timeline_cl_startend_df= timeline_cl_startend_df[timeline_cl_startend_df.cldiff > 0]
+        timeline_cl_startend_df = timeline_cl_startend_df[timeline_cl_startend_df.cldiff > 0]
         print("\n\n\t\t **** ERROR timeline_cl_startend_df")
         print(err_df.head())
         print(err_df.shape)
@@ -2282,9 +2283,12 @@ def graph_it():
 
     # csv_df['cl_id'] = csv_df["trace_info"].apply(lambda x: x.split(' ', 5)[4] if "CL_OUT_CNF" in x or "CL_START" in x else np.nan)
     cl_id_df = csv_df[(csv_df.tracecode_dec == 134) | (csv_df.tracecode_dec == 136)][['byte', 'trace_info']]
-    cl_id_df.rename(columns={'trace_info': 'cl_id'}, inplace=True)
-    cl_id_df.cl_id = cl_id_df.cl_id.str.rsplit(' ', 1, expand=True).drop([0], axis=1)
-    csv_df = csv_df.merge(cl_id_df, on='byte', how='left')
+    if cl_id_df.empty:
+        csv_df = csv_df.assign(cl_id=pd.Series(np.nan))
+    else:
+        cl_id_df.rename(columns={'trace_info': 'cl_id'}, inplace=True)
+        cl_id_df.cl_id = cl_id_df.cl_id.str.rsplit(' ', 1, expand=True).drop([0], axis=1)
+        csv_df = csv_df.merge(cl_id_df, on='byte', how='left')
 
     # csv_df['cl_mac'] = csv_df.apply(lambda x: x.trace_info.split('>', 2)[1].strip() if x.tracecode_dec == 147 else np.nan, axis=1)
     cl_mac_df = csv_df[csv_df.tracecode_dec == 147][['byte', 'trace_info']]
@@ -2322,7 +2326,7 @@ def graph_it():
         cl_range_start, cl_range_end = cl_id_range[0].split(':')
         cl_range_start = str(int(cl_range_start)-1) if cl_range_start else '0'
         cl_range_end = cl_range_end if cl_range_end else str(int(csv_df.cl_id.astype(float).max()))
-        csv_df = csv_df[(csv_df.cl_id >= cl_range_start) & (csv_df.cl_id <=cl_range_end)]
+        csv_df = csv_df[(csv_df.cl_id >= cl_range_start) & (csv_df.cl_id <= cl_range_end)]
 
     # seq contrl
     tx_seq_ctrl_df = csv_df[(csv_df.tracecode_dec == 144) & (csv_df.trace_info.str.contains("TX"))][['byte', 'trace_info']].rename(columns={'trace_info': 'tx_seq_ctrl'})
@@ -2479,7 +2483,7 @@ if __name__ == "__main__":
     lastseqinfo = ""
 
     # verify we have python atleast 3.x+
-    assert sys.version_info >= (3, 0), "Requires Python 3.x+. Current Version is {}".format(sys.version.split(" ", 2)[0])
+    assert sys.version_info >= (3, 6), "Requires Python 3.6+. Current Version is {}".format(sys.version.split(" ", 2)[0])
 
     check_and_install_package(['numpy'])
 
@@ -2650,7 +2654,7 @@ if __name__ == "__main__":
         response = input("Which graph (use a single number or list like 1,2) ")
         countsemi = response.count(';')
 
-        graph_ans, *cl_id_range = response.split(';',2)
+        graph_ans, *cl_id_range = response.split(';', 2)
 
         graph_ans_list = graph_ans.split(',')
         result = all(int(elem, 10) in list(graph_dic.keys()) for elem in graph_ans_list)
