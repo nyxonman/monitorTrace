@@ -19,7 +19,7 @@ MIN_A7_VER = (10, 0, 519)
 
 OS_POSIX = "posix"
 OS_WIN = "nt"
-__VERSION__ = "2.4"
+__VERSION__ = "2.5"
 APP_VERSION = __VERSION__ + " {OS: " + os.name + "}"
 OUTPUT_FILE_NAME = "lastdecodedTraces"
 OUTPUT_FILE_EXT = ".log"
@@ -64,6 +64,10 @@ graphs = {
     'cl_timing': {},
     'timeline': {}
 }
+
+valid_img_ext_list=[
+    '.png', '.jpg', '.pdf', '.svg'
+]
 
 tracing_events_num_str = {
     0: "LMMGR_PRE_IND",
@@ -176,6 +180,13 @@ tracing_events_num_str = {
     110: "T_TXDELAY",
     111: "T_PEER_CURSLOT",
     112: "T_RWIN_QUALTIME",
+    113: "PHY_TX_START",
+    114: "PHY_TX_STOP",
+    115: "PHY_TX_RX_START",
+    116: "PHY_TX_RX_STOP",
+    117: "PHY_RX_START_START",
+    118: "PHY_RX_START_STOP",
+
     120: "T_RESERVED",
     121: "FRT32_TX_START",
     122: "FRT32_TX_END",
@@ -1224,6 +1235,14 @@ class listIdAction(argparse.Action):
             raise ValueError("Invalid List ID")
         setattr(namespace, self.dest, values)
 
+class exportAction(argparse.Action):
+    def __call__(self, parser, namespace, values, option_string=None):
+
+        if not values[-4:] in valid_img_ext_list:
+
+            print("Error: Invalid extension {}.Valid extensions {}".format(values, valid_img_ext_list))
+            raise ValueError("Invalid Extension")
+        setattr(namespace, self.dest, values)
 
 def my_wait(sec, new_count=0):
     for i in range(sec):
@@ -1890,7 +1909,7 @@ def graph_timeline_visualiser():
         print(err_df.shape)
 
     # PHY INDICATIONS and CALLs
-    filter_list = [1, 2, 3, 4, 6, 140, 141, 148, 149]
+    filter_list = [1, 2, 3, 4, 6, 113, 114, 115, 116, 117, 118, 140, 141, 148, 149]
     timeline_phycallind_df = pd.DataFrame()
     timeline_phycallind_df = cl_csv_df[cl_csv_df.tracecode_dec.isin(filter_list)]
     timeline_phycallind_df = timeline_phycallind_df.assign(y1=pd.Series(np.nan))
@@ -2366,8 +2385,14 @@ def graph_it():
     # stat_total = csv_df.groupby('tracecode_dec').count().reset_index().astype({"tracecode_dec": int})
     # stat_total = stat_total[['tracecode_dec', 'byte']]
     # stat_total = stat_total.merge(traceCodeMap_df, how='inner', on="tracecode_dec").sort_values(by=['tracecode_dec']).reset_index()
-
-    cl_csv_df = csv_df.loc[(csv_df['tracecode_dec'] > 120) & (csv_df['tracecode_dec'] <= 151) | (csv_df.tracecode_dec <= 6)]
+    cl_filter_list = list(range(121, 152))
+    cl_filter_list.extend(list(range(0, 7)))
+    cl_filter_list.extend(list(range(113, 119)))
+    # print(cl_filter_list)
+    # exit(0)
+    cl_csv_df = pd.DataFrame()
+    cl_csv_df = csv_df[csv_df.tracecode_dec.isin(cl_filter_list)]
+    # cl_csv_df = csv_df.loc[(csv_df['tracecode_dec'] > 120) & (csv_df['tracecode_dec'] <= 151) | (csv_df.tracecode_dec <= 6)]
     cl_csv_df = cl_csv_df.drop(columns=['tracecode_hex'])
 
     # cl_csv_df = cl_csv_df.assign(sts=pd.Series(np.nan))
@@ -2389,8 +2414,6 @@ def graph_it():
         print("\nFastLink...Data Processing...", flush=True, end='')
 
         graph_fastlink()
-
-    graph23 = True
 
     if '0' in graph_ans_list or '2' in graph_ans_list or '3' in graph_ans_list:
         while True:
@@ -2533,6 +2556,11 @@ if __name__ == "__main__":
     my_parser.add_argument('-d', '--debug',
                            action='store_true',
                            help='Debug Mode')
+    my_parser.add_argument('-e', '--export', metavar="export",
+                          type=str,
+                          action=exportAction,
+                          help='Export Graph to a file. Supported extensions {}. Works only with -g option'.format(valid_img_ext_list))
+
     my_group.add_argument('-f', '--file',
                           type=str,
                           help='path to the local file to decode. The local file should be obtained from hexdump -C option')
@@ -2575,6 +2603,11 @@ if __name__ == "__main__":
         args = my_parser.parse_args()
     except:
         exit()
+
+    # if export option is provided with graphing option exit
+    if args.export and not args.graph:
+        print("Error -e option works only with -g")
+        exit(0)
 
     print("*** Monitoring traces v" + APP_VERSION +
           " started at " + get_datetime())
