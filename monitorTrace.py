@@ -9,11 +9,13 @@ from datetime import datetime
 import argparse
 import csv
 import random
+import json
 
 # list of global variables subject to change
 glob = {
     'QUIT': False,
 }
+json_list = {}
 
 MIN_A7_VER = (10, 0, 519)
 
@@ -65,7 +67,7 @@ graphs = {
     'timeline': {}
 }
 
-valid_img_ext_list=[
+valid_img_ext_list = [
     '.png', '.jpg', '.pdf', '.svg'
 ]
 
@@ -1235,6 +1237,7 @@ class listIdAction(argparse.Action):
             raise ValueError("Invalid List ID")
         setattr(namespace, self.dest, values)
 
+
 class exportAction(argparse.Action):
     def __call__(self, parser, namespace, values, option_string=None):
 
@@ -1243,6 +1246,7 @@ class exportAction(argparse.Action):
             print("Error: Invalid extension {}.Valid extensions {}".format(values, valid_img_ext_list))
             raise ValueError("Invalid Extension")
         setattr(namespace, self.dest, values)
+
 
 def my_wait(sec, new_count=0):
     for i in range(sec):
@@ -1296,6 +1300,13 @@ def show_required_traces(trace_list):
         print(trace, " => ", tracing_events_num_str[trace])
 
 
+def write_df_to_json(key, df, mode='a'):
+    with open('myJson.js', mode) as f:
+        f.write(key+':')
+        f.write(df.to_json(orient='records'))
+        f.write(',\n\n')
+
+
 def graph_fastlink():
     filter_list = [149, 148]
 
@@ -1347,7 +1358,9 @@ def graph_fastlink():
                 hovermode='x',
 
             )
-            graphs['rtt'].show()
+
+            write_df_to_json('rttJson',rtt_df)
+            # graphs['rtt'].show()
             print("Done", flush=True)
 
         else:
@@ -1963,6 +1976,7 @@ def graph_timeline_visualiser():
             line=dict(width=1,
                       color='orange'))
     )
+    write_df_to_json("timeline_clStartEndJson",timeline_cl_startend_df)
 
     # add TXs
     fig.add_bar(
@@ -1983,6 +1997,8 @@ def graph_timeline_visualiser():
             line=dict(width=1,
                       color=timeline_tx_df['color']))
     )
+    # print(fig)
+    write_df_to_json("timeline_txJson", timeline_tx_df)
 
     # add RXs
     fig.add_bar(
@@ -1999,6 +2015,8 @@ def graph_timeline_visualiser():
             line=dict(width=1,
                       color=timeline_rx_df['color']))
     )
+    write_df_to_json("timeline_rxJson", timeline_rx_df)
+
 
     # add PHY Indications and calls
 
@@ -2016,6 +2034,8 @@ def graph_timeline_visualiser():
             line=dict(width=1,
                       color=timeline_phycallind_df.color))
     )
+    write_df_to_json("timeline_phyIndJson", timeline_phycallind_df)
+
 
     # add CL traces
     fig.add_scatter(
@@ -2245,6 +2265,11 @@ def graph_mode_chan():
         xaxis={"type": "category"},
 
     )
+    write_df_to_json('modeRxJson',modestats_rx_df)
+    write_df_to_json('chanRxJson',chanstats_rx_df)
+    write_df_to_json('modeTxJson',modestats_tx_df)
+    write_df_to_json('chanTxJson',chanstats_tx_df)
+
     fig.show()
     print("Done", flush=True, end='\n')
 
@@ -2409,6 +2434,10 @@ def graph_it():
 
     print(cl_stats)
 
+    with open('myJson.js', 'w') as f:
+        f.write('// data logged at {}.\n\n'.format(get_datetime()))
+        f.write('const jsonData={\n')
+
     # obtain fastlink df
     if '0' in graph_ans_list or '1' in graph_ans_list:
         print("\nFastLink...Data Processing...", flush=True, end='')
@@ -2492,6 +2521,9 @@ def graph_it():
         print("\nModeChan Stats...Data Processing...", flush=True, end='')
         graph_mode_chan()
 
+    with open('myJson.js', 'a') as f:
+        f.write('\n}')
+
 
 cl_id = 0
 
@@ -2557,9 +2589,9 @@ if __name__ == "__main__":
                            action='store_true',
                            help='Debug Mode')
     my_parser.add_argument('-e', '--export', metavar="export",
-                          type=str,
-                          action=exportAction,
-                          help='Export Graph to a file. Supported extensions {}. Works only with -g option'.format(valid_img_ext_list))
+                           type=str,
+                           action=exportAction,
+                           help='Export Graph to a file. Supported extensions {}. Works only with -g option'.format(valid_img_ext_list))
 
     my_group.add_argument('-f', '--file',
                           type=str,
