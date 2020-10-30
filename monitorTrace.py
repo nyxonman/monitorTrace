@@ -1303,6 +1303,7 @@ def show_required_traces(trace_list):
 def write_df_to_json(key, df, mode='a'):
     with open('myJson.js', mode) as f:
         f.write(key+':')
+        f.write('')
         f.write(df.to_json(orient='records'))
         f.write(',\n\n')
 
@@ -1931,7 +1932,7 @@ def graph_timeline_visualiser():
     timeline_phycallind_df.drop(columns=['frt_hex'], inplace=True)
 
     # CL Traces
-    filter_list = [131, 132, 133, 134, 135, 136, 137, 138, 139, 142, 143, 144, 145, 146, 147, 150]
+    filter_list = [129,130, 131, 132, 133, 134, 135, 136, 137, 138, 139, 142, 143, 144, 145, 146, 147, 150]
     timeline_cl_df = pd.DataFrame()
     timeline_cl_df = cl_csv_df[cl_csv_df.tracecode_dec.isin(filter_list)]
     timeline_cl_df = timeline_cl_df.assign(color=pd.Series(np.nan))
@@ -1976,7 +1977,7 @@ def graph_timeline_visualiser():
             line=dict(width=1,
                       color='orange'))
     )
-    write_df_to_json("timeline_clStartEndJson",timeline_cl_startend_df)
+    write_df_to_json("timeline_clStartEndJson",timeline_cl_startend_df[['cl_id','cldiff','clend','clstart','hoverinfo']])
 
     # add TXs
     fig.add_bar(
@@ -1998,7 +1999,7 @@ def graph_timeline_visualiser():
                       color=timeline_tx_df['color']))
     )
     # print(fig)
-    write_df_to_json("timeline_txJson", timeline_tx_df)
+    write_df_to_json("timeline_txJson", timeline_tx_df[['cl_id','color','hoverinfo','ts_txstart','ts_txend','tx_dur']])
 
     # add RXs
     fig.add_bar(
@@ -2015,7 +2016,7 @@ def graph_timeline_visualiser():
             line=dict(width=1,
                       color=timeline_rx_df['color']))
     )
-    write_df_to_json("timeline_rxJson", timeline_rx_df)
+    write_df_to_json("timeline_rxJson", timeline_rx_df[['cl_id','color','hoverinfo','ts_rxstart','ts_rxend','rx_dur']])
 
 
     # add PHY Indications and calls
@@ -2034,7 +2035,7 @@ def graph_timeline_visualiser():
             line=dict(width=1,
                       color=timeline_phycallind_df.color))
     )
-    write_df_to_json("timeline_phyIndJson", timeline_phycallind_df)
+    write_df_to_json("timeline_phyIndJson", timeline_phycallind_df[["cl_id","frt_dec","trace_info","color"]])
 
 
     # add CL traces
@@ -2052,6 +2053,7 @@ def graph_timeline_visualiser():
             line=dict(width=1,
                       color=timeline_cl_df.color))
     )
+    write_df_to_json("timeline_clTracesJson", timeline_cl_df[["cl_id","frt_dec","trace_info","color"]])
 
     # add annotations for tx and rx
     fig.add_annotation(
@@ -2092,7 +2094,7 @@ def graph_timeline_visualiser():
     fig.update_xaxes(rangeslider_visible=True, title="FRT usec",)
     fig.update_yaxes(zeroline=True, zerolinewidth=1, zerolinecolor='grey')
 
-    fig.show()
+    # fig.show()
     print("Done", flush=True, end='\n')
 
 
@@ -2270,7 +2272,7 @@ def graph_mode_chan():
     write_df_to_json('modeTxJson',modestats_tx_df)
     write_df_to_json('chanTxJson',chanstats_tx_df)
 
-    fig.show()
+    # fig.show()
     print("Done", flush=True, end='\n')
 
 
