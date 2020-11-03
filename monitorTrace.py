@@ -52,6 +52,8 @@ POLL_INTERVAL = 10  # in seconds
 
 SDU_TX_SUCCESS = 0
 SDU_TX_FAILURE = -1
+GRAPH_HIGHCHARTS = 1
+GRAPH_PLOTLY = 2
 
 ID_ALL = 0
 ID_PRIM = 1
@@ -60,6 +62,9 @@ ID_TRACE = 3
 ID_FLAG = 4
 ID_OWNERS = 5
 ID_MAX = 6
+
+GRAPH_OPTION = GRAPH_HIGHCHARTS
+# GRAPH_OPTION = GRAPH_PLOTLY
 
 graphs = {
     'rtt': {},
@@ -1336,32 +1341,34 @@ def graph_fastlink():
         rtt_df['cdf'] = rtt_df['pdf'].cumsum()
         rtt_df = rtt_df.reset_index()
         rtt_df = rtt_df.astype({'diff': int})
-        print("Done...Rendering graph...", flush=True, end='')
+        print("Done...Rendering/Preparing graph...", flush=True, end='')
 
         # Create figure with secondary y-axisspecs
         if(graphs['rtt'] == {}):
-            graphs['rtt'] = make_subplots(specs=[[{"secondary_y": True}]])
+            if GRAPH_OPTION == GRAPH_PLOTLY:
+                graphs['rtt'] = make_subplots(specs=[[{"secondary_y": True}]])
 
-            # Add traces
-            graphs['rtt'].add_bar(x=rtt_df['diff'], y=rtt_df['freq'], name="Count", opacity=0.5)
-            graphs['rtt'].add_scatter(x=rtt_df['diff'], y=rtt_df['pdf'], name="PDF", secondary_y=True)
-            graphs['rtt'].add_scatter(x=rtt_df['diff'], y=rtt_df['cdf'], name="CDF", secondary_y=True)
-            # graphs['rtt'].add_trace(go.Bar(x=rtt_df['diff'], y=rtt_df['freq'], name="Count", opacity=0.5,
-            #                      ), secondary_y=True)
-            # graphs['rtt'].add_trace(go.Scatter(x=rtt_df['diff'], y=rtt_df['pdf'], name="PDF"))
-            # graphs['rtt'].add_trace(go.Scatter(x=rtt_df['diff'], y=rtt_df['cdf'], name='CDF'))
-            graphs['rtt'].update_layout(
-                # template="plotly_dark",
-                title="Round Trip time in usec",
-                xaxis_title="RTT (usecs)",
-                yaxis_title="Count",
-                yaxis2_title="PDF & CDF",
-                hovermode='x',
+                # Add traces
+                graphs['rtt'].add_bar(x=rtt_df['diff'], y=rtt_df['freq'], name="Count", opacity=0.5)
+                graphs['rtt'].add_scatter(x=rtt_df['diff'], y=rtt_df['pdf'], name="PDF", secondary_y=True)
+                graphs['rtt'].add_scatter(x=rtt_df['diff'], y=rtt_df['cdf'], name="CDF", secondary_y=True)
+                # graphs['rtt'].add_trace(go.Bar(x=rtt_df['diff'], y=rtt_df['freq'], name="Count", opacity=0.5,
+                #                      ), secondary_y=True)
+                # graphs['rtt'].add_trace(go.Scatter(x=rtt_df['diff'], y=rtt_df['pdf'], name="PDF"))
+                # graphs['rtt'].add_trace(go.Scatter(x=rtt_df['diff'], y=rtt_df['cdf'], name='CDF'))
+                graphs['rtt'].update_layout(
+                    # template="plotly_dark",
+                    title="Round Trip time in usec",
+                    xaxis_title="RTT (usecs)",
+                    yaxis_title="Count",
+                    yaxis2_title="PDF & CDF",
+                    hovermode='x',
 
-            )
+                )
+                graphs['rtt'].show()
 
-            write_df_to_json('rttJson',rtt_df)
-            # graphs['rtt'].show()
+            elif GRAPH_OPTION == GRAPH_HIGHCHARTS:
+                write_df_to_json('rttJson', rtt_df)
             print("Done", flush=True)
 
         else:
@@ -1521,7 +1528,7 @@ def graph_cl_timings():
     # drop values higher than 3sec
     timings_df.afterRx2rxPHR = timings_df.apply(lambda x: np.nan if np.isnan([x.afterRx2rxPHR]) or x.afterRx2rxPHR > 3000.0 else x.afterRx2rxPHR, axis=1)
 
-    print("Done...Rendering Graph...Report...", flush=True, end='')
+    print("Done...Rendering/Preparing Graph...Report...", flush=True, end='')
 
     # PLOT THE TIMING DIAGRAM
     # A list of Matplotlib releases and their dates
@@ -1642,199 +1649,203 @@ def graph_cl_timings():
     # MAKE THE TIMING REPORT
 
     # Create the base line
-    start = min(points)
-    stop = max(points)
+    if GRAPH_OPTION == GRAPH_PLOTLY:
+        start = min(points)
+        stop = max(points)
 
-    fig = go.Figure()
+        fig = go.Figure()
 
-    # Add baseline
-    fig.add_shape(
-        # Line Horizontal
-        type="line",
-        x0=start, y0=0,
-        x1=stop, y1=0,
-        line=dict(
-            color="grey",
-            width=2,
-        ),
-    )
-
-    # legend for min/max/avg
-    fig.add_annotation(
-        x=1000, y=-1,
-        xref="x", yref="y",
-        text="min/max/avg",
-        showarrow=False,
-        font=dict(
-            family="Courier New, monospace",
-            size=16,
-            color="#ffffff"
-        ),
-        align="center",
-        arrowhead=2,
-        arrowsize=1,
-        arrowwidth=2,
-        arrowcolor="#636363",
-        ax=20, ay=-30,
-        bordercolor="#c7c7c7",
-        borderwidth=2,
-        borderpad=4,
-        bgcolor="#ff7f0e",
-        opacity=0.8
-    )
-
-    # add vertical lines
-    for ii, (iname, ipt) in enumerate(zip(names, points)):
-        level = levels_dic[iname]
-        vert = 'top' if level < 0 else 'bottom'
-        # fig.add_scatter(x=target2txphr_df['target2txphr'], y=target2txphr_df['pdf'], name="PDF", secondary_y=True, row=1, col=1)
-        # print(ii, iname, ipt)
+        # Add baseline
         fig.add_shape(
-            # Line vertical
+            # Line Horizontal
             type="line",
-            x0=ipt, y0=0,
-            x1=ipt, y1=level,
+            x0=start, y0=0,
+            x1=stop, y1=0,
             line=dict(
-                color=colors_dic[iname],
+                color="grey",
                 width=2,
-            )
+            ),
         )
 
-    # add labels to the lines
-    fig.add_trace(go.Scatter(
-        x=points,
-        # y=[i * 1.05 for i in list(levels_dic.values())],
-        y=[i for i in list(levels_dic.values())],
-        text=list(names_label_dic.values()),
-        textposition="top center",
-        mode="text+markers",
-        hoverinfo="none",
-        marker=dict(size=12,
-                    color='white',
-                    line=dict(width=2,
-                              color='black'))
-    ))
-
-    # draw the horizontal lines
-    i = 0
-    for d in arrows_x:
-        x1, x2, y = d.values()
-        fig.add_shape(
-            # Line horizontals for texts
-            type="line",
-            x0=x1, y0=y,
-            x1=x2, y1=y,
-            line=dict(
-                color='DarkOrange',
-                width=2,
-                dash="dot"
-            )
+        # legend for min/max/avg
+        fig.add_annotation(
+            x=1000, y=-1,
+            xref="x", yref="y",
+            text="min/max/avg",
+            showarrow=False,
+            font=dict(
+                family="Courier New, monospace",
+                size=16,
+                color="#ffffff"
+            ),
+            align="center",
+            arrowhead=2,
+            arrowsize=1,
+            arrowwidth=2,
+            arrowcolor="#636363",
+            ax=20, ay=-30,
+            bordercolor="#c7c7c7",
+            borderwidth=2,
+            borderpad=4,
+            bgcolor="#ff7f0e",
+            opacity=0.8
         )
 
-        i = i+1
+        # add vertical lines
+        for ii, (iname, ipt) in enumerate(zip(names, points)):
+            level = levels_dic[iname]
+            vert = 'top' if level < 0 else 'bottom'
+            # fig.add_scatter(x=target2txphr_df['target2txphr'], y=target2txphr_df['pdf'], name="PDF", secondary_y=True, row=1, col=1)
+            # print(ii, iname, ipt)
+            fig.add_shape(
+                # Line vertical
+                type="line",
+                x0=ipt, y0=0,
+                x1=ipt, y1=level,
+                line=dict(
+                    color=colors_dic[iname],
+                    width=2,
+                )
+            )
 
-    # add the values;labels over the horizontal line.
-    x = [(sub["x1"]+sub["x2"]) / 2 for sub in arrows_x]
-    y = [sub["y"]*1.15 for sub in arrows_x]
-    fig.add_trace(go.Scatter(
-        x=x,
-        y=y,
-        text=val_texts,
-        mode="text",
-        hoverinfo="none",
+        # add labels to the lines
+        fig.add_trace(go.Scatter(
+            x=points,
+            # y=[i * 1.05 for i in list(levels_dic.values())],
+            y=[i for i in list(levels_dic.values())],
+            text=list(names_label_dic.values()),
+            textposition="top center",
+            mode="text+markers",
+            hoverinfo="none",
+            marker=dict(size=12,
+                        color='white',
+                        line=dict(width=2,
+                                color='black'))
+        ))
 
-    ))
-    # POLL/ACK/DATA
-    rx_dur = points_dic['rxEnd']-(points_dic['rxPHR'])
-    txdiff = points_dic['TxPHR1'] - points_dic['TargetTx1']
-    fig.add_bar(
-        x=[(points_dic['TxPHR1']-txdiff+(tx_dur+txdiff)/2), (points_dic['rxPHR']-txdiff+(rx_dur+txdiff)/2), (points_dic['TxPHR2']-txdiff+(tx_dur+txdiff+100)/2)],
-        y=[0.25, -0.25, 0.25],
-        width=[tx_dur+txdiff, rx_dur+txdiff, (tx_dur+100+txdiff)],
-        text=["POLL", "ACK", "DATA"],
-        textposition="inside",
-        hoverinfo="none",
-        marker=dict(
-            color=['darksalmon', 'darkseagreen', 'darksalmon'],
-            line=dict(width=2,
-                      color='black'))
-    )
+        # draw the horizontal lines
+        i = 0
+        for d in arrows_x:
+            x1, x2, y = d.values()
+            fig.add_shape(
+                # Line horizontals for texts
+                type="line",
+                x0=x1, y0=y,
+                x1=x2, y1=y,
+                line=dict(
+                    color='DarkOrange',
+                    width=2,
+                    dash="dot"
+                )
+            )
 
-    fig.update_layout(
-        title="CL Timing Summary Report",
-        showlegend=False,
-        yaxis=dict(
-            showticklabels=False
-        ),
+            i = i+1
 
-    )
+        # add the values;labels over the horizontal line.
+        x = [(sub["x1"]+sub["x2"]) / 2 for sub in arrows_x]
+        y = [sub["y"]*1.15 for sub in arrows_x]
+        fig.add_trace(go.Scatter(
+            x=x,
+            y=y,
+            text=val_texts,
+            mode="text",
+            hoverinfo="none",
 
-    fig.show()
+        ))
+        # POLL/ACK/DATA
+        rx_dur = points_dic['rxEnd']-(points_dic['rxPHR'])
+        txdiff = points_dic['TxPHR1'] - points_dic['TargetTx1']
+        fig.add_bar(
+            x=[(points_dic['TxPHR1']-txdiff+(tx_dur+txdiff)/2), (points_dic['rxPHR']-txdiff+(rx_dur+txdiff)/2), (points_dic['TxPHR2']-txdiff+(tx_dur+txdiff+100)/2)],
+            y=[0.25, -0.25, 0.25],
+            width=[tx_dur+txdiff, rx_dur+txdiff, (tx_dur+100+txdiff)],
+            text=["POLL", "ACK", "DATA"],
+            textposition="inside",
+            hoverinfo="none",
+            marker=dict(
+                color=['darksalmon', 'darkseagreen', 'darksalmon'],
+                line=dict(width=2,
+                        color='black'))
+        )
+
+        fig.update_layout(
+            title="CL Timing Summary Report",
+            showlegend=False,
+            yaxis=dict(
+                showticklabels=False
+            ),
+
+        )
+
+        fig.show()
+    # end of if GRAPH_OPTION == GRAPH_PLOTLY:
+
     print("Done... timing...", flush=True, end='')
 
     # MAKE THE TIMING GRAPHS
     # plot
-    fig = make_subplots(4, 2,
-                        specs=[[{"secondary_y": True},    {"secondary_y": True}],
-                               [{"secondary_y": True},    {"secondary_y": True}],
-                               [{"secondary_y": True},    {"secondary_y": True}],
-                               [{"secondary_y": True}, {"secondary_y": True}]],
-                        subplot_titles=("Target Time to Tx PHR Time",
-                                        "Tx End to Rx Start",
-                                        "Rx End to Target Time",
-                                        "rxend2txtime",
-                                        "Tx Call to Target Time",
-                                        "Rx End to Tx Call",
-                                        "Rxcall to After Rx",
-                                        "CL duration in msec"),
-                        x_title="time in msec",
-                        y_title="Frequency",
-                        )
+    if GRAPH_OPTION == GRAPH_PLOTLY:
+        fig = make_subplots(4, 2,
+                            specs=[[{"secondary_y": True},    {"secondary_y": True}],
+                                [{"secondary_y": True},    {"secondary_y": True}],
+                                [{"secondary_y": True},    {"secondary_y": True}],
+                                [{"secondary_y": True}, {"secondary_y": True}]],
+                            subplot_titles=("Target Time to Tx PHR Time",
+                                            "Tx End to Rx Start",
+                                            "Rx End to Target Time",
+                                            "rxend2txtime",
+                                            "Tx Call to Target Time",
+                                            "Rx End to Tx Call",
+                                            "Rxcall to After Rx",
+                                            "CL duration in msec"),
+                            x_title="time in msec",
+                            y_title="Frequency",
+                            )
 
-    # Add traces
-    fig.add_bar(x=target2txphr_df['target2txphr'], y=target2txphr_df['freq'], name="Count", opacity=0.8, row=1, col=1)
-    fig.add_scatter(x=target2txphr_df['target2txphr'], y=target2txphr_df['pdf'], name="PDF", secondary_y=True, row=1, col=1)
-    fig.add_scatter(x=target2txphr_df['target2txphr'], y=target2txphr_df['cdf'], name="CDF", secondary_y=True, row=1, col=1)
+        # Add traces
+        fig.add_bar(x=target2txphr_df['target2txphr'], y=target2txphr_df['freq'], name="Count", opacity=0.8, row=1, col=1)
+        fig.add_scatter(x=target2txphr_df['target2txphr'], y=target2txphr_df['pdf'], name="PDF", secondary_y=True, row=1, col=1)
+        fig.add_scatter(x=target2txphr_df['target2txphr'], y=target2txphr_df['cdf'], name="CDF", secondary_y=True, row=1, col=1)
 
-    fig.add_bar(x=txend2rxstart_df['txend2rxstart'], y=txend2rxstart_df['freq'], name="Count", opacity=0.8, row=1, col=2)
-    fig.add_scatter(x=txend2rxstart_df['txend2rxstart'], y=txend2rxstart_df['pdf'], name="PDF", secondary_y=True, row=1, col=2)
-    fig.add_scatter(x=txend2rxstart_df['txend2rxstart'], y=txend2rxstart_df['cdf'], name="CDF", secondary_y=True, row=1, col=2)
+        fig.add_bar(x=txend2rxstart_df['txend2rxstart'], y=txend2rxstart_df['freq'], name="Count", opacity=0.8, row=1, col=2)
+        fig.add_scatter(x=txend2rxstart_df['txend2rxstart'], y=txend2rxstart_df['pdf'], name="PDF", secondary_y=True, row=1, col=2)
+        fig.add_scatter(x=txend2rxstart_df['txend2rxstart'], y=txend2rxstart_df['cdf'], name="CDF", secondary_y=True, row=1, col=2)
 
-    fig.add_bar(x=rxend2targettime_df['rxend2targettime'], y=rxend2targettime_df['freq'], name="Count", opacity=0.8, row=2, col=1)
-    fig.add_scatter(x=rxend2targettime_df['rxend2targettime'], y=rxend2targettime_df['pdf'], name="PDF", secondary_y=True, row=2, col=1)
-    fig.add_scatter(x=rxend2targettime_df['rxend2targettime'], y=rxend2targettime_df['cdf'], name="CDF", secondary_y=True, row=2, col=1)
+        fig.add_bar(x=rxend2targettime_df['rxend2targettime'], y=rxend2targettime_df['freq'], name="Count", opacity=0.8, row=2, col=1)
+        fig.add_scatter(x=rxend2targettime_df['rxend2targettime'], y=rxend2targettime_df['pdf'], name="PDF", secondary_y=True, row=2, col=1)
+        fig.add_scatter(x=rxend2targettime_df['rxend2targettime'], y=rxend2targettime_df['cdf'], name="CDF", secondary_y=True, row=2, col=1)
 
-    fig.add_bar(x=rxend2txtime_df['rxend2txtime'], y=rxend2txtime_df['freq'], name="Count", opacity=0.8, row=2, col=2)
-    fig.add_scatter(x=rxend2txtime_df['rxend2txtime'], y=rxend2txtime_df['pdf'], name="PDF", secondary_y=True, row=2, col=2)
-    fig.add_scatter(x=rxend2txtime_df['rxend2txtime'], y=rxend2txtime_df['cdf'], name="CDF", secondary_y=True, row=2, col=2)
+        fig.add_bar(x=rxend2txtime_df['rxend2txtime'], y=rxend2txtime_df['freq'], name="Count", opacity=0.8, row=2, col=2)
+        fig.add_scatter(x=rxend2txtime_df['rxend2txtime'], y=rxend2txtime_df['pdf'], name="PDF", secondary_y=True, row=2, col=2)
+        fig.add_scatter(x=rxend2txtime_df['rxend2txtime'], y=rxend2txtime_df['cdf'], name="CDF", secondary_y=True, row=2, col=2)
 
-    fig.add_bar(x=txcall2targettime_df['txcall2targettime'], y=txcall2targettime_df['freq'], name="Count", opacity=0.8, row=3, col=1)
-    fig.add_scatter(x=txcall2targettime_df['txcall2targettime'], y=txcall2targettime_df['pdf'], name="PDF", secondary_y=True, row=3, col=1)
-    fig.add_scatter(x=txcall2targettime_df['txcall2targettime'], y=txcall2targettime_df['cdf'], name="CDF", secondary_y=True, row=3, col=1)
+        fig.add_bar(x=txcall2targettime_df['txcall2targettime'], y=txcall2targettime_df['freq'], name="Count", opacity=0.8, row=3, col=1)
+        fig.add_scatter(x=txcall2targettime_df['txcall2targettime'], y=txcall2targettime_df['pdf'], name="PDF", secondary_y=True, row=3, col=1)
+        fig.add_scatter(x=txcall2targettime_df['txcall2targettime'], y=txcall2targettime_df['cdf'], name="CDF", secondary_y=True, row=3, col=1)
 
-    fig.add_bar(x=rxend2txcall_df['rxend2txcall'], y=rxend2txcall_df['freq'], name="Count", opacity=0.8, row=3, col=2)
-    fig.add_scatter(x=rxend2txcall_df['rxend2txcall'], y=rxend2txcall_df['pdf'], name="PDF", secondary_y=True, row=3, col=2)
-    fig.add_scatter(x=rxend2txcall_df['rxend2txcall'], y=rxend2txcall_df['cdf'], name="CDF", secondary_y=True, row=3, col=2)
+        fig.add_bar(x=rxend2txcall_df['rxend2txcall'], y=rxend2txcall_df['freq'], name="Count", opacity=0.8, row=3, col=2)
+        fig.add_scatter(x=rxend2txcall_df['rxend2txcall'], y=rxend2txcall_df['pdf'], name="PDF", secondary_y=True, row=3, col=2)
+        fig.add_scatter(x=rxend2txcall_df['rxend2txcall'], y=rxend2txcall_df['cdf'], name="CDF", secondary_y=True, row=3, col=2)
 
-    fig.add_bar(x=rxcall2afterrx_df['rxcall2afterrx'], y=rxcall2afterrx_df['freq'], name="Count", opacity=0.8, row=4, col=1)
-    fig.add_scatter(x=rxcall2afterrx_df['rxcall2afterrx'], y=rxcall2afterrx_df['pdf'], name="PDF", secondary_y=True, row=4, col=1)
-    fig.add_scatter(x=rxcall2afterrx_df['rxcall2afterrx'], y=rxcall2afterrx_df['cdf'], name="CDF", secondary_y=True, row=4, col=1)
+        fig.add_bar(x=rxcall2afterrx_df['rxcall2afterrx'], y=rxcall2afterrx_df['freq'], name="Count", opacity=0.8, row=4, col=1)
+        fig.add_scatter(x=rxcall2afterrx_df['rxcall2afterrx'], y=rxcall2afterrx_df['pdf'], name="PDF", secondary_y=True, row=4, col=1)
+        fig.add_scatter(x=rxcall2afterrx_df['rxcall2afterrx'], y=rxcall2afterrx_df['cdf'], name="CDF", secondary_y=True, row=4, col=1)
 
-    fig.add_bar(x=cl_dur_df['dur_ms'], y=cl_dur_df['freq'], name="Count", opacity=0.8, row=4, col=2)
-    fig.add_scatter(x=cl_dur_df['dur_ms'], y=cl_dur_df['pdf'], name="PDF", secondary_y=True, row=4, col=2)
-    fig.add_scatter(x=cl_dur_df['dur_ms'], y=cl_dur_df['cdf'], name="CDF", secondary_y=True, row=4, col=2)
+        fig.add_bar(x=cl_dur_df['dur_ms'], y=cl_dur_df['freq'], name="Count", opacity=0.8, row=4, col=2)
+        fig.add_scatter(x=cl_dur_df['dur_ms'], y=cl_dur_df['pdf'], name="PDF", secondary_y=True, row=4, col=2)
+        fig.add_scatter(x=cl_dur_df['dur_ms'], y=cl_dur_df['cdf'], name="CDF", secondary_y=True, row=4, col=2)
 
-    fig.update_layout(
-        title="CL Timings",
-        showlegend=False,
-        hovermode='x',
-        yaxis2=dict(
-            title='PDF/CDF',
+        fig.update_layout(
+            title="CL Timings",
+            showlegend=False,
+            hovermode='x',
+            yaxis2=dict(
+                title='PDF/CDF',
+            )
+
         )
 
-    )
-
-    fig.show()
+        fig.show()
     print("Done", flush=True, end='\n')
 
 
@@ -1932,7 +1943,7 @@ def graph_timeline_visualiser():
     timeline_phycallind_df.drop(columns=['frt_hex'], inplace=True)
 
     # CL Traces
-    filter_list = [129,130, 131, 132, 133, 134, 135, 136, 137, 138, 139, 142, 143, 144, 145, 146, 147, 150]
+    filter_list = [129, 130, 131, 132, 133, 134, 135, 136, 137, 138, 139, 142, 143, 144, 145, 146, 147, 150]
     timeline_cl_df = pd.DataFrame()
     timeline_cl_df = cl_csv_df[cl_csv_df.tracecode_dec.isin(filter_list)]
     timeline_cl_df = timeline_cl_df.assign(color=pd.Series(np.nan))
@@ -1955,146 +1966,149 @@ def graph_timeline_visualiser():
         print(err_df.head())
         print(err_df.shape)
 
-    print("Done...Rendering Graph...", flush=True, end='')
+    print("Done...Rendering/Preparing Graph...", flush=True, end='')
+    if GRAPH_OPTION == GRAPH_PLOTLY:
 
-    fig = go.Figure()
+        fig = go.Figure()
 
-    # add clstart end
-    fig.add_bar(
-        x=timeline_cl_startend_df.clstart + timeline_cl_startend_df.cldiff/2,
-        y=[6]*len(timeline_tx_df.index),
-        width=timeline_cl_startend_df.cldiff,
-        base=-3,
-        name="CL",
-        text=timeline_cl_startend_df.hoverinfo,
-        textposition="outside",
-        hovertemplate='%{text}',            # hoverinfo="none",
-        # hoverinfo="none",
-        marker=dict(
-            # color='darksalmon',
-            color='Wheat',
-            opacity=0.35,
-            line=dict(width=1,
-                      color='orange'))
-    )
-    write_df_to_json("timeline_clStartEndJson",timeline_cl_startend_df[['cl_id','cldiff','clend','clstart','hoverinfo']])
+        # add clstart end
+        fig.add_bar(
+            x=timeline_cl_startend_df.clstart + timeline_cl_startend_df.cldiff/2,
+            y=[6]*len(timeline_tx_df.index),
+            width=timeline_cl_startend_df.cldiff,
+            base=-3,
+            name="CL",
+            text=timeline_cl_startend_df.hoverinfo,
+            textposition="outside",
+            hovertemplate='%{text}',            # hoverinfo="none",
+            # hoverinfo="none",
+            marker=dict(
+                # color='darksalmon',
+                color='Wheat',
+                opacity=0.35,
+                line=dict(width=1,
+                        color='orange'))
+        )
 
-    # add TXs
-    fig.add_bar(
-        x=timeline_tx_df.ts_txstart + timeline_tx_df.tx_dur/2,
-        y=[2]*len(timeline_tx_df.index),
-        width=timeline_tx_df.tx_dur,
-        # base=1,
-        name="TX",
-        text=timeline_tx_df.hoverinfo,
-        textposition="inside",
-        hovertemplate='%{text}',            # hoverinfo="none",
-        # offset=-timeline_tx_df.tx_dur/2,
-        # hoverinfo="none",
-        marker=dict(
-            # color='darksalmon',
-            color=timeline_tx_df['color'],
-            opacity=1,
-            line=dict(width=1,
-                      color=timeline_tx_df['color']))
-    )
-    # print(fig)
-    write_df_to_json("timeline_txJson", timeline_tx_df[['cl_id','color','hoverinfo','ts_txstart','ts_txend','tx_dur']])
+         # add TXs
+        fig.add_bar(
+            x=timeline_tx_df.ts_txstart + timeline_tx_df.tx_dur/2,
+            y=[2]*len(timeline_tx_df.index),
+            width=timeline_tx_df.tx_dur,
+            # base=1,
+            name="TX",
+            text=timeline_tx_df.hoverinfo,
+            textposition="inside",
+            hovertemplate='%{text}',            # hoverinfo="none",
+            # offset=-timeline_tx_df.tx_dur/2,
+            # hoverinfo="none",
+            marker=dict(
+                # color='darksalmon',
+                color=timeline_tx_df['color'],
+                opacity=1,
+                line=dict(width=1,
+                        color=timeline_tx_df['color']))
+        )
+        # add RXs
+        fig.add_bar(
+            x=timeline_rx_df.ts_rxstart + timeline_rx_df.rx_dur/2,
+            y=[-2]*len(timeline_rx_df.index),
+            width=timeline_rx_df.rx_dur,
+            name="RX",
+            text=timeline_rx_df.hoverinfo,
+            textposition="inside",
+            hovertemplate='%{text}',            # hoverinfo="none",
+            marker=dict(
+                # color='darkseagreen',
+                color=timeline_rx_df['color'],
+                line=dict(width=1,
+                        color=timeline_rx_df['color']))
+        )
+            # add PHY Indications and calls
 
-    # add RXs
-    fig.add_bar(
-        x=timeline_rx_df.ts_rxstart + timeline_rx_df.rx_dur/2,
-        y=[-2]*len(timeline_rx_df.index),
-        width=timeline_rx_df.rx_dur,
-        name="RX",
-        text=timeline_rx_df.hoverinfo,
-        textposition="inside",
-        hovertemplate='%{text}',            # hoverinfo="none",
-        marker=dict(
-            # color='darkseagreen',
-            color=timeline_rx_df['color'],
-            line=dict(width=1,
-                      color=timeline_rx_df['color']))
-    )
-    write_df_to_json("timeline_rxJson", timeline_rx_df[['cl_id','color','hoverinfo','ts_rxstart','ts_rxend','rx_dur']])
+        fig.add_scatter(
+            x=timeline_phycallind_df.frt_dec,
+            y=[0]*len(timeline_phycallind_df.index),
+            mode="markers",
+            name="Internal Controls/Indications",
+            text="<b>CL_ID:</b> " + timeline_phycallind_df.cl_id + "<br>" + timeline_phycallind_df.trace_info,
+            hovertemplate="<b>FRT:</b>%{x}<br>%{text}",
+            visible="legendonly",
+            # hoverinfo="none",
+            marker=dict(
+                color='white',
+                line=dict(width=1,
+                        color=timeline_phycallind_df.color))
+        )
+        # add CL traces
+        fig.add_scatter(
+            x=timeline_cl_df.frt_dec,
+            y=[0]*len(timeline_cl_df.index),
+            mode="markers",
+            name="CL Traces",
+            text="<b>CL_ID:</b> " + timeline_cl_df.cl_id + "<br>" + timeline_cl_df.trace_info,
+            hovertemplate="<b>FRT:</b>%{x}<br>%{text}",
+            visible="legendonly",
+            # hoverinfo="none",
+            marker=dict(
+                color='white',
+                line=dict(width=1,
+                        color=timeline_cl_df.color))
+        )
+         # add annotations for tx and rx
+        fig.add_annotation(
+            x=min(timeline_tx_df.ts_txend),
+            y=3.5,
+            text="Transmissions",
+            font=dict(
+                family="Courier New, monospace",
+                size=16,
+                color="red"
+            ),
+            showarrow=False,)
+        fig.add_annotation(
+            x=min(timeline_rx_df.ts_rxend),
+            y=-4,
+            text="Receptions",
+            font=dict(
+                family="Courier New, monospace",
+                size=16,
+                color="green"
+            ),
+            showarrow=False,)
+
+        fig.update_layout(
+            title="Timeline Visualizer",
+            showlegend=True,
+            xaxis_tickformat='f',
+            yaxis=dict(
+                # visible=False,
+                range=[-8, 8],
+                fixedrange=True,
+                showticklabels=False,
+            ),
+            legend=dict(orientation='h', yanchor='top', xanchor='center', y=1, x=0.5)
+            # hovermode='x',
+            # shapes=shapes,
+        )
+        fig.update_xaxes(rangeslider_visible=True, title="FRT usec",)
+        fig.update_yaxes(zeroline=True, zerolinewidth=1, zerolinecolor='grey')
+
+        fig.show()
 
 
-    # add PHY Indications and calls
+    elif GRAPH_OPTION == GRAPH_HIGHCHARTS:
 
-    fig.add_scatter(
-        x=timeline_phycallind_df.frt_dec,
-        y=[0]*len(timeline_phycallind_df.index),
-        mode="markers",
-        name="Internal Controls/Indications",
-        text="<b>CL_ID:</b> " + timeline_phycallind_df.cl_id + "<br>" + timeline_phycallind_df.trace_info,
-        hovertemplate="<b>FRT:</b>%{x}<br>%{text}",
-        visible="legendonly",
-        # hoverinfo="none",
-        marker=dict(
-            color='white',
-            line=dict(width=1,
-                      color=timeline_phycallind_df.color))
-    )
-    write_df_to_json("timeline_phyIndJson", timeline_phycallind_df[["cl_id","frt_dec","trace_info","color"]])
+        write_df_to_json("timeline_clStartEndJson", timeline_cl_startend_df[['cl_id', 'cldiff', 'clend', 'clstart', 'hoverinfo']])
 
+        write_df_to_json("timeline_txJson", timeline_tx_df[['cl_id', 'color', 'hoverinfo', 'ts_txstart', 'ts_txend', 'tx_dur']])
 
-    # add CL traces
-    fig.add_scatter(
-        x=timeline_cl_df.frt_dec,
-        y=[0]*len(timeline_cl_df.index),
-        mode="markers",
-        name="CL Traces",
-        text="<b>CL_ID:</b> " + timeline_cl_df.cl_id + "<br>" + timeline_cl_df.trace_info,
-        hovertemplate="<b>FRT:</b>%{x}<br>%{text}",
-        visible="legendonly",
-        # hoverinfo="none",
-        marker=dict(
-            color='white',
-            line=dict(width=1,
-                      color=timeline_cl_df.color))
-    )
-    write_df_to_json("timeline_clTracesJson", timeline_cl_df[["cl_id","frt_dec","trace_info","color"]])
+        write_df_to_json("timeline_rxJson", timeline_rx_df[['cl_id', 'color', 'hoverinfo', 'ts_rxstart', 'ts_rxend', 'rx_dur']])
 
-    # add annotations for tx and rx
-    fig.add_annotation(
-        x=min(timeline_tx_df.ts_txend),
-        y=3.5,
-        text="Transmissions",
-        font=dict(
-            family="Courier New, monospace",
-            size=16,
-            color="red"
-        ),
-        showarrow=False,)
-    fig.add_annotation(
-        x=min(timeline_rx_df.ts_rxend),
-        y=-4,
-        text="Receptions",
-        font=dict(
-            family="Courier New, monospace",
-            size=16,
-            color="green"
-        ),
-        showarrow=False,)
+        write_df_to_json("timeline_phyIndJson", timeline_phycallind_df[["cl_id", "frt_dec", "trace_info", "color"]])
 
-    fig.update_layout(
-        title="Timeline Visualizer",
-        showlegend=True,
-        xaxis_tickformat='f',
-        yaxis=dict(
-            # visible=False,
-            range=[-8, 8],
-            fixedrange=True,
-            showticklabels=False,
-        ),
-        legend=dict(orientation='h', yanchor='top', xanchor='center', y=1, x=0.5)
-        # hovermode='x',
-        # shapes=shapes,
-    )
-    fig.update_xaxes(rangeslider_visible=True, title="FRT usec",)
-    fig.update_yaxes(zeroline=True, zerolinewidth=1, zerolinecolor='grey')
+        write_df_to_json("timeline_clTracesJson", timeline_cl_df[["cl_id", "frt_dec", "trace_info", "color"]])
 
-    # fig.show()
     print("Done", flush=True, end='\n')
 
 
@@ -2149,51 +2163,52 @@ def graph_buf_mgr():
     # print(px.colors.qualitative.Dark24)
     buff_colors = px.colors.qualitative.Dark24
     # buff_colors = get_n_colors(len(unique_owners));
+    if GRAPH_OPTION == GRAPH_PLOTLY:
+        fig = go.Figure()
+        fig = make_subplots(rows=2, cols=1, subplot_titles=("Buffer claimed and released Timeline",
+                                                            "Buffer claims, releases and leaks stats",),
+                            )
 
-    fig = go.Figure()
-    fig = make_subplots(rows=2, cols=1, subplot_titles=("Buffer claimed and released Timeline",
-                                                        "Buffer claims, releases and leaks stats",),
-                        )
+        shapes = list()
+        i = 0
 
-    shapes = list()
-    i = 0
+        # per owner graphing
+        for key, owner_df in buf_owner_dic.items():
+            # print(key, owner_df)
+            # draw a rectangle
+            fig.add_bar(
+                x=owner_df.frt_dec,
+                y=owner_df.buffer_dec,
+                width=owner_df.frt_diff,
+                name=key,
+                text=owner_df['info'] + "<br>FRT start:" + owner_df.frt_dec.astype(str) + "<br> FRT end: " + owner_df.rel_frt.astype(str),
+                # hoverinfo='text',
+                # hovertext="FRT start:" + owner_df.frt_dec.astype(str) +"<br> FRT end: " +owner_df.rel_frt.astype(str) +"<br>" + owner_df['info'],
+                textposition="inside",
+                hovertemplate='%{text}',            # hoverinfo="none",
+                row=1,
+                col=1,
+                marker=dict(
+                    color=buff_colors[i],
+                    opacity=0.7,
+                    line=dict(width=0.5,
+                            color=buff_colors[i]))
+            )
+            i = i+1
 
-    # per owner graphing
-    for key, owner_df in buf_owner_dic.items():
-        # print(key, owner_df)
-        # draw a rectangle
-        fig.add_bar(
-            x=owner_df.frt_dec,
-            y=owner_df.buffer_dec,
-            width=owner_df.frt_diff,
-            name=key,
-            text=owner_df['info'] + "<br>FRT start:" + owner_df.frt_dec.astype(str) + "<br> FRT end: " + owner_df.rel_frt.astype(str),
-            # hoverinfo='text',
-            # hovertext="FRT start:" + owner_df.frt_dec.astype(str) +"<br> FRT end: " +owner_df.rel_frt.astype(str) +"<br>" + owner_df['info'],
-            textposition="inside",
-            hovertemplate='%{text}',            # hoverinfo="none",
-            row=1,
-            col=1,
-            marker=dict(
-                color=buff_colors[i],
-                opacity=0.7,
-                line=dict(width=0.5,
-                          color=buff_colors[i]))
+        fig.update_layout(
+            title="Buffer Management",
+            showlegend=True,
+            xaxis_tickformat='f',
+            yaxis=dict(
+                # visible=False,
+                fixedrange=True,
+            ),
+            # hovermode='x',
+            # shapes=shapes,
         )
-        i = i+1
 
-    fig.update_layout(
-        title="Buffer Management",
-        showlegend=True,
-        xaxis_tickformat='f',
-        yaxis=dict(
-            # visible=False,
-            fixedrange=True,
-        ),
-        # hovermode='x',
-        # shapes=shapes,
-    )
-    # fig.show()
+        fig.show()
 
     # bufmgr_get_df.leak = bufmgr_get_df.leak.replace(0,np.nan)
     buf_summary_df = (bufmgr_get_df.groupby('owner').count()).reset_index()[['owner', 'frt_dec', 'rel_frt', 'leak']]
@@ -2201,25 +2216,27 @@ def graph_buf_mgr():
     # fig = px.bar(buf_summary_df, x="owner", y=["buf_claim", "buf_release", "buf_leak"],
     #              barmode='group', row=2, col=1
     #              )
-    fig.add_trace(
-        go.Bar(x=buf_summary_df.owner, y=buf_summary_df["buf_claim"], name="buf_claim", text=buf_summary_df["buf_claim"],
-               textposition='auto',),
-        row=2, col=1
-    )
-    fig.add_trace(
-        go.Bar(x=buf_summary_df.owner, y=buf_summary_df["buf_release"], name="buf_release", text=buf_summary_df["buf_release"],
-               textposition='auto',),
-        row=2, col=1
-    )
-    fig.add_trace(
-        go.Bar(x=buf_summary_df.owner, y=buf_summary_df["buf_leak"], name="buf_leak", text=buf_summary_df["buf_leak"],
-               textposition='auto',),
-        row=2, col=1
-    )
+    if GRAPH_OPTION == GRAPH_PLOTLY:
 
-    # # print(fig)
-    fig.update_layout(barmode='group')
-    fig.show()
+        fig.add_trace(
+            go.Bar(x=buf_summary_df.owner, y=buf_summary_df["buf_claim"], name="buf_claim", text=buf_summary_df["buf_claim"],
+                textposition='auto',),
+            row=2, col=1
+        )
+        fig.add_trace(
+            go.Bar(x=buf_summary_df.owner, y=buf_summary_df["buf_release"], name="buf_release", text=buf_summary_df["buf_release"],
+                textposition='auto',),
+            row=2, col=1
+        )
+        fig.add_trace(
+            go.Bar(x=buf_summary_df.owner, y=buf_summary_df["buf_leak"], name="buf_leak", text=buf_summary_df["buf_leak"],
+                textposition='auto',),
+            row=2, col=1
+        )
+
+        # # print(fig)
+        fig.update_layout(barmode='group')
+        fig.show()
 
     print("Done", flush=True, end='\n')
 
@@ -2246,31 +2263,34 @@ def graph_mode_chan():
     chanstats_tx_df = modechan_tx_df[['byte', 'chan']].groupby(['chan']).agg('count').rename(columns={'byte': 'count'}).reset_index()
     chanstats_rx_df = modechan_rx_df[['byte', 'chan']].groupby(['chan']).agg('count').rename(columns={'byte': 'count'}).reset_index()
 
-    print("Done...Rendering Graph...", flush=True, end='')
+    print("Done...Rendering/Preparing Graph...", flush=True, end='')
+    if GRAPH_OPTION == GRAPH_PLOTLY:
 
-    fig = go.Figure()
-    fig = make_subplots(rows=2, cols=1, subplot_titles=("Mode Usage",
-                                                        "Channel Usage",),
-                        x_title="Channel",
-                        )
+        fig = go.Figure()
+        fig = make_subplots(rows=2, cols=1, subplot_titles=("Mode Usage",
+                                                            "Channel Usage",),
+                            x_title="Channel",
+                            )
 
-    fig.add_bar(x=modestats_rx_df['mode'], y=modestats_rx_df['count'], name="MODE RX", opacity=0.7, textposition="outside", text=modestats_rx_df['count'], row=1, col=1,)
-    fig.add_bar(x=modestats_tx_df['mode'], y=modestats_tx_df['count'], name="MODE TX", opacity=0.7, textposition="outside", text=modestats_tx_df['count'], row=1, col=1,)
+        fig.add_bar(x=modestats_rx_df['mode'], y=modestats_rx_df['count'], name="MODE RX", opacity=0.7, textposition="outside", text=modestats_rx_df['count'], row=1, col=1,)
+        fig.add_bar(x=modestats_tx_df['mode'], y=modestats_tx_df['count'], name="MODE TX", opacity=0.7, textposition="outside", text=modestats_tx_df['count'], row=1, col=1,)
 
-    fig.add_bar(x=chanstats_rx_df['chan'], y=chanstats_rx_df['count'], name="CHAN RX", opacity=0.7, textposition="outside", text=chanstats_rx_df['count'], row=2, col=1,)
-    fig.add_bar(x=chanstats_tx_df['chan'], y=chanstats_tx_df['count'], name="CHAN TX", opacity=0.7, textposition="outside", text=chanstats_tx_df['count'], row=2, col=1,)
+        fig.add_bar(x=chanstats_rx_df['chan'], y=chanstats_rx_df['count'], name="CHAN RX", opacity=0.7, textposition="outside", text=chanstats_rx_df['count'], row=2, col=1,)
+        fig.add_bar(x=chanstats_tx_df['chan'], y=chanstats_tx_df['count'], name="CHAN TX", opacity=0.7, textposition="outside", text=chanstats_tx_df['count'], row=2, col=1,)
 
-    fig.update_layout(
-        title="Mode Channel Usage",
-        yaxis_title="Count",
-        xaxis_title="Modes",
-        xaxis={"type": "category"},
+        fig.update_layout(
+            title="Mode Channel Usage",
+            yaxis_title="Count",
+            xaxis_title="Modes",
+            xaxis={"type": "category"},
 
-    )
-    write_df_to_json('modeRxJson',modestats_rx_df)
-    write_df_to_json('chanRxJson',chanstats_rx_df)
-    write_df_to_json('modeTxJson',modestats_tx_df)
-    write_df_to_json('chanTxJson',chanstats_tx_df)
+        )
+    elif GRAPH_OPTION == GRAPH_HIGHCHARTS:
+
+        write_df_to_json('modeRxJson', modestats_rx_df)
+        write_df_to_json('chanRxJson', chanstats_rx_df)
+        write_df_to_json('modeTxJson', modestats_tx_df)
+        write_df_to_json('chanTxJson', chanstats_tx_df)
 
     # fig.show()
     print("Done", flush=True, end='\n')
@@ -2282,23 +2302,31 @@ def graph_it():
         print("{} not found. Use -c option to create the required csv.".format(graph_file))
         return
 
-    check_and_install_package(["pandas", "plotly==4.9.0"])
-    global pd
-    global np
-    global px
-    global go
-    global make_subplots
-    global py
+    packages = []
+    packages.append("pandas")
+    if GRAPH_OPTION == GRAPH_PLOTLY:
+        packages.append("plotly==4.9.0")
+
+    check_and_install_package(packages)
+
+
 
     try:
         import pandas as pd
         import numpy as np
+        global pd
+        global np
         # import mplcursors
         # import matplotlib.pyplot as plt
-        import plotly.express as px
-        import plotly.graph_objects as go
-        from plotly.subplots import make_subplots
-        import plotly.offline as py
+        if GRAPH_OPTION == GRAPH_PLOTLY:
+            import plotly.express as px
+            import plotly.graph_objects as go
+            from plotly.subplots import make_subplots
+            import plotly.offline as py
+            global px
+            global go
+            global make_subplots
+            global py
 
     except:
         print("Error while installing packages")

@@ -77,9 +77,7 @@ chartOptions = {
 
 
 function drawChart(chartId, renderFlag) {
-	var chart;
-	document.getElementById('chartContainer').innerHTML = ""
-	document.getElementById('container').innerHTML = ""
+
 	switch (chartId) {
 		case RTT_CHART_ID:
 			create_rtt_chart(renderFlag);
@@ -100,150 +98,57 @@ function drawChart(chartId, renderFlag) {
 }
 // console.log(dataPoints)
 
-function create_chart(id, chartData) {
-	console.log(id, chartData)
-	var chart = new CanvasJS.Chart("chartContainer",
-		{
-			animationEnabled: true,
-			// colorSet         : "uniqueColorSet",
-			// animationDuration: 10000,
-			exportEnabled: true,
-			animationRender: true,
-			zoomEnabled: true,
-
-			//zoomType       : "xy",
-			toolTip: {
-				shared: true
-			},
-			title: {
-				text: chartOptions[id].chartTitle
-			},
-			axisX: {
-				title: chartOptions[id].xAxisTitle,
-				// valueFormatString: "YYYY/MM/DD HH:mm:ss" ,
-				// labelAngle: -45,
-				crosshair: {
-					enabled: true,
-					snapToDataPoint: true
-				}
-			},
-			/*axisX2:{
-			 title : "Secondary X Axis"
-			},*/
-
-			axisY: {
-				title: chartOptions[id].yAxisTitle,
-				// stripLines:[
-				// {
-				//     value:chartOptions[RTT_CHART_ID].thValue,
-				//     label:chartOptions[RTT_CHART_ID].thTitle+" "+chartOptions[RTT_CHART_ID].thValue
-				// }
-				// ],
-				// maximum:,
-				crosshair: {
-					enabled: false,
-					snapToDataPoint: true,
-					/*labelFormatter: function(e) {
-						return "$" + CanvasJS.formatNumber(e.value, "##0.00");
-					}*/
-				}
-			},
-			/* axisY2:{
-				 title : "Secondary Y Axis"
-			 },*/
-			legend: {
-				horizontalAlign: "center", // left, center ,right
-				verticalAlign: "top",  // top, center, bottom
-				cursor: "pointer",
-				itemclick: function (e) {
-					//console.log("legend click: " + e.dataPointIndex);
-					//console.log(e);
-					if (typeof (e.dataSeries.visible) === "undefined" || e.dataSeries.visible) {
-						e.dataSeries.visible = false;
-					} else {
-						e.dataSeries.visible = true;
-					}
-
-					e.chart.render();
-				}
-			},
-			data: chartData
-		});
-
-	return chart
-}
-
-var zoomRatio = 1;
-var lastX;
-var lastY;
-var mouseDown;
-var chart;
 var markerCnt = 0
 
-function create_marker_line(markerNum, frt) {
-	var marker = {
-		'first' : {
-			'elem':null,
-			'val':null,
-		}
-	}
+function create_marker_line(markerNum, frt, markerColor) {
+
 	var markerListDiv = document.getElementById('markersList')
-	console.log("markerDiv",markerListDiv.innerHTML)
-	var firstMarkerNum=0
+	var firstMarkerNum = 0
 	var secondMarkerNum = 0;
 	var firstMarkerElem, secondMarkerElem;
-	var firstMarkerVal=0, secondMarkerVal=0;
+	var firstMarkerVal = 0, secondMarkerVal = 0;
 	if (markerNum % 2 != 0) {
 		firstMarkerNum = markerNum
-		secondMarkerNum = markerNum +1
-		lineHtml = `<div class="marker" id="divMarkerVal-${firstMarkerNum}-${secondMarkerNum}">
-		<div style="width:33%;">M${firstMarkerNum}: <span name="marker1" class="markerVal" id="marker${firstMarkerNum}Val"> </span></div>
-		<div style="width:33%;">M${secondMarkerNum}: <span name="marker2" class="markerVal" id="marker${secondMarkerNum}Val"> </span></div>
-		<div style="width:33%;">delta: <span class= "deltaVal" id="deltaVal${firstMarkerNum}${secondMarkerNum}" readonly> </span></div>
-		<button class= "removeMkrBtnClass" id="removeMkrBtn${firstMarkerNum}${secondMarkerNum}" >X</button>
+		secondMarkerNum = markerNum + 1
+		lineHtml = `<div class="marker" style="border:2px solid ${markerColor}"id="divMarkerVal-${firstMarkerNum}-${secondMarkerNum}">
+		<div style="width:33%; ">M${firstMarkerNum}: <span name="marker1" class="markerVal" id="marker${firstMarkerNum}Val"> </span></div>
+		<div style="width:33%; ">M${secondMarkerNum}: <span name="marker2" class="markerVal" id="marker${secondMarkerNum}Val"> </span></div>
+		<div style="width:33%; ">delta: <span class= "deltaVal" id="deltaVal${firstMarkerNum}${secondMarkerNum}" readonly> </span></div>
+		<button class= "btn btn-sm btn-outline-secondary removeMkrBtnClass" id="removeMkrBtn${firstMarkerNum}${secondMarkerNum}" >X</button>
 		</div>`
 
-
-
 		markerListDiv.innerHTML = markerListDiv.innerHTML + lineHtml
-	}else{
-		firstMarkerNum = markerNum-1
+	} else {
+		firstMarkerNum = markerNum - 1
 		secondMarkerNum = markerNum
 	}
 
 	firstMarkerElem = document.getElementById(`marker${firstMarkerNum}Val`)
 	secondMarkerElem = document.getElementById(`marker${secondMarkerNum}Val`)
 
-	console.log("first",firstMarkerNum, "second", secondMarkerNum)
-
 	if (markerNum % 2 != 0) {
 		firstMarkerVal = parseInt(frt, 10)
 		firstMarkerElem.innerHTML = firstMarkerVal
 		secondMarkerVal = document.getElementById(`marker${secondMarkerNum}Val`).innerHTML
-	}else{
+	} else {
 		firstMarkerVal = document.getElementById(`marker${firstMarkerNum}Val`).innerHTML
 		secondMarkerVal = parseInt(frt, 10)
 		secondMarkerElem.innerHTML = secondMarkerVal
 	}
-	console.log("firstVal",firstMarkerVal, "secondVal", secondMarkerVal)
 
-	if(firstMarkerVal!= 0  && secondMarkerVal != 0){
+	if (firstMarkerVal != 0 && secondMarkerVal != 0) {
 		var delta = parseInt(secondMarkerVal) - parseInt(firstMarkerVal)
-		console.log("delta = ", delta)
 		deltaElem = document.getElementById(`deltaVal${firstMarkerNum}${secondMarkerNum}`)
 		deltaElem.innerHTML = delta
 	}
 
-
-	// m1Val = $("#marker1Val").val()
-	// m2Val = $("#marker2Val").val()
-
-	// markerListDiv.appendChild(lineHtml)
 }
 
 
 function create_highchart(id, chartData, containerDiv = 'container') {
 	console.log(id, chartData)
+	// chart = new Highcharts.chart()
+
 	chart = Highcharts.chart(containerDiv, {
 
 		chart: {
@@ -254,28 +159,33 @@ function create_highchart(id, chartData, containerDiv = 'container') {
 			panning: true,
 			events: {
 				click: function (e) {
+					if (!e.shiftKey && !e.ctrlKey) return
 					let chart = this;
 					let xAxis = chart.xAxis[0];
 					let xValue = xAxis.toValue(this.mouseDownX);
 
 					let clickX = 0;
+					if (markerCnt % 2 == 0)
+						colorCnt = markerCnt % 10
+					else
+						colorCnt = (markerCnt - 1) % 10
+					markerColor = Highcharts.getOptions().colors[colorCnt]
 					markerCnt++
-					console.log("marker ", markerCnt, xValue)
-					create_marker_line(markerCnt, xValue)
-					// if (markerCnt < 3) {
-
+					create_marker_line(markerCnt, xValue, markerColor)
 
 					xAxis.addPlotLine({
 						value: xValue,
-						color: '#ff0000',
+						cursor: 'pointer',
+						color: markerColor,
 						width: 1,
 						label: {
 							rotation: 90,
 							text: `M${markerCnt}`,
-							className: "markerLabel" + markerCnt
+							className: "markerLabel markerLabel" + markerCnt
 						},
 						zIndex: 99,
 						className: `marker marker${markerCnt}Line`,
+						dashStyle:'ShortDash',
 						events: {
 							mousedown: function (e) {
 								chart.clickX = e.pageX;
@@ -283,11 +193,6 @@ function create_highchart(id, chartData, containerDiv = 'container') {
 							}
 						}
 					});
-					// } else {
-					// 	markerCnt = 2
-					// }
-
-
 
 				}
 			}
@@ -307,11 +212,6 @@ function create_highchart(id, chartData, containerDiv = 'container') {
 						hover: { enabled: false }
 					}
 				},
-				// states: {
-				// 	inactive: {
-				// 		opacity: 0.7
-				// 	}
-				// },
 			},
 
 		},
@@ -408,8 +308,7 @@ function create_highchart(id, chartData, containerDiv = 'container') {
 
 	});
 
-
-
+	charts[id]=chart
 
 }
 
@@ -432,46 +331,6 @@ function create_rtt_chart(renderFlag) {
 		pdf_y_data.push(item.pdf)
 		cdf_y_data.push(item.cdf)
 	});
-
-	let chartData = [
-		/* count */
-		{
-			type: "column",
-			axisYType: 'primary',
-			name: "Freq",
-			showInLegend: true,
-			legendText: "Freq",
-			// visible: false, //***hidden
-			dataPoints: freqData,
-
-		},
-		/* pdf */
-		{
-			type: "line",
-			name: "PDF",
-			axisYType: 'secondary',
-			showInLegend: true,
-			legendText: "PDF",
-			dataPoints: pdfData,
-
-		},
-		/* cdf */
-		{
-			type: "line",
-			name: "CDF",
-			axisYType: 'secondary',
-			showInLegend: true,
-			legendText: "CDF",
-			dataPoints: cdfData,
-
-		},
-
-	]
-
-	var chart = create_chart(RTT_CHART_ID, chartData)
-
-	if (renderFlag)
-		chart.render();
 
 	chartData = [
 		/* count */
@@ -507,7 +366,7 @@ function create_rtt_chart(renderFlag) {
 		},
 
 	]
-	create_highchart(RTT_CHART_ID, chartData)
+	create_highchart(RTT_CHART_ID, chartData,RTT_CHART_ID)
 
 
 
@@ -519,44 +378,6 @@ function create_mode_chart(renderFlag) {
 	console.log('creating modechanchart')
 	let modeRxData = []
 	let modeTxData = []
-
-	// let pdfData = []
-	// let cdfData = []
-	jsonData.modeRxJson.forEach(item => {
-		modeRxData.push({ label: item.mode, y: item.count })
-	});
-	jsonData.modeTxJson.forEach(item => {
-		modeTxData.push({ label: item.mode, y: item.count })
-	});
-	chartData = [
-		/* count */
-		{
-			type: "column",
-			axisYType: 'primary',
-			name: "Mode Rx",
-			showInLegend: true,
-			legendText: "Mode Rx",
-			// visible: false, //***hidden
-			dataPoints: modeRxData,
-
-		},
-		/* pdf */
-		{
-			type: "column",
-			name: "Mode Tx",
-			axisYType: 'primary',
-			showInLegend: true,
-			legendText: "Mode Tx",
-			dataPoints: modeTxData,
-
-		},
-
-
-	]
-	var chart = create_chart(MODE_CHART_ID, chartData)
-
-	if (renderFlag)
-		chart.render();
 
 	jsonData.modeRxJson.forEach(item => {
 		modeRxData.push({ name: item.mode, y: item.count })
@@ -589,7 +410,7 @@ function create_mode_chart(renderFlag) {
 
 
 	]
-	create_highchart(MODE_CHART_ID, chartData)
+	create_highchart(MODE_CHART_ID, chartData,MODE_CHART_ID)
 
 
 }
@@ -606,35 +427,6 @@ function create_chan_chart(renderFlag) {
 	jsonData.chanTxJson.forEach(item => {
 		chanTxData.push({ label: item.chan, y: item.count })
 	});
-	let chartData = [
-		/* count */
-		{
-			type: "column",
-			axisYType: 'primary',
-			name: "chan Rx",
-			showInLegend: true,
-			legendText: "chan Rx",
-			// visible: false, //***hidden
-			dataPoints: chanRxData
-		},
-		/* pdf */
-		{
-			type: "column",
-			name: "chan Tx",
-			axisYType: 'primary',
-			showInLegend: true,
-			legendText: "chan Tx",
-			dataPoints: chanTxData
-		},
-
-
-	]
-	var chart = create_chart(CHAN_CHART_ID, chartData)
-
-	if (renderFlag)
-		chart.render();
-	chanRxData = []
-	chanTxData = []
 
 	jsonData.chanRxJson.forEach(item => {
 		chanRxData.push({ name: item.chan, y: item.count })
@@ -667,45 +459,9 @@ function create_chan_chart(renderFlag) {
 
 
 	]
-	create_highchart(CHAN_CHART_ID, chartData)
+	create_highchart(CHAN_CHART_ID, chartData,CHAN_CHART_ID)
 
 
-}
-let rawData = [
-	{ name: 'D', x: 2, y: 2, dur: 2 },
-	// { name: 'B', x: , y:2 ,dur:5},
-	{ name: 'A', x: 5, y: 2, dur: 10 },
-	// { name: 'E', x: 8, y:2 ,dur:10},
-	{ name: 'C', x: 21, y: 2, dur: 20 },
-];
-function makeSeries(listOfData) {
-	var sumX = 0.0;
-	for (var i = 0; i < listOfData.length; i++) {
-		sumX += listOfData[i].x;
-	}
-	var gap = sumX / rawData.length * 0.2;
-	var allSeries = []
-	var x = 0.0;
-	for (var i = 0; i < listOfData.length; i++) {
-		var data = listOfData[i];
-		allSeries[i] = {
-			name: data.name,
-			data: [
-				[data.x, 0], [data.x, data.y],
-				{
-					x: x + data.x / 2.0,
-					y: data.y,
-					dataLabels: { enabled: true, format: data.x + ' x {y}' }
-				},
-				[data.dur + data.x, data.y], [data.dur + data.x, 0]
-			],
-			w: data.x,
-			h: data.y
-		};
-		x += data.x + gap;
-	}
-	console.log("allseries", allSeries)
-	return allSeries;
 }
 
 function create_timeline_chart(renderFlag) {
@@ -721,6 +477,7 @@ function create_timeline_chart(renderFlag) {
 	jsonData.timeline_txJson.forEach(item => {
 		chartData.push({
 			type: 'area',
+			findNearestPointBy: 'xy',
 			data: [
 				[item.ts_txstart, 0],
 				[item.ts_txstart, 1],
@@ -758,7 +515,7 @@ function create_timeline_chart(renderFlag) {
 	jsonData.timeline_rxJson.forEach(item => {
 		chartData.push({
 			type: 'area',
-
+			findNearestPointBy: 'xy',
 			data: [
 				[item.ts_rxstart, 0], [item.ts_rxstart, -1],
 				{
@@ -792,6 +549,7 @@ function create_timeline_chart(renderFlag) {
 	jsonData.timeline_clStartEndJson.forEach(item => {
 		chartData.push({
 			type: 'area',
+			findNearestPointBy: 'xy',
 			data: [
 				[item.clstart, 0], [item.clstart, 3],
 				{
@@ -842,6 +600,7 @@ function create_timeline_chart(renderFlag) {
 
 	chartData.push({
 		type: "scatter",
+		findNearestPointBy: 'xy',
 		// axisYType: 'primary',
 		name: "phyData Indications",
 		showInLegend: true,
@@ -882,6 +641,7 @@ function create_timeline_chart(renderFlag) {
 	});
 	chartData.push({
 		type: "scatter",
+		findNearestPointBy: 'xy',
 		// axisYType: 'primary',
 		name: "CL Traces",
 		showInLegend: true,
@@ -909,8 +669,7 @@ function create_timeline_chart(renderFlag) {
 
 	})
 
-
-	create_highchart(TIMELINE_CHART_ID, chartData)
+	create_highchart(TIMELINE_CHART_ID, chartData,TIMELINE_CHART_ID)
 
 }
 function openGraph(evt, tabName) {
@@ -934,10 +693,10 @@ window.onload = function () {
 	// drawChart(RTT_CHART_ID, true)
 	document.getElementById("firstTab").click();
 
-	$(document).on("click", ".removeMkrBtnClass", function(event){
+	$(document).on("click", ".removeMkrBtnClass", function (event) {
 		// console.log("clicked",event)
 		// console.log($(this))
-		parentRow=$(this).parent()
+		parentRow = $(this).parent()
 		id = parentRow.attr('id').split('-')
 		$(`.marker${id[1]}Line`).remove()
 		$(`.marker${id[2]}Line`).remove()
@@ -947,6 +706,31 @@ window.onload = function () {
 		parentRow.remove()
 
 	});
+	$(document).on("click", "#removeAllMarkers", function (event) {
+		// console.log("clicked",event)
+		// console.log($(this))
+		$('.marker').remove()
+		$('.markerLabel').remove()
+	});
+
+	document.getElementById('container')
+		.addEventListener(
+			'mousemove',
+			function (e) {
+				if (chart.activePlotLine) {
+					chart.activePlotLine.svgElem.translate(e.pageX - chart.clickX, 0);
+				}
+			}
+		);
+
+	document.addEventListener(
+		'mouseup',
+		function (e) {
+			if (chart.activePlotLine) {
+				chart.activePlotLine = false;
+			}
+		}
+	);
 
 
 

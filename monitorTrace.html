@@ -7,14 +7,22 @@
 	<title>Monitor Trace</title>
 	<meta name="description" content="Tool to monitor the DSP Traces">
 	<meta name="author" content="SitePoint">
-	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<!-- <meta name="viewport" content="width=device-width, initial-scale=1"> -->
+	<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+	<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css"
+		integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
+	<!-- <meta http-equiv="refresh" content="30" /> -->
 	<style>
 		body {
 			font-family: Arial;
 		}
 
-		div {
+		/* div {
 			display: block;
+		} */
+
+		.chartContainer {
+			height: 600px;
 		}
 
 		/* Style the tab */
@@ -53,60 +61,87 @@
 			border: 1px solid #ccc;
 			border-top: none;
 		}
-		#markersList{
 
-			display:flex;
-			flex-direction: column;
-			width: 60%;
-		}
-		#markersList .marker{
+		#markersList {
+
 			display: flex;
-			justify-content: center;
+			/* flex-direction: column; */
+			width: 100%;
+			flex-wrap: wrap;
+		}
 
+		#markersList .marker {
+			display: flex;
+			justify-content: space-between;
+			padding: 5px;
+			border-radius: 10px;
+			margin-bottom: 2px;
+			width: 50%;
+
+		}
+
+		.highcharts-data-table table tr:nth-child(even) {
+			background-color: #f2f2f2;
 		}
 	</style>
 </head>
 
 <body>
-	<h2>G5R Monitor Trace</h2>
+	<div class="container-fluid">
+		<div class="row">
+			<div class="col-lg-12 text-center">
 
-	<div class="tab">
-		<button class="tablinks" graphId="rtt" onclick="openGraph(event, 'rttTab')">RTT</button>
-		<button class="tablinks" graphId="mode" onclick="openGraph(event, 'modeTab')">Mode Stats</button>
-		<button class="tablinks" graphId="chan" onclick="openGraph(event, 'chanTab')">Chan Stats</button>
-		<button class="tablinks" id="firstTab" graphId="timeline"
-			onclick="openGraph(event, 'timelineTab')">Timeline</button>
-	</div>
-	<div id="rttTab" class="tabcontent" style="width: 100%;">
-		<p>London is the capital city of England.</p>
-		<div id="rtt" style="width: 100%;"></div>
-	</div>
+				<h2>G5R Monitor Trace</h2>
+			</div>
+		</div>
 
-	<div id="modeTab" class="tabcontent" style="width: 100%;">
-		<p>Paris is the capital of France.</p>
-		<div id="mode" style="width: 100%;"></div>
+		<div class="row">
+			<div class="col-lg-12">
+				<div class="tab">
+					<button class="tablinks" graphId="rtt" onclick="openGraph(event, 'rttTab')">RTT</button>
+					<button class="tablinks" graphId="mode" onclick="openGraph(event, 'modeTab')">Mode Stats</button>
+					<button class="tablinks" graphId="chan" onclick="openGraph(event, 'chanTab')">Chan Stats</button>
+					<button class="tablinks" id="firstTab" graphId="timeline"
+						onclick="openGraph(event, 'timelineTab')">Timeline</button>
+				</div>
+				<div id="rttTab" class="tabcontent" style="width: 100%;">
+					<div id="rtt" class="chartContainer"></div>
+				</div>
 
-	</div>
+				<div id="modeTab" class="tabcontent" style="width: 100%;">
+					<div id="mode" class="chartContainer"></div>
 
-	<div id="chanTab" class="tabcontent" style="width: 100%;">
-		<p>Tokyo is the capital of Japan.</p>
+				</div>
 
-		<div id="chan" style="width: 100%;"></div>
-	</div>
-	<div id="timelineTab" class="tabcontent" style="width: 100%;">
-		<p>Tokyo is the capital of Japan.</p>
+				<div id="chanTab" class="tabcontent" style="width: 100%;">
 
-		<div id="timeline" style="width: 100%;"></div>
-	</div>
-	<div id="chartContainer" style="">
-	</div>
-	<div id="container" style="height: 600px;"></div>
-	<!-- <div id="controls">
+					<div id="chan" class="chartContainer"></div>
+				</div>
+				<div id="timelineTab" class="tabcontent" style="width: 100%;">
+					<div id="timeline" class="chartContainer"></div>
+				</div>
+			</div>
+		</div>
+
+		<div id="container"></div>
+		<!-- <div id="controls">
 		M1: <input id="marker1Val"\>
 		M2: <input id="marker2Val"\>
 		delta: <input id="deltaVal" readonly\><button id="removeMkrBtn" style="display: none;">X</button><br>
 	</div> -->
-	<div id="markersList">
+		<hr>
+
+		<div class="row">
+			<div class="col-lg-12">
+				<button class="btn btn btn-outline-danger btn-sm" id="removeAllMarkers">Remove all Markers</button> <i>
+					Press "Shift" or
+					"Ctrl"
+					Click to add markers</i>
+				<div class="col-lg-12" id="markersList">
+
+				</div>
+			</div>
+		</div>
 
 	</div>
 
@@ -114,7 +149,13 @@
 	<!-- <div id="containerSecondary" style=""></div> -->
 	<script src="https://code.jquery.com/jquery-3.5.1.min.js"
 		integrity="sha256-9/aliU8dGd2tb6OSsuzixeV4y/faTqgFtohetphbbj0=" crossorigin="anonymous"></script>
-	<script type="text/javascript" src="https://canvasjs.com/assets/script/canvasjs.min.js"></script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.9/umd/popper.min.js"
+		integrity="sha384-ApNbgh9B+Y1QKtv3Rn7W3mgPxhU9K/ScQsAP7hUibX39j7fakFPskvXusvfa0b4Q"
+		crossorigin="anonymous"></script>
+	<script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js"
+		integrity="sha384-JZR6Spejh4U02d8jOt6vLEHfe/JQGiRRSQQxSfFWpi1MquVdAyjUar5+76PVCmYl"
+		crossorigin="anonymous"></script>
+	<!-- <script type="text/javascript" src="https://canvasjs.com/assets/script/canvasjs.min.js"></script> -->
 	<script src="https://code.highcharts.com/highcharts.js"></script>
 	<script src="https://code.highcharts.com/modules/data.js"></script>
 	<script src="https://code.highcharts.com/modules/exporting.js"></script>
