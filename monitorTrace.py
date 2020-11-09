@@ -10,6 +10,7 @@ import argparse
 import csv
 import random
 import json
+import webbrowser
 
 # list of global variables subject to change
 glob = {
@@ -1305,11 +1306,11 @@ def show_required_traces(trace_list):
         print(trace, " => ", tracing_events_num_str[trace])
 
 
-def write_df_to_json(key, df, mode='a'):
+def write_df_to_json(key, df, mode='a', isdict=False):
     with open('myJson.js', mode) as f:
         f.write(key+':')
         f.write('')
-        f.write(df.to_json(orient='records'))
+        f.write(json.dumps(df)) if isdict else f.write(df.to_json(orient='records'))
         f.write(',\n\n')
 
 
@@ -1507,11 +1508,11 @@ def graph_cl_timings():
 
     cl_dur_df = cl_csv_df[cl_csv_df['tracecode_dec'] == 132][['byte', 'sts', 'trace_info']]
     if not cl_dur_df.empty:
-        cl_dur_df['dur_ms'] = cl_dur_df.apply(lambda x: x['trace_info'].split(' ')[3].split('msec')[0], axis=1)
+        cl_dur_df['cl_dur'] = cl_dur_df.apply(lambda x: x['trace_info'].split(' ')[3].split('msec')[0], axis=1)
         cl_dur_df.drop(columns=['trace_info', 'sts'], inplace=True)
-        cl_dur_df['dur_ms'] = cl_dur_df['dur_ms'].astype(int)
-        # cl_dur_df = cl_dur_df.sort_values(by='dur_ms')
-        cl_dur_df = cl_dur_df.groupby('dur_ms').agg(
+        cl_dur_df['cl_dur'] = cl_dur_df['cl_dur'].astype(int)
+        # cl_dur_df = cl_dur_df.sort_values(by='cl_dur')
+        cl_dur_df = cl_dur_df.groupby('cl_dur').agg(
             'count').rename(columns={'byte': 'freq'}).reset_index()
         # PDF
         cl_dur_df['pdf'] = cl_dur_df['freq'] / sum(cl_dur_df['freq'])
@@ -1720,7 +1721,7 @@ def graph_cl_timings():
             marker=dict(size=12,
                         color='white',
                         line=dict(width=2,
-                                color='black'))
+                                  color='black'))
         ))
 
         # draw the horizontal lines
@@ -1765,7 +1766,7 @@ def graph_cl_timings():
             marker=dict(
                 color=['darksalmon', 'darkseagreen', 'darksalmon'],
                 line=dict(width=2,
-                        color='black'))
+                          color='black'))
         )
 
         fig.update_layout(
@@ -1778,6 +1779,18 @@ def graph_cl_timings():
         )
 
         fig.show()
+    else:
+        summary = {
+            "colors_dic": colors_dic,
+            "val_texts": val_texts,
+            "levels_dic": levels_dic,
+            "arrows_x": arrows_x,
+            "rx_dur": rx_dur,
+            "names_label_dic":names_label_dic,
+            # "txdiff": txdiff,
+            "points_dic": points_dic,
+        }
+        write_df_to_json('cltimingJson', summary, isdict=True)
     # end of if GRAPH_OPTION == GRAPH_PLOTLY:
 
     print("Done... timing...", flush=True, end='')
@@ -1787,9 +1800,9 @@ def graph_cl_timings():
     if GRAPH_OPTION == GRAPH_PLOTLY:
         fig = make_subplots(4, 2,
                             specs=[[{"secondary_y": True},    {"secondary_y": True}],
-                                [{"secondary_y": True},    {"secondary_y": True}],
-                                [{"secondary_y": True},    {"secondary_y": True}],
-                                [{"secondary_y": True}, {"secondary_y": True}]],
+                                   [{"secondary_y": True},    {"secondary_y": True}],
+                                   [{"secondary_y": True},    {"secondary_y": True}],
+                                   [{"secondary_y": True}, {"secondary_y": True}]],
                             subplot_titles=("Target Time to Tx PHR Time",
                                             "Tx End to Rx Start",
                                             "Rx End to Target Time",
@@ -1831,9 +1844,9 @@ def graph_cl_timings():
         fig.add_scatter(x=rxcall2afterrx_df['rxcall2afterrx'], y=rxcall2afterrx_df['pdf'], name="PDF", secondary_y=True, row=4, col=1)
         fig.add_scatter(x=rxcall2afterrx_df['rxcall2afterrx'], y=rxcall2afterrx_df['cdf'], name="CDF", secondary_y=True, row=4, col=1)
 
-        fig.add_bar(x=cl_dur_df['dur_ms'], y=cl_dur_df['freq'], name="Count", opacity=0.8, row=4, col=2)
-        fig.add_scatter(x=cl_dur_df['dur_ms'], y=cl_dur_df['pdf'], name="PDF", secondary_y=True, row=4, col=2)
-        fig.add_scatter(x=cl_dur_df['dur_ms'], y=cl_dur_df['cdf'], name="CDF", secondary_y=True, row=4, col=2)
+        fig.add_bar(x=cl_dur_df['cl_dur'], y=cl_dur_df['freq'], name="Count", opacity=0.8, row=4, col=2)
+        fig.add_scatter(x=cl_dur_df['cl_dur'], y=cl_dur_df['pdf'], name="PDF", secondary_y=True, row=4, col=2)
+        fig.add_scatter(x=cl_dur_df['cl_dur'], y=cl_dur_df['cdf'], name="CDF", secondary_y=True, row=4, col=2)
 
         fig.update_layout(
             title="CL Timings",
@@ -1846,6 +1859,16 @@ def graph_cl_timings():
         )
 
         fig.show()
+    else:
+        write_df_to_json("cltimings_target2txphrJson",target2txphr_df)
+        write_df_to_json("cltimings_txend2rxstartJson",txend2rxstart_df)
+        write_df_to_json("cltimings_rxend2targettimeJson",rxend2targettime_df)
+        write_df_to_json("cltimings_rxend2txtimeJson",rxend2txtime_df)
+        write_df_to_json("cltimings_txcall2targettimeJson",txcall2targettime_df)
+        write_df_to_json("cltimings_rxend2txcallJson",rxend2txcall_df)
+        write_df_to_json("cltimings_rxcall2afterrxJson",rxcall2afterrx_df)
+        write_df_to_json("cltimings_cl_durJson",cl_dur_df)
+
     print("Done", flush=True, end='\n')
 
 
@@ -1987,10 +2010,10 @@ def graph_timeline_visualiser():
                 color='Wheat',
                 opacity=0.35,
                 line=dict(width=1,
-                        color='orange'))
+                          color='orange'))
         )
 
-         # add TXs
+        # add TXs
         fig.add_bar(
             x=timeline_tx_df.ts_txstart + timeline_tx_df.tx_dur/2,
             y=[2]*len(timeline_tx_df.index),
@@ -2007,7 +2030,7 @@ def graph_timeline_visualiser():
                 color=timeline_tx_df['color'],
                 opacity=1,
                 line=dict(width=1,
-                        color=timeline_tx_df['color']))
+                          color=timeline_tx_df['color']))
         )
         # add RXs
         fig.add_bar(
@@ -2022,9 +2045,9 @@ def graph_timeline_visualiser():
                 # color='darkseagreen',
                 color=timeline_rx_df['color'],
                 line=dict(width=1,
-                        color=timeline_rx_df['color']))
+                          color=timeline_rx_df['color']))
         )
-            # add PHY Indications and calls
+        # add PHY Indications and calls
 
         fig.add_scatter(
             x=timeline_phycallind_df.frt_dec,
@@ -2038,7 +2061,7 @@ def graph_timeline_visualiser():
             marker=dict(
                 color='white',
                 line=dict(width=1,
-                        color=timeline_phycallind_df.color))
+                          color=timeline_phycallind_df.color))
         )
         # add CL traces
         fig.add_scatter(
@@ -2053,9 +2076,9 @@ def graph_timeline_visualiser():
             marker=dict(
                 color='white',
                 line=dict(width=1,
-                        color=timeline_cl_df.color))
+                          color=timeline_cl_df.color))
         )
-         # add annotations for tx and rx
+        # add annotations for tx and rx
         fig.add_annotation(
             x=min(timeline_tx_df.ts_txend),
             y=3.5,
@@ -2095,7 +2118,6 @@ def graph_timeline_visualiser():
         fig.update_yaxes(zeroline=True, zerolinewidth=1, zerolinecolor='grey')
 
         fig.show()
-
 
     elif GRAPH_OPTION == GRAPH_HIGHCHARTS:
 
@@ -2161,9 +2183,9 @@ def graph_buf_mgr():
     print("Done...Rendering Graph...", flush=True, end='')
 
     # print(px.colors.qualitative.Dark24)
-    buff_colors = px.colors.qualitative.Dark24
     # buff_colors = get_n_colors(len(unique_owners));
     if GRAPH_OPTION == GRAPH_PLOTLY:
+        buff_colors = px.colors.qualitative.Dark24
         fig = go.Figure()
         fig = make_subplots(rows=2, cols=1, subplot_titles=("Buffer claimed and released Timeline",
                                                             "Buffer claims, releases and leaks stats",),
@@ -2192,7 +2214,7 @@ def graph_buf_mgr():
                     color=buff_colors[i],
                     opacity=0.7,
                     line=dict(width=0.5,
-                            color=buff_colors[i]))
+                              color=buff_colors[i]))
             )
             i = i+1
 
@@ -2220,23 +2242,35 @@ def graph_buf_mgr():
 
         fig.add_trace(
             go.Bar(x=buf_summary_df.owner, y=buf_summary_df["buf_claim"], name="buf_claim", text=buf_summary_df["buf_claim"],
-                textposition='auto',),
+                   textposition='auto',),
             row=2, col=1
         )
         fig.add_trace(
             go.Bar(x=buf_summary_df.owner, y=buf_summary_df["buf_release"], name="buf_release", text=buf_summary_df["buf_release"],
-                textposition='auto',),
+                   textposition='auto',),
             row=2, col=1
         )
         fig.add_trace(
             go.Bar(x=buf_summary_df.owner, y=buf_summary_df["buf_leak"], name="buf_leak", text=buf_summary_df["buf_leak"],
-                textposition='auto',),
+                   textposition='auto',),
             row=2, col=1
         )
 
         # # print(fig)
         fig.update_layout(barmode='group')
         fig.show()
+
+    if GRAPH_OPTION == GRAPH_HIGHCHARTS:
+        write_df_to_json("buffer_summaryJson", buf_summary_df[['owner', 'buf_claim', 'buf_release', 'buf_leak']])
+        # print(buf_owner_dic)
+        bufmgr_get_unleaked_df
+        write_df_to_json("buffer_Json", bufmgr_get_unleaked_df[['frt_dec', 'owner', 'buffer_dec', 'rel_frt', 'frt_diff', 'info']])
+
+        # for key, owner_df in buf_owner_dic.items():
+        #     val = "buffer_" + key.lower() + "Json"
+        #     write_df_to_json(val, owner_df[['frt_dec', 'buffer_dec', 'frt_diff', 'rel_frt', 'info']])
+
+        # write_df_to_json("buffer_ownerJson", buf_owner_dic[['frt_dec', 'buf_dec', 'frt_diff', 'rel_frt', 'info']])
 
     print("Done", flush=True, end='\n')
 
@@ -2308,8 +2342,6 @@ def graph_it():
         packages.append("plotly==4.9.0")
 
     check_and_install_package(packages)
-
-
 
     try:
         import pandas as pd
@@ -2464,9 +2496,10 @@ def graph_it():
 
     print(cl_stats)
 
-    with open('myJson.js', 'w') as f:
-        f.write('// data logged at {}.\n\n'.format(get_datetime()))
-        f.write('const jsonData={\n')
+    if GRAPH_OPTION == GRAPH_HIGHCHARTS:
+        with open('myJson.js', 'w') as f:
+            f.write('// data logged at {}.\n\n'.format(get_datetime()))
+            f.write('const jsonData={\n')
 
     # obtain fastlink df
     if '0' in graph_ans_list or '1' in graph_ans_list:
@@ -2550,9 +2583,10 @@ def graph_it():
     if '0' in graph_ans_list or '5' in graph_ans_list:
         print("\nModeChan Stats...Data Processing...", flush=True, end='')
         graph_mode_chan()
+    if GRAPH_OPTION == GRAPH_HIGHCHARTS:
 
-    with open('myJson.js', 'a') as f:
-        f.write('\n}')
+        with open('myJson.js', 'a') as f:
+            f.write('\n}')
 
 
 cl_id = 0
@@ -2889,9 +2923,13 @@ if __name__ == "__main__":
                 with open(hexfile, 'w') as fout:
                     fout.writelines(hexdump)
 
-            if (args.graph and not graph_shown):
-                print("\n\n##### Graphs are not live. It will be shown only once.")
+            if ( args.graph and (not graph_shown or GRAPH_OPTION==GRAPH_HIGHCHARTS)):
+                if GRAPH_OPTION==GRAPH_PLOTLY:
+                    print("\n\n##### Graphs are not live. It will be shown only once.")
                 graph_it()
+                print('file://' + os.path.realpath('monitorTrace.html'))
+                if not graph_shown:
+                    webbrowser.open('file://' + os.path.realpath("monitorTrace.html"))
                 graph_shown = True
 
         # time.sleep(args.poll)

@@ -11,15 +11,11 @@
 	<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
 	<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css"
 		integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
-	<!-- <meta http-equiv="refresh" content="30" /> -->
+	<!-- <meta http-equiv="refresh" content="5" /> -->
 	<style>
 		body {
 			font-family: Arial;
 		}
-
-		/* div {
-			display: block;
-		} */
 
 		.chartContainer {
 			height: 600px;
@@ -63,7 +59,6 @@
 		}
 
 		#markersList {
-
 			display: flex;
 			/* flex-direction: column; */
 			width: 100%;
@@ -83,11 +78,17 @@
 		.highcharts-data-table table tr:nth-child(even) {
 			background-color: #f2f2f2;
 		}
+
+		#pills-timings {
+			display: flex !important;
+		}
 	</style>
 </head>
 
 <body>
+
 	<div class="container-fluid">
+
 		<div class="row">
 			<div class="col-lg-12 text-center">
 
@@ -96,13 +97,43 @@
 		</div>
 
 		<div class="row">
+			<div class="offset-sm-6  col-sm-3">
+				<div class="input-group mb-3">
+					<div class="input-group-prepend">
+						<label class="input-group-text" for="refreshIntvDur">Refresh Interval</label>
+					</div>
+					<select class="custom-select" id="refreshIntvDur">
+						<option value="0" selected>None</option>
+						<option value="5">5</option>
+						<option value="10">10</option>
+						<option value="15">15</option>
+						<option  value="30">30</option>
+						<option value="45">45</option>
+						<option value="60">60</option>
+					</select>
+				</div>
+			</div>
+			<div class="col-sm-2"><select class="form-control" id="refreshIntUnit">
+					<option value="1">sec</option>
+					<option value="60">min</option>
+				</select></div>
+
+		</div>
+
+		<div class="row">
 			<div class="col-lg-12">
 				<div class="tab">
 					<button class="tablinks" graphId="rtt" onclick="openGraph(event, 'rttTab')">RTT</button>
 					<button class="tablinks" graphId="mode" onclick="openGraph(event, 'modeTab')">Mode Stats</button>
 					<button class="tablinks" graphId="chan" onclick="openGraph(event, 'chanTab')">Chan Stats</button>
-					<button class="tablinks" id="firstTab" graphId="timeline"
+					<button class="tablinks" graphId="buffer" onclick="openGraph(event, 'bufferTab')">Buffer
+						Mgmt</button>
+					<button class="tablinks" graphId="timeline" id="firstTab"
 						onclick="openGraph(event, 'timelineTab')">Timeline</button>
+					<button class="tablinks" id="" graphId="cltiming" onclick="openGraph(event, 'cltimingTab')">CL
+						Timing Summary</button>
+					<button class="tablinks" id="" graphId="cltimings" onclick="openGraph(event, 'cltimingsTab')">CL
+						Timings</button>
 				</div>
 				<div id="rttTab" class="tabcontent" style="width: 100%;">
 					<div id="rtt" class="chartContainer"></div>
@@ -120,15 +151,30 @@
 				<div id="timelineTab" class="tabcontent" style="width: 100%;">
 					<div id="timeline" class="chartContainer"></div>
 				</div>
+				<div id="bufferTab" class="tabcontent" style="width: 100%;">
+					<div id="buffer" class="chartContainer"></div>
+					<div id="buffer2" class="chartContainer2"></div>
+
+				</div>
+				<div id="cltimingTab" class="tabcontent" style="width: 100%;">
+					<div id="cltiming" class="chartContainer"></div>
+				</div>
+
+				<div id="cltimingsTab" class="tabcontent" style="width: 100%;">
+					<div id="cltimings" class="row">
+						<div id="target2txphr" class="col-md-4 col-sm-6 chartContainer underCLTimings"></div>
+						<div id="txend2rxstart" class="col-md-4 col-sm-6 chartContainer underCLTimings"></div>
+						<div id="rxend2targettime" class="col-md-4 col-sm-6 chartContainer underCLTimings"></div>
+						<div id="rxend2txtime" class="col-md-4 col-sm-6 chartContainer underCLTimings"></div>
+						<div id="txcall2targettime" class="col-md-4 col-sm-6 chartContainer underCLTimings"></div>
+						<div id="rxend2txcall" class="col-md-4 col-sm-6 chartContainer underCLTimings"></div>
+						<div id="rxcall2afterrx" class="col-md-4 col-sm-6 chartContainer underCLTimings"></div>
+						<div id="cl_dur" class="col-md-4 col-sm-6 chartContainer underCLTimings"></div>
+					</div>
+				</div>
 			</div>
 		</div>
 
-		<div id="container"></div>
-		<!-- <div id="controls">
-		M1: <input id="marker1Val"\>
-		M2: <input id="marker2Val"\>
-		delta: <input id="deltaVal" readonly\><button id="removeMkrBtn" style="display: none;">X</button><br>
-	</div> -->
 		<hr>
 
 		<div class="row">
@@ -143,7 +189,10 @@
 			</div>
 		</div>
 
-	</div>
+
+	</div> <!-- container-fluid -->
+
+
 
 	<!-- <div id="container" style=""></div> -->
 	<!-- <div id="containerSecondary" style=""></div> -->
@@ -158,12 +207,15 @@
 	<!-- <script type="text/javascript" src="https://canvasjs.com/assets/script/canvasjs.min.js"></script> -->
 	<script src="https://code.highcharts.com/highcharts.js"></script>
 	<script src="https://code.highcharts.com/modules/data.js"></script>
+	<script src="https://code.highcharts.com/modules/boost.js"></script>
 	<script src="https://code.highcharts.com/modules/exporting.js"></script>
 	<script src="https://code.highcharts.com/modules/export-data.js"></script>
 	<script src="https://code.highcharts.com/modules/accessibility.js"></script>
 	<script src="https://code.highcharts.com/highcharts-more.js"></script>
-	<!-- <script src="https://code.highcharts.com/modules/dumbbell.js"></script> -->
-	<!-- <script src="https://code.highcharts.com/modules/lollipop.js"></script> -->
+	<script src="https://code.highcharts.com/modules/dumbbell.js"></script>
+	<script src="https://code.highcharts.com/modules/lollipop.js"></script>
+	<script src="https://code.highcharts.com/modules/annotations.js"></script>
+
 
 	<script type="text/javascript" src="./myJson.js"></script>
 	<script type="text/javascript" src="./monitorTrace.js"></script>
