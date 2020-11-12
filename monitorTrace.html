@@ -11,14 +11,62 @@
 	<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
 	<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css"
 		integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
+
+	<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.0/css/all.css"
+		integrity="sha384-lZN37f5QGtY3VHgisS14W3ExzMWZxybE1SJSEsQp9S+oqd12jhcu+A56Ebc1zFSJ" crossorigin="anonymous">
+
 	<!-- <meta http-equiv="refresh" content="5" /> -->
 	<style>
 		body {
-			font-family: Arial;
+			/* font-family: Arial; */
+			font-family: "Roboto", sans-serif;
+		}
+
+		/*
+		.heading {
+			padding: 20px 0px;
+			background-color: ;
+		} */
+		.page {
+			background-color: #F4F7FA;
+		}
+
+		p-0 {
+			padding: 0 !important;
+		}
+
+		.subtitle {
+			color: orange;
+			font-size: 30px;
+		}
+
+		.shadow,
+		hr {
+			box-shadow: 0 .5rem 1rem rgba(0, 0, 0, .15) !important;
+		}
+
+		.sticky-top {
+			position: -webkit-sticky;
+			position: sticky;
+			top: 0;
+			z-index: 1020;
+		}
+
+
+		.section-padding {
+			padding: 1rem 0;
+		}
+
+		.header {
+			padding-top: 10px;
+		}
+
+		.dashboard-counts .count-number {
+			font-size: 2em;
 		}
 
 		.chartContainer {
-			height: 600px;
+			min-height: 500px;
 		}
 
 		/* Style the tab */
@@ -35,9 +83,10 @@
 			border: none;
 			outline: none;
 			cursor: pointer;
-			padding: 14px 16px;
+			padding: 5px 20px;
 			transition: 0.3s;
 			font-size: 17px;
+			border-right: 1px solid #bbb;
 		}
 
 		/* Change background color of buttons on hover */
@@ -58,21 +107,36 @@
 			border-top: none;
 		}
 
-		#markersList {
-			display: flex;
-			/* flex-direction: column; */
-			width: 100%;
-			flex-wrap: wrap;
+		.markerTableList {
+			max-height: 120px;
+			/* margin: 12px; */
+			padding: 16px;
+
+			overflow-y: auto;
+			overflow-x: hidden;
 		}
 
-		#markersList .marker {
-			display: flex;
-			justify-content: space-between;
-			padding: 5px;
-			border-radius: 10px;
-			margin-bottom: 2px;
-			width: 50%;
+		.markerTableList .marker {
+			/* display: flex; */
+			/* justify-content: space-between; */
+			/* padding: 5px; */
+			border-radius: 1px;
+			/* margin-bottom: 2px; */
+			/* width: 50%; */
+			max-height: 28px;
+			font-size: 12px;
+			/* margin-right: 3%; */
+			margin-bottom: 5px;
 
+		}
+
+		.removeMkrBtnClass {
+			font-size: 20px;
+			cursor: pointer;
+		}
+
+		.removeMkrBtnClass:hover {
+			color: rgb(174, 0, 0) !important;
 		}
 
 		.highcharts-data-table table tr:nth-child(even) {
@@ -82,117 +146,229 @@
 		#pills-timings {
 			display: flex !important;
 		}
+
+		.dashboard-counts {
+			color: #333;
+		}
+
+		footer {
+			/* position: fixed; */
+			height: 100px;
+			/* bottom: 0; */
+			/* width: 100%; */
+			/* overflow-y: auto; */
+		}
 	</style>
 </head>
 
 <body>
 
-	<div class="container-fluid">
+	<nav class="navbar-dark sticky-top bg-dark flex-md-nowrap p-0 shadow">
+		<div class="container-fluid">
 
-		<div class="row">
-			<div class="col-lg-12 text-center">
+			<div class="row header">
+				<div class="col-sm-4">
+					<h3 class="text-white">Gen5Riva <span class="subtitle">MonitorTrace</span> <i
+							class="fas fa-info-circle"></i>
+					</h3>
+				</div>
+				<div class="offset-sm-4 col-sm-1 ">
 
-				<h2>G5R Monitor Trace</h2>
-			</div>
-		</div>
+					<button class="btn btn-sm btn-outline-warning float-right" id="removeAllMarkers">Remove all Markers</button>
+				</div>
 
-		<div class="row">
-			<div class="offset-sm-6  col-sm-3">
-				<div class="input-group mb-3">
-					<div class="input-group-prepend">
-						<label class="input-group-text" for="refreshIntvDur">Refresh Interval</label>
+				<div class=" col-sm-3">
+					<div class="input-group mb-3">
+						<div class="input-group-prepend">
+							<label class="input-group-text" for="refreshIntvDur">Refresh Interval</label>
+						</div>
+						<select class="custom-select" id="refreshIntvDur">
+							<option value="0" selected>None</option>
+							<option value="5">5</option>
+							<option value="10">10</option>
+							<option value="15">15</option>
+							<option value="30">30</option>
+							<option value="45">45</option>
+							<option value="60">60</option>
+						</select>
+						<select class="form-control" id="refreshIntUnit">
+							<option value="1">sec</option>
+							<option value="60">min</option>
+						</select>
 					</div>
-					<select class="custom-select" id="refreshIntvDur">
-						<option value="0" selected>None</option>
-						<option value="5">5</option>
-						<option value="10">10</option>
-						<option value="15">15</option>
-						<option  value="30">30</option>
-						<option value="45">45</option>
-						<option value="60">60</option>
-					</select>
+
 				</div>
 			</div>
-			<div class="col-sm-2"><select class="form-control" id="refreshIntUnit">
-					<option value="1">sec</option>
-					<option value="60">min</option>
-				</select></div>
 
 		</div>
 
-		<div class="row">
-			<div class="col-lg-12">
-				<div class="tab">
-					<button class="tablinks" graphId="rtt" onclick="openGraph(event, 'rttTab')">RTT</button>
-					<button class="tablinks" graphId="mode" onclick="openGraph(event, 'modeTab')">Mode Stats</button>
-					<button class="tablinks" graphId="chan" onclick="openGraph(event, 'chanTab')">Chan Stats</button>
-					<button class="tablinks" graphId="buffer" onclick="openGraph(event, 'bufferTab')">Buffer
-						Mgmt</button>
-					<button class="tablinks" graphId="timeline" id="firstTab"
-						onclick="openGraph(event, 'timelineTab')">Timeline</button>
-					<button class="tablinks" id="" graphId="cltiming" onclick="openGraph(event, 'cltimingTab')">CL
-						Timing Summary</button>
-					<button class="tablinks" id="" graphId="cltimings" onclick="openGraph(event, 'cltimingsTab')">CL
-						Timings</button>
-				</div>
-				<div id="rttTab" class="tabcontent" style="width: 100%;">
-					<div id="rtt" class="chartContainer"></div>
-				</div>
 
-				<div id="modeTab" class="tabcontent" style="width: 100%;">
-					<div id="mode" class="chartContainer"></div>
+	</nav>
+	<div class="page">
 
-				</div>
 
-				<div id="chanTab" class="tabcontent" style="width: 100%;">
+		<div class="container-fluid">
 
-					<div id="chan" class="chartContainer"></div>
-				</div>
-				<div id="timelineTab" class="tabcontent" style="width: 100%;">
-					<div id="timeline" class="chartContainer"></div>
-				</div>
-				<div id="bufferTab" class="tabcontent" style="width: 100%;">
-					<div id="buffer" class="chartContainer"></div>
-					<div id="buffer2" class="chartContainer2"></div>
 
+			<section class="dashboard-counts section-padding">
+				<div class="container-fluid">
+					<div class="row">
+						<!-- Count item widget-->
+						<div class="col-xl-2 col-md-3 col-sm-4 col-6">
+							<div class="wrapper count-title d-flex">
+								<div class="icon"><span class="glyphicon glyphicon-search" aria-hidden="true"></span>
+								</div>
+								<div class="name"><strong class="text-uppercase">Total CL</strong>
+									<div class="count-number">25</div>
+								</div>
+							</div>
+						</div>
+						<!-- Count item widget-->
+						<div class="col-xl-2 col-md-4 col-6">
+							<div class="wrapper count-title d-flex">
+								<div class="icon"><i class="icon-padnote"></i></div>
+								<div class="name"><strong class="text-uppercase">Work Orders</strong><span>Last 5
+										days</span>
+									<div class="count-number">400</div>
+								</div>
+							</div>
+						</div>
+						<!-- Count item widget-->
+						<div class="col-xl-2 col-md-4 col-6">
+							<div class="wrapper count-title d-flex">
+								<div class="icon"><i class="icon-check"></i></div>
+								<div class="name"><strong class="text-uppercase">New Quotes</strong><span>Last 2
+										months</span>
+									<div class="count-number">342</div>
+								</div>
+							</div>
+						</div>
+						<!-- Count item widget-->
+						<div class="col-xl-2 col-md-4 col-6">
+							<div class="wrapper count-title d-flex">
+								<div class="icon"><i class="icon-bill"></i></div>
+								<div class="name"><strong class="text-uppercase">New Invoices</strong><span>Last 2
+										days</span>
+									<div class="count-number">123</div>
+								</div>
+							</div>
+						</div>
+						<!-- Count item widget-->
+						<div class="col-xl-2 col-md-4 col-6">
+							<div class="wrapper count-title d-flex">
+								<div class="icon"><i class="icon-list"></i></div>
+								<div class="name"><strong class="text-uppercase">Open Cases</strong><span>Last 3
+										months</span>
+									<div class="count-number">92</div>
+								</div>
+							</div>
+						</div>
+						<!-- Count item widget-->
+						<div class="col-xl-2 col-md-4 col-6">
+							<div class="wrapper count-title d-flex">
+								<div class="icon"><i class="icon-list-1"></i></div>
+								<div class="name"><strong class="text-uppercase">New Cases</strong><span>Last 7
+										days</span>
+									<div class="count-number">70</div>
+								</div>
+							</div>
+						</div>
+					</div>
 				</div>
-				<div id="cltimingTab" class="tabcontent" style="width: 100%;">
-					<div id="cltiming" class="chartContainer"></div>
-				</div>
+			</section>
 
-				<div id="cltimingsTab" class="tabcontent" style="width: 100%;">
-					<div id="cltimings" class="row">
-						<div id="target2txphr" class="col-md-4 col-sm-6 chartContainer underCLTimings"></div>
-						<div id="txend2rxstart" class="col-md-4 col-sm-6 chartContainer underCLTimings"></div>
-						<div id="rxend2targettime" class="col-md-4 col-sm-6 chartContainer underCLTimings"></div>
-						<div id="rxend2txtime" class="col-md-4 col-sm-6 chartContainer underCLTimings"></div>
-						<div id="txcall2targettime" class="col-md-4 col-sm-6 chartContainer underCLTimings"></div>
-						<div id="rxend2txcall" class="col-md-4 col-sm-6 chartContainer underCLTimings"></div>
-						<div id="rxcall2afterrx" class="col-md-4 col-sm-6 chartContainer underCLTimings"></div>
-						<div id="cl_dur" class="col-md-4 col-sm-6 chartContainer underCLTimings"></div>
+			<hr>
+
+			<div class="row">
+				<div class="col-lg-12">
+					<div class="tab">
+						<button class="tablinks" graphId="rtt" onclick="openGraph(event, 'rttTab')">RTT</button>
+						<button class="tablinks" graphId="mode" onclick="openGraph(event, 'modeTab')">Mode
+							Stats</button>
+						<button class="tablinks" graphId="chan" onclick="openGraph(event, 'chanTab')">Chan
+							Stats</button>
+						<button class="tablinks" graphId="buffer" onclick="openGraph(event, 'bufferTab')">Buffer
+							Mgmt</button>
+						<button class="tablinks" graphId="timeline" id="firstTab"
+							onclick="openGraph(event, 'timelineTab')">Timeline</button>
+						<button class="tablinks" id="" graphId="cltiming" onclick="openGraph(event, 'cltimingTab')">CL
+							Timing Summary</button>
+						<button class="tablinks" id="" graphId="cltimings" onclick="openGraph(event, 'cltimingsTab')">CL
+							Timings</button>
+					</div>
+					<div id="rttTab" class="tabcontent" style="width: 100%;">
+						<div id="rtt" class="chartContainer"></div>
+						<div class="markerTable">
+							<i class="fas fa-tags"></i> Markers List
+
+							<div class="row markerTableList" id="markersList-rttTab"></div>
+						</div>
+
+					</div>
+
+					<div id="modeTab" class="tabcontent" style="width: 100%;">
+						<div id="mode" class="chartContainer"></div>
+						<div class="markerTable">
+							<i class="fas fa-tags"></i> Markers List
+							<div class="row markerTableList" id="markersList-modeTab"></div>
+						</div>
+					</div>
+
+					<div id="chanTab" class="tabcontent" style="width: 100%;">
+						<div id="chan" class="chartContainer"></div>
+						<div class="markerTable">
+							<i class="fas fa-tags"></i> Markers List
+							<div class="row markerTableList" id="markersList-chanTab"></div>
+						</div>
+					</div>
+					<div id="timelineTab" class="tabcontent" style="width: 100%;">
+						<div id="timeline" class="chartContainer"></div>
+						<div class="markerTable">
+							<i class="fas fa-tags"></i> Markers List
+							<div class="row markerTableList" id="markersList-timelineTab"></div>
+						</div>
+					</div>
+					<div id="bufferTab" class="tabcontent" style="width: 100%;">
+						<div id="buffer" class="chartContainer"></div>
+						<hr>
+						<div id="buffer2" class="chartContainer2"></div>
+						<div class="markerTable">
+							<i class="fas fa-tags"></i> Markers List
+							<div class="row markerTableList" id="markersList-bufferTab"></div>
+						</div>
+					</div>
+					<div id="cltimingTab" class="tabcontent" style="width: 100%;">
+						<div id="cltiming" class="chartContainer"></div>
+						<div class="markerTable">
+							<i class="fas fa-tags"></i> Markers List
+							<div class="row markerTableList" id="markersList-cltimingTab"></div>
+						</div>
+					</div>
+
+					<div id="cltimingsTab" class="tabcontent" style="width: 100%;">
+						<div id="cltimings" class="row">
+							<div id="target2txphr" class="col-md-4 col-sm-6 chartContainer underCLTimings"></div>
+							<div id="txend2rxstart" class="col-md-4 col-sm-6 chartContainer underCLTimings"></div>
+							<div id="rxend2targettime" class="col-md-4 col-sm-6 chartContainer underCLTimings"></div>
+							<div id="rxend2txtime" class="col-md-4 col-sm-6 chartContainer underCLTimings"></div>
+							<div id="txcall2targettime" class="col-md-4 col-sm-6 chartContainer underCLTimings"></div>
+							<div id="rxend2txcall" class="col-md-4 col-sm-6 chartContainer underCLTimings"></div>
+							<div id="rxcall2afterrx" class="col-md-4 col-sm-6 chartContainer underCLTimings"></div>
+							<div id="cl_dur" class="col-md-4 col-sm-6 chartContainer underCLTimings"></div>
+						</div>
+						<div class="markerTable">
+							<i class="fas fa-tags"></i> Markers List
+							<button class="btn btn-sm btn-outline-danger " id="removeAllMarkers">Remove all
+								Markers</button>
+							<div class="row markerTableList" id="markersList-cltimingsTab"></div>
+						</div>
+
 					</div>
 				</div>
 			</div>
 		</div>
-
-		<hr>
-
-		<div class="row">
-			<div class="col-lg-12">
-				<button class="btn btn btn-outline-danger btn-sm" id="removeAllMarkers">Remove all Markers</button> <i>
-					Press "Shift" or
-					"Ctrl"
-					Click to add markers</i>
-				<div class="col-lg-12" id="markersList">
-
-				</div>
-			</div>
-		</div>
-
-
 	</div> <!-- container-fluid -->
-
-
+	</div> <!-- page -->
 
 	<!-- <div id="container" style=""></div> -->
 	<!-- <div id="containerSecondary" style=""></div> -->
@@ -219,6 +395,7 @@
 
 	<script type="text/javascript" src="./myJson.js"></script>
 	<script type="text/javascript" src="./monitorTrace.js"></script>
+
 </body>
 
 </html>

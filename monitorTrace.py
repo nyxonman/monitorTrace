@@ -22,7 +22,7 @@ MIN_A7_VER = (10, 0, 519)
 
 OS_POSIX = "posix"
 OS_WIN = "nt"
-__VERSION__ = "2.5"
+__VERSION__ = "3.0"
 APP_VERSION = __VERSION__ + " {OS: " + os.name + "}"
 OUTPUT_FILE_NAME = "lastdecodedTraces"
 OUTPUT_FILE_EXT = ".log"
@@ -72,6 +72,16 @@ graphs = {
     'cl_timing': {},
     'timeline': {}
 }
+
+GRAPH_NUM_STR = {
+    0: 'ALL',
+    1: 'RTT Between clata.get and cldata.cnf',
+    2: 'CL Timings',
+    3: 'Timeline Visualiser',
+    4: 'Buffer Management',
+    5: 'CL Mode/Channel Stats'
+}
+DEFAULT_GRAPH = 0
 
 valid_img_ext_list = [
     '.png', '.jpg', '.pdf', '.svg'
@@ -1786,7 +1796,7 @@ def graph_cl_timings():
             "levels_dic": levels_dic,
             "arrows_x": arrows_x,
             "rx_dur": rx_dur,
-            "names_label_dic":names_label_dic,
+            "names_label_dic": names_label_dic,
             # "txdiff": txdiff,
             "points_dic": points_dic,
         }
@@ -1855,19 +1865,17 @@ def graph_cl_timings():
             yaxis2=dict(
                 title='PDF/CDF',
             )
-
         )
-
         fig.show()
     else:
-        write_df_to_json("cltimings_target2txphrJson",target2txphr_df)
-        write_df_to_json("cltimings_txend2rxstartJson",txend2rxstart_df)
-        write_df_to_json("cltimings_rxend2targettimeJson",rxend2targettime_df)
-        write_df_to_json("cltimings_rxend2txtimeJson",rxend2txtime_df)
-        write_df_to_json("cltimings_txcall2targettimeJson",txcall2targettime_df)
-        write_df_to_json("cltimings_rxend2txcallJson",rxend2txcall_df)
-        write_df_to_json("cltimings_rxcall2afterrxJson",rxcall2afterrx_df)
-        write_df_to_json("cltimings_cl_durJson",cl_dur_df)
+        write_df_to_json("cltimings_target2txphrJson", target2txphr_df)
+        write_df_to_json("cltimings_txend2rxstartJson", txend2rxstart_df)
+        write_df_to_json("cltimings_rxend2targettimeJson", rxend2targettime_df)
+        write_df_to_json("cltimings_rxend2txtimeJson", rxend2txtime_df)
+        write_df_to_json("cltimings_txcall2targettimeJson", txcall2targettime_df)
+        write_df_to_json("cltimings_rxend2txcallJson", rxend2txcall_df)
+        write_df_to_json("cltimings_rxcall2afterrxJson", rxcall2afterrx_df)
+        write_df_to_json("cltimings_cl_durJson", cl_dur_df)
 
     print("Done", flush=True, end='\n')
 
@@ -1916,7 +1924,7 @@ def graph_timeline_visualiser():
         ret = ""
         ret = "~~~( " + x.owner + " )~~~<br>"
         if(x.owner == "CL"):
-            ret = ret + "<b>CLId </b>" + str(x.cl_id) + ", " + x.cl_mac + "<br>" + \
+            ret = ret + "<b>CLId </b>" + str(x.cl_id) + ", " + x.cl_mac[10:] + "<br>" + \
                 x.txrx_param + "<br>" + \
                 "<b>seqctrl:</b> " + seqinfo + "<br>"
         if(x.owner == 'CL' or x.owner == 'FH'):
@@ -1974,13 +1982,15 @@ def graph_timeline_visualiser():
 
     # CL start END
     filter_list = [131, 132]
-    timeline_cl_start_df = cl_csv_df[cl_csv_df.tracecode_dec == 131][['byte', 'frt_dec', 'cl_id']].rename(columns={'frt_dec': 'clstart'})
-    timeline_cl_end_df = cl_csv_df[cl_csv_df.tracecode_dec == 132][['byte', 'frt_dec', 'cl_id']].rename(columns={'frt_dec': 'clend'})
+
+    timeline_cl_start_df = cl_csv_df[cl_csv_df.tracecode_dec == 131][['byte', 'frt_dec', 'cl_id', 'cl_mac']].rename(columns={'frt_dec': 'clstart'})
+    timeline_cl_end_df = cl_csv_df[cl_csv_df.tracecode_dec == 132][['byte', 'frt_dec', 'cl_id', 'cl_mac']].rename(columns={'frt_dec': 'clend'})
 
     timeline_cl_startend_df = timeline_cl_start_df.merge(timeline_cl_end_df, on='cl_id', how='left')
     timeline_cl_startend_df['cldiff'] = timeline_cl_startend_df.clend - timeline_cl_startend_df.clstart
     timeline_cl_startend_df = timeline_cl_startend_df.dropna()
-    timeline_cl_startend_df['hoverinfo'] = "CL " + timeline_cl_startend_df.cl_id.astype(str) + ", " + (timeline_cl_startend_df.cldiff/1000).astype(int).astype(str) + "msec"
+    print(timeline_cl_startend_df.info())
+    timeline_cl_startend_df['hoverinfo'] = "CL " + timeline_cl_startend_df.cl_id.astype(str) + ", " + (timeline_cl_startend_df.cldiff/1000).astype(int).astype(str) + "msec<br>" + timeline_cl_startend_df.cl_mac_x.str[10:]
     err_df = timeline_cl_startend_df[timeline_cl_startend_df.cldiff <= 0]
 
     if(not (err_df.empty)):
@@ -2366,7 +2376,7 @@ def graph_it():
 
     # plt.style.use('seaborn-deep')
     # plt.style.use('ggplot')
-    if(cl_id_range):
+    if(args.range):
         print("showing graph {} CLs {} from '{}'".format(graph_ans_list, cl_id_range, graph_file))
     else:
         print("showing graph {} from '{}'".format(graph_ans_list, graph_file))
@@ -2428,11 +2438,14 @@ def graph_it():
         csv_df = csv_df.ffill()
 
     # filter for clId Ranges
-    if cl_id_range:
-        cl_range_start, cl_range_end = cl_id_range[0].split(':')
+    if args.range:
+        cl_range_start, cl_range_end = cl_id_range.split(':')
         cl_range_start = str(int(cl_range_start)-1) if cl_range_start else '0'
-        cl_range_end = cl_range_end if cl_range_end else str(int(csv_df.cl_id.astype(float).max()))
-        csv_df = csv_df[(csv_df.cl_id >= cl_range_start) & (csv_df.cl_id <= cl_range_end)]
+        max_val = str(int(csv_df.cl_id.astype(float).max()))
+        cl_range_end = max(cl_range_end, max_val) if cl_range_end else max_val
+        # print(csv_df[csv_df.cl_id=='98'].head(50))
+
+        csv_df = csv_df[(csv_df.cl_id.astype(float) >= float(cl_range_start)) & (csv_df.cl_id.astype(float) <= float(cl_range_end))]
 
     # seq contrl
     tx_seq_ctrl_df = csv_df[(csv_df.tracecode_dec == 144) & (csv_df.trace_info.str.contains("TX"))][['byte', 'trace_info']].rename(columns={'trace_info': 'tx_seq_ctrl'})
@@ -2589,6 +2602,32 @@ def graph_it():
             f.write('\n}')
 
 
+def check_system_dependency():
+    # run ssh or plink depending upon the os
+    if os.name == OS_POSIX:
+        p1 = subprocess.Popen(['which', 'sshpass'], stdout=subprocess.PIPE,  stderr=subprocess.PIPE)
+    else:
+
+        p1 = subprocess.Popen(['where', "plink", ],
+                              stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
+    try:
+        raw_output, err = p1.communicate(timeout=30)
+    except:
+        print("prob while communicating quit:{}", glob["QUIT"])
+        print("err={}, retCode={}, raw_output={}".format(
+            err, p1.returncode, raw_output))
+        return False
+
+    if "plink.exe" in raw_output.decode('utf-8') or "sshpass" in raw_output.decode('utf-8'):
+        return True
+
+    if os.name == OS_POSIX:
+        print("*** Requires sshpass to continue. Install using sudo apt install sshpass")
+    else:
+        print("*** Requires plink.exe to continue. Please install plink.")
+    return False
+
+
 cl_id = 0
 
 if __name__ == "__main__":
@@ -2634,7 +2673,7 @@ if __name__ == "__main__":
     # write to a file per day
     outputfile = OUTPUT_FILE_NAME + "_" + date_today + OUTPUT_FILE_EXT
 
-    my_parser = argparse.ArgumentParser(formatter_class=argparse.RawDescriptionHelpFormatter,
+    my_parser = argparse.ArgumentParser(formatter_class=argparse.RawTextHelpFormatter,
                                         description='''Decode the hex trace for DSP for G5R
             - Live with the IPv4 Wifi address of the node
             - From a local file
@@ -2655,14 +2694,14 @@ if __name__ == "__main__":
     my_parser.add_argument('-e', '--export', metavar="export",
                            type=str,
                            action=exportAction,
-                           help='Export Graph to a file. Supported extensions {}. Works only with -g option'.format(valid_img_ext_list))
+                           help='Export Graph to a file. Supported extensions {}. \nWorks only with -g option. Currenlty not used.'.format(valid_img_ext_list))
 
     my_group.add_argument('-f', '--file',
                           type=str,
                           help='path to the local file to decode. The local file should be obtained from hexdump -C option')
     my_parser.add_argument('-g', '--graph',
-                           action='store_true',
-                           help='Show Graphs using decoded csv file or the hex traces. Limited functionality with live option -i')
+                           type=str,
+                           help="Show Graphs live or using decoded csv file or the hex traces.\n You may select multiple separating by comma (,)\n  {}".format( '\n  '.join(str(key)+" : "+str(val) for key, val in GRAPH_NUM_STR.items())))
     my_group.add_argument('-i', '--ip', metavar="IPv4",
                           type=str,
                           action=Ipv4Action,
@@ -2683,7 +2722,10 @@ if __name__ == "__main__":
                            type=float,
                            default=POLL_INTERVAL,
                            help='Polling Inverval in seconds (Default:{})'.format(POLL_INTERVAL))
-
+    my_parser.add_argument('-r', '--range',
+                           type=str,
+                           default='',
+                           help="Give a range of CLs to decode based on CL ID. Format startCLId:endCLId")
     my_parser.add_argument('-o', '--output',
                            default=outputfile,
                            help='Output to a file (Default={})'.format(outputfile))
@@ -2699,6 +2741,10 @@ if __name__ == "__main__":
         args = my_parser.parse_args()
     except:
         exit()
+
+    # check for system dependcies i.e. sshpass for linux and plink for windows
+    if not check_system_dependency():
+        exit(0)
 
     # if export option is provided with graphing option exit
     if args.export and not args.graph:
@@ -2764,31 +2810,23 @@ if __name__ == "__main__":
         print("REACHABLE")
         REACHABLE = True
 
+    if args.range:
+        cl_id_range = args.range
+        cnt_colon = cl_id_range.count(':')
+        if cnt_colon > 1:
+            print("Error: Format not correct. Range format should be start:end")
+            exit(0)
+
+
     if args.graph:
 
-        graph_dic = {
-            0: "All",
-            1: "RTT Between CL DataGet Req/Cnf",
-            2: "CL Timings",
-            3: "Timeline Visualizer",
-            4: "Buffer Get/Release",
-            5: "CL Mode/Channel Stats",
-        }
+        graph_ans_list = args.graph.split(',')
+        result = all(int(elem, 10) in list(GRAPH_NUM_STR.keys()) for elem in graph_ans_list)
 
-        for key, val in graph_dic.items():
-            print("\t{} : {}".format(key, val))
-        print("Hint: Use a single number or list like 1,2")
-        print("Hint: Add cl id range in the format start:end like 1:10 ")
-        print("Example: graph 1 and 2 for cl ids 5 to 15 -> 1,2;5:15")
-        response = input("Which graph (use a single number or list like 1,2) ")
-        countsemi = response.count(';')
-
-        graph_ans, *cl_id_range = response.split(';', 2)
-
-        graph_ans_list = graph_ans.split(',')
-        result = all(int(elem, 10) in list(graph_dic.keys()) for elem in graph_ans_list)
         if not result:
-            print("Invalid entry {}. Choose from {}".format(graph_ans, list(graph_dic.keys())))
+            print("Invalid entry {}. Choose from {}\n  {}".format(graph_ans_list,
+                                                                  list(GRAPH_NUM_STR.keys()),
+                                                                  '\n  '.join(str(key)+" : "+str(val) for key, val in GRAPH_NUM_STR.items())))
             exit(0)
 
     # if file mode process and exit
@@ -2811,6 +2849,9 @@ if __name__ == "__main__":
 
         if args.graph:
             graph_it()
+            print('file://' + os.path.realpath('monitorTrace.html'))
+            webbrowser.open('file://' + os.path.realpath("monitorTrace.html"))
+
         exit()
 
     print(" - Reading the device... ", end='')
@@ -2923,8 +2964,8 @@ if __name__ == "__main__":
                 with open(hexfile, 'w') as fout:
                     fout.writelines(hexdump)
 
-            if ( args.graph and (not graph_shown or GRAPH_OPTION==GRAPH_HIGHCHARTS)):
-                if GRAPH_OPTION==GRAPH_PLOTLY:
+            if (args.graph and (not graph_shown or GRAPH_OPTION == GRAPH_HIGHCHARTS)):
+                if GRAPH_OPTION == GRAPH_PLOTLY:
                     print("\n\n##### Graphs are not live. It will be shown only once.")
                 graph_it()
                 print('file://' + os.path.realpath('monitorTrace.html'))

@@ -121,19 +121,7 @@ chartOptions = {
 		// "thValue"    : "13"
 
 	},
-	'cltiming': {
-		"chartTitle": "CL",
-		"xAxisType": 'linear',
-		"xAxisTitle": "Timestamp in usecs",
-		// "yAxisMax": 3,
-		// "yAxisMin": -3,
-		// "yAxisTitle": "",
-		// "yAxisTitle2": "",
-		// "yAxis2Max": ,
-		// "thTitle"    : "Max Power",
-		// "thValue"    : "13"
 
-	},
 	"target2txphr": {
 		"chartTitle": "Target 2 tx PHR",
 		"xAxisType": 'linear',
@@ -210,29 +198,29 @@ chartOptions = {
 };
 
 
-function drawChart(chartId, renderFlag) {
+function drawChart(chartId, tabName, renderFlag) {
 
 	switch (chartId) {
 		case RTT_CHART_ID:
-			create_rtt_chart(renderFlag);
+			create_rtt_chart(tabName, renderFlag);
 			break;
 		case MODE_CHART_ID:
-			create_mode_chart(renderFlag);
+			create_mode_chart(tabName, renderFlag);
 			break;
 		case CHAN_CHART_ID:
-			create_chan_chart(renderFlag);
+			create_chan_chart(tabName, renderFlag);
 			break
 		case TIMELINE_CHART_ID:
-			create_timeline_chart(renderFlag);
+			create_timeline_chart(tabName, renderFlag);
 			break;
 		case CLTIMING_CHART_ID:
-			create_cltiming_chart(renderFlag);
+			create_cltiming_chart(tabName, renderFlag);
 			break;
 		case CLTIMINGS_CHART_ID:
-			create_cltimings_chart(renderFlag);
+			create_cltimings_chart(tabName, renderFlag);
 			break;
 		case BUFFER_CHART_ID:
-			create_buffer_chart(renderFlag);
+			create_buffer_chart(tabName, renderFlag);
 			break;
 		default:
 			alert("Improper chart type " + chartId + " for ");
@@ -242,9 +230,9 @@ function drawChart(chartId, renderFlag) {
 
 var markerCnt = 0
 
-function create_marker_line(markerNum, frt, markerColor) {
+function create_marker_line(tabName, markerNum, frt, markerColor, id) {
 
-	var markerListDiv = document.getElementById('markersList')
+	var markerListDiv = document.getElementById('markersList'+ '-' + tabName)
 	var firstMarkerNum = 0
 	var secondMarkerNum = 0;
 	var firstMarkerElem, secondMarkerElem;
@@ -254,11 +242,13 @@ function create_marker_line(markerNum, frt, markerColor) {
 	if (markerNum % 2 != 0) {
 		firstMarkerNum = markerNum
 		secondMarkerNum = markerNum + 1
-		lineHtml = `<div class="marker" style="border:2px solid ${markerColor}"id="divMarkerVal-${firstMarkerNum}-${secondMarkerNum}">
-		<div style="width:33%; ">M${firstMarkerNum}: <span name="marker1" class="markerVal" id="marker${firstMarkerNum}Val"> </span></div>
-		<div style="width:33%; ">M${secondMarkerNum}: <span name="marker2" class="markerVal" id="marker${secondMarkerNum}Val"> </span></div>
-		<div style="width:33%; ">delta: <span class= "deltaVal" id="deltaVal${firstMarkerNum}${secondMarkerNum}" readonly> </span></div>
-		<button class= "btn btn-sm btn-outline-secondary removeMkrBtnClass" id="removeMkrBtn${firstMarkerNum}${secondMarkerNum}" >X</button>
+		lineHtml = `<div class="marker col-sm-6 " style="border:2px solid ${markerColor}"id="divMarkerVal-${firstMarkerNum}-${secondMarkerNum}">
+			<div class="row">
+				<div class="col-sm-3"> M${firstMarkerNum}: <span name="marker1" class="markerVal" id="marker${firstMarkerNum}Val"> </span></div>
+				<div class="col-sm-3"> M${secondMarkerNum}: <span name="marker2" class="markerVal" id="marker${secondMarkerNum}Val"> </span></div>
+				<div class="col-sm-6"> Delta: <span class= "deltaVal" id="deltaVal${firstMarkerNum}${secondMarkerNum}"> </span>
+				<i style="color:${markerColor};" class="fas fa-backspace fs-lg removeMkrBtnClass float-right" id="removeMkrBtn${firstMarkerNum}${secondMarkerNum}"></i></div>
+			</div>
 		</div>`
 
 		markerListDiv.innerHTML = markerListDiv.innerHTML + lineHtml
@@ -282,15 +272,47 @@ function create_marker_line(markerNum, frt, markerColor) {
 
 	if (firstMarkerVal != 0 && secondMarkerVal != 0) {
 		var delta = parseInt(secondMarkerVal) - parseInt(firstMarkerVal)
-		deltaElem = document.getElementById(`deltaVal${firstMarkerNum}${secondMarkerNum}`)
-		deltaElem.innerHTML = delta
+		var signStr = Math.sign(delta)==-1?"-":""
+		var deltaElem = document.getElementById(`deltaVal${firstMarkerNum}${secondMarkerNum}`)
+		var deltaSec=0
+		var deltaMs=0
+		var deltaUs=0
+		var deltaStr = delta + ' usec ('
+		var deltaMsStr=''
+		var deltaSecStr=''
+		var deltaUsStr=delta + 'usec '
+		var extra=0
+
+		delta = Math.abs(delta)
+		if (delta > 1000) {
+			deltaMs = parseInt(delta / 1000, 10)
+			deltaUs = delta % 1000
+			deltaMsStr = deltaMs + "ms "
+			extra=1
+		}
+
+		if(deltaMs > 1000){
+			deltaSec = parseInt(deltaMs/1000,10)
+			deltaMs = deltaMs % 1000
+			deltaSecStr= deltaSec+" sec "
+			deltaMsStr = deltaMs + "ms "
+		}
+		if (deltaUs <= 0){
+			deltaUs=''
+			deltaUsStr=''
+		}else{
+			deltaUsStr = deltaUs + "us"
+		}
+
+		deltaStr = extra? delta + " ( " + deltaSecStr + deltaMsStr  + deltaUsStr + " )":delta
+		deltaElem.innerHTML = signStr+deltaStr
 	}
 
 }
 var redrawEnabled = true;
 
-function create_highchart(id, chartData, containerDiv = 'container', annotations_arr = []) {
-	console.log(id, chartData)
+function create_highchart(id,tabName, chartData, containerDiv = 'container', annotations_arr = []) {
+	console.log(id, tabName, chartData)
 
 	chart = Highcharts.chart(containerDiv, {
 		credits: {
@@ -298,10 +320,14 @@ function create_highchart(id, chartData, containerDiv = 'container', annotations
 		},
 		boost: {
 			// enabled: false,
-			// useGPUTranslations: true,
+			useGPUTranslations: true,
 			// allowForce:true,
 			// usePreallocated:true,
-			// useAlpha:falses
+			useAlpha: false
+		},
+		exporting: {
+			sourceWidth: 1920,
+			sourceHeight: 920,
 		},
 
 		chart: {
@@ -363,7 +389,7 @@ function create_highchart(id, chartData, containerDiv = 'container', annotations
 						colorCnt = (markerCnt - 1) % 10
 					markerColor = Highcharts.getOptions().colors[colorCnt]
 					markerCnt++
-					create_marker_line(markerCnt, xValue, markerColor)
+					create_marker_line(tabName, markerCnt, xValue, markerColor, id)
 
 					xAxis.addPlotLine({
 						value: xValue,
@@ -478,7 +504,7 @@ function create_highchart(id, chartData, containerDiv = 'container', annotations
 }
 
 
-function create_rtt_chart(renderFlag) {
+function create_rtt_chart(tabName, renderFlag) {
 
 	if (!jsonData.hasOwnProperty('rttJson')) return;
 
@@ -526,7 +552,7 @@ function create_rtt_chart(renderFlag) {
 		},
 
 	]
-	create_highchart(RTT_CHART_ID, chartData, RTT_CHART_ID)
+	create_highchart(RTT_CHART_ID,tabName, chartData, RTT_CHART_ID)
 
 
 
@@ -534,7 +560,7 @@ function create_rtt_chart(renderFlag) {
 
 }
 
-function create_mode_chart(renderFlag) {
+function create_mode_chart(tabName, renderFlag) {
 	if (!jsonData.hasOwnProperty('modeTxJson')) return;
 
 	console.log('creating modechanchart')
@@ -554,6 +580,9 @@ function create_mode_chart(renderFlag) {
 			type: "column",
 			name: "ModeRx",
 			data: modeRxData,
+			dataLabels: {
+				enabled: true,
+			},
 			color: Highcharts.getOptions().colors[7]
 		},
 		/* Mode Tx */
@@ -561,14 +590,17 @@ function create_mode_chart(renderFlag) {
 			type: "column",
 			name: "ModeTx",
 			data: modeTxData,
+			dataLabels: {
+				enabled: true,
+			},
 			color: Highcharts.getOptions().colors[3]
 		},
 
 	]
-	create_highchart(MODE_CHART_ID, chartData, MODE_CHART_ID)
+	create_highchart(MODE_CHART_ID,tabName, chartData, MODE_CHART_ID)
 
 }
-function create_chan_chart(renderFlag) {
+function create_chan_chart(tabName, renderFlag) {
 	if (!jsonData.hasOwnProperty('chanTxJson')) return;
 
 	console.log('creating chanchanchart')
@@ -595,6 +627,9 @@ function create_chan_chart(renderFlag) {
 			type: "column",
 			name: "Chan Rx",
 			data: chanRxData,
+			dataLabels: {
+				enabled: true,
+			},
 			color: Highcharts.getOptions().colors[7]
 		},
 		/* Chan Tx */
@@ -602,15 +637,18 @@ function create_chan_chart(renderFlag) {
 			type: "column",
 			name: "Chan Tx",
 			data: chanTxData,
+			dataLabels: {
+				enabled: true,
+			},
 			color: Highcharts.getOptions().colors[3]
 		},
 
 	]
-	create_highchart(CHAN_CHART_ID, chartData, CHAN_CHART_ID)
+	create_highchart(CHAN_CHART_ID,tabName, chartData, CHAN_CHART_ID)
 
 }
 
-function create_buffer_chart(renderFlag) {
+function create_buffer_chart(tabName, renderFlag) {
 	if (!jsonData.hasOwnProperty('buffer_Json')) return;
 
 	console.log('creating buffer summary chart')
@@ -661,7 +699,7 @@ function create_buffer_chart(renderFlag) {
 		},
 
 	]
-	create_highchart(BUFFER_CHART_ID, chartData, BUFFER_CHART_ID)
+	create_highchart(BUFFER_CHART_ID,tabName, chartData, BUFFER_CHART_ID)
 
 	console.log('creating buffer alloc')
 	chartData = []
@@ -725,11 +763,11 @@ function create_buffer_chart(renderFlag) {
 		})
 	});
 
-	create_highchart(BUFFER_CHART_ID + "2", chartData, BUFFER_CHART_ID + "2")
+	create_highchart(BUFFER_CHART_ID+"2",tabName, chartData, BUFFER_CHART_ID+"2")
 
 }
 
-function create_cltimings_chart(renderFlag) {
+function create_cltimings_chart(tabName, renderFlag) {
 	let freqData = []
 	let pdfData = []
 	let cdfData = []
@@ -780,12 +818,12 @@ function create_cltimings_chart(renderFlag) {
 			},
 		]
 
-		create_highchart(id, chartData, id)
+		create_highchart(id,tabName, chartData, id)
 
 	}
 }
 
-function create_cltiming_chart(renderFlag) {
+function create_cltiming_chart(tabName, renderFlag) {
 	if (!jsonData.hasOwnProperty('cltimingJson')) return;
 
 	console.log("cltiming", jsonData.cltimingJson)
@@ -802,6 +840,15 @@ function create_cltiming_chart(renderFlag) {
 		data: [
 			[points_dic.TxPHR1, 0],
 			[points_dic.TxPHR1, 0.5],
+			{
+				x: points_dic.TxPHR1 + tx_dur / 2,
+				y: 0.5,
+				dataLabels: {
+					enabled: true,
+					format: "Transmission e.g. POLL",
+
+				}
+			},
 			[points_dic.TxPHR1 + tx_dur, 0.5],
 			[points_dic.TxPHR1 + tx_dur, 0],
 		],
@@ -824,10 +871,20 @@ function create_cltiming_chart(renderFlag) {
 		type: 'area',
 		findNearestPointBy: 'xy',
 		data: [
-			[points_dic.rxPHR - 0, 0],
-			[points_dic.rxPHR - 0, -0.5],
-			[points_dic.rxPHR - 0 + rx_dur, -0.5],
-			[points_dic.rxPHR - 0 + rx_dur, 0],
+			[points_dic.rxPHR, 0],
+			[points_dic.rxPHR, -0.5],
+			{
+				x: points_dic.rxPHR + rx_dur / 2,
+				y: -0.5,
+				dataLabels: {
+					enabled: true,
+					format: "Reception e.g. ACK",
+					verticalAlign: 'top'
+				}
+			},
+			[points_dic.rxPHR + rx_dur, -0.5],
+
+			[points_dic.rxPHR + rx_dur, 0],
 		],
 		name: "ACK",
 		enableMouseTracking: false,
@@ -838,6 +895,7 @@ function create_cltiming_chart(renderFlag) {
 				opacity: 1
 			}
 		},
+
 		showInLegend: false,
 		color: '#8FBC8F',
 		lineWidth: 2,
@@ -852,6 +910,15 @@ function create_cltiming_chart(renderFlag) {
 		data: [
 			[points_dic.TxPHR2, 0],
 			[points_dic.TxPHR2, 0.5],
+			{
+				x: points_dic.TxPHR2 + (tx_dur + 500) / 2,
+				y: 0.5,
+				dataLabels: {
+					enabled: true,
+					format: "Transmission e.g. DATA",
+
+				}
+			},
 			[points_dic.TxPHR2 + tx_dur + 500, 0.5],
 			[points_dic.TxPHR2 + tx_dur + 500, 0],
 		],
@@ -1004,11 +1071,11 @@ function create_cltiming_chart(renderFlag) {
 
 	})
 
-	create_highchart(CLTIMING_CHART_ID, chartData, CLTIMING_CHART_ID, annotations_arr = annotations)
+	create_highchart(CLTIMING_CHART_ID,tabName, chartData, CLTIMING_CHART_ID, annotations_arr = annotations)
 
 }
 
-function create_timeline_chart(renderFlag) {
+function create_timeline_chart(tabName, renderFlag) {
 	if (!jsonData.hasOwnProperty('timeline_clStartEndJson')) return;
 
 	console.log('creating timeline chart')
@@ -1120,13 +1187,14 @@ function create_timeline_chart(renderFlag) {
 			name: "CL " + item.cl_id,
 			fillColor: 'rgba(247, 228, 194,0.35)',
 			color: "rgba(247, 228, 194,1)",
+
 			turboThreshold: 0,
 
 			// tooltip:null
 			tooltip: {
 				// followPointer: true,
 				useHTML: true,
-				headerFormat: '<span style="color: {series.color}">{series.name}</span>: ',
+				headerFormat: '<span style="color: rgba(170, 135, 54,1)">{series.name}</span>: ',
 				pointFormat: '<span>FRT: {point.x}</span> ' + item.hoverinfo
 			},
 		})
@@ -1217,7 +1285,7 @@ function create_timeline_chart(renderFlag) {
 
 	})
 
-	create_highchart(TIMELINE_CHART_ID, chartData, TIMELINE_CHART_ID)
+	create_highchart(TIMELINE_CHART_ID,tabName, chartData, TIMELINE_CHART_ID)
 	console.log('creating timeline chart END')
 
 
@@ -1237,7 +1305,7 @@ function openGraph(evt, tabName) {
 	graphId = evt.currentTarget.attributes.graphId.value
 
 	if (Object.keys(charts[graphId]).length == 0)
-		drawChart(graphId, true)
+		drawChart(graphId, tabName, true)
 
 }
 
@@ -1249,7 +1317,7 @@ window.onload = function () {
 	$(document).on("click", ".removeMkrBtnClass", function (event) {
 		// console.log("clicked",event)
 		// console.log($(this))
-		parentRow = $(this).parent()
+		parentRow = $(this).parent().parent().parent()
 		id = parentRow.attr('id').split('-')
 		$(`.marker${id[1]}Line`).remove()
 		$(`.marker${id[2]}Line`).remove()
@@ -1282,6 +1350,10 @@ window.onload = function () {
 			}, refreshIntv);
 		}
 	});
+
+	$('.popover-dismiss').popover({
+		trigger: 'focus'
+	  })
 
 }
 
