@@ -17,7 +17,7 @@ RXEND2TXCALL_CHART_ID = "rxend2txcall"
 RXCALL2AFTERRX_CHART_ID = "rxcall2afterrx"
 CL_DUR_CHART_ID = "cl_dur"
 
-// types of charts
+/*  types of charts */
 charts = {
 	"rtt": {},
 	"cltiming": {},
@@ -28,7 +28,7 @@ charts = {
 	'mode': {}
 };
 
-// datasets for different charts
+/*  datasets for different charts */
 datasets = {
 	"rtt": [],
 	"cltiming": [],
@@ -38,7 +38,7 @@ datasets = {
 	'modechan': [],
 }
 
-// chart options for different charts
+/*  chart options for different charts */
 chartOptions = {
 	'rtt': {
 		"chartTitle": "RTT between clData.get and clData.cnf",
@@ -47,8 +47,8 @@ chartOptions = {
 		"yAxisTitle": "Count",
 		"yAxisTitle2": "PDF/CDF",
 		"yAxis2Max": 1,
-		// "thTitle"    : "Max Power",
-		// "thValue"    : "13"
+		/*  "thTitle"    : "Max Power", */
+		/*  "thValue"    : "13" */
 
 	},
 	'mode': {
@@ -56,10 +56,10 @@ chartOptions = {
 		"xAxisType": 'category',
 		"xAxisTitle": "Modes",
 		"yAxisTitle": "Count",
-		// "yAxisTitle2": "PDF/CDF",
-		// "yAxis2Max": 1,
-		// "thTitle"    : "Max Power",
-		// "thValue"    : "13"
+		/*  "yAxisTitle2": "PDF/CDF", */
+		/*  "yAxis2Max": 1, */
+		/*  "thTitle"    : "Max Power", */
+		/*  "thValue"    : "13" */
 
 	},
 	'chan': {
@@ -67,10 +67,10 @@ chartOptions = {
 		"xAxisType": 'category',
 		"xAxisTitle": "Channel",
 		"yAxisTitle": "Count",
-		// "yAxisTitle2": "",
-		// "yAxis2Max": 1,
-		// "thTitle"    : "Max Power",
-		// "thValue"    : "13"
+		/*  "yAxisTitle2": "", */
+		/*  "yAxis2Max": 1, */
+		/*  "thTitle"    : "Max Power", */
+		/*  "thValue"    : "13" */
 
 	},
 	'buffer': {
@@ -78,10 +78,10 @@ chartOptions = {
 		"xAxisType": 'category',
 		"xAxisTitle": "Owner",
 		"yAxisTitle": "Count",
-		// "yAxisTitle2": "",
-		// "yAxis2Max": 1,
-		// "thTitle"    : "Max Power",
-		// "thValue"    : "13"
+		/*  "yAxisTitle2": "", */
+		/*  "yAxis2Max": 1, */
+		/*  "thTitle"    : "Max Power", */
+		/*  "thValue"    : "13" */
 
 	},
 	'buffer2': {
@@ -89,10 +89,10 @@ chartOptions = {
 		"xAxisType": 'linear',
 		"xAxisTitle": "Timestamp in usecs",
 		"yAxisTitle": "Buffer",
-		// "yAxisTitle2": "",
-		// "yAxis2Max": 1,
-		// "thTitle"    : "Max Power",
-		// "thValue"    : "13"
+		/*  "yAxisTitle2": "", */
+		/*  "yAxis2Max": 1, */
+		/*  "thTitle"    : "Max Power", */
+		/*  "thValue"    : "13" */
 
 	},
 	'timeline': {
@@ -101,11 +101,11 @@ chartOptions = {
 		"xAxisTitle": "Timestamp in usecs",
 		"yAxisMax": 7,
 		"yAxisMin": -7,
-		// "yAxisTitle": "",
-		// "yAxisTitle2": "",
-		// "yAxis2Max": ,
-		// "thTitle"    : "Max Power",
-		// "thValue"    : "13"
+		/*  "yAxisTitle": "", */
+		/*  "yAxisTitle2": "", */
+		/*  "yAxis2Max": , */
+		/*  "thTitle"    : "Max Power", */
+		/*  "thValue"    : "13" */
 
 	},
 	'cltiming': {
@@ -114,11 +114,11 @@ chartOptions = {
 		"xAxisTitle": "Timestamp in usecs",
 		"yAxisMax": 3,
 		"yAxisMin": -3,
-		// "yAxisTitle": "",
-		// "yAxisTitle2": "",
-		// "yAxis2Max": ,
-		// "thTitle"    : "Max Power",
-		// "thValue"    : "13"
+		/*  "yAxisTitle": "", */
+		/*  "yAxisTitle2": "", */
+		/*  "yAxis2Max": , */
+		/*  "thTitle"    : "Max Power", */
+		/*  "thValue"    : "13" */
 
 	},
 
@@ -228,11 +228,12 @@ function drawChart(chartId, tabName, renderFlag) {
 
 }
 
+
 var markerCnt = 0
 
 function create_marker_line(tabName, markerNum, frt, markerColor, id) {
 
-	var markerListDiv = document.getElementById('markersList'+ '-' + tabName)
+	var markerListDiv = document.getElementById('markersList' + '-' + tabName)
 	var firstMarkerNum = 0
 	var secondMarkerNum = 0;
 	var firstMarkerElem, secondMarkerElem;
@@ -272,46 +273,108 @@ function create_marker_line(tabName, markerNum, frt, markerColor, id) {
 
 	if (firstMarkerVal != 0 && secondMarkerVal != 0) {
 		var delta = parseInt(secondMarkerVal) - parseInt(firstMarkerVal)
-		var signStr = Math.sign(delta)==-1?"-":""
+		var signStr = Math.sign(delta) == -1 ? "-" : ""
 		var deltaElem = document.getElementById(`deltaVal${firstMarkerNum}${secondMarkerNum}`)
-		var deltaSec=0
-		var deltaMs=0
-		var deltaUs=0
+		var deltaSec = 0
+		var deltaMs = 0
+		var deltaUs = 0
 		var deltaStr = delta + ' usec ('
-		var deltaMsStr=''
-		var deltaSecStr=''
-		var deltaUsStr=delta + 'usec '
-		var extra=0
+		var deltaMsStr = ''
+		var deltaSecStr = ''
+		var deltaUsStr = delta + 'usec '
+		var extra = 0
 
 		delta = Math.abs(delta)
 		if (delta > 1000) {
 			deltaMs = parseInt(delta / 1000, 10)
 			deltaUs = delta % 1000
 			deltaMsStr = deltaMs + "ms "
-			extra=1
+			extra = 1
 		}
 
-		if(deltaMs > 1000){
-			deltaSec = parseInt(deltaMs/1000,10)
+		if (deltaMs > 1000) {
+			deltaSec = parseInt(deltaMs / 1000, 10)
 			deltaMs = deltaMs % 1000
-			deltaSecStr= deltaSec+" sec "
+			deltaSecStr = deltaSec + " sec "
 			deltaMsStr = deltaMs + "ms "
 		}
-		if (deltaUs <= 0){
-			deltaUs=''
-			deltaUsStr=''
-		}else{
+		if (deltaUs <= 0) {
+			deltaUs = ''
+			deltaUsStr = ''
+		} else {
 			deltaUsStr = deltaUs + "us"
 		}
 
-		deltaStr = extra? delta + " ( " + deltaSecStr + deltaMsStr  + deltaUsStr + " )":delta
-		deltaElem.innerHTML = signStr+deltaStr
+		deltaStr = extra ? delta + " ( " + deltaSecStr + deltaMsStr + deltaUsStr + " )" : delta
+		deltaElem.innerHTML = signStr + deltaStr
 	}
 
 }
 var redrawEnabled = true;
 
-function create_highchart(id,tabName, chartData, containerDiv = 'container', annotations_arr = []) {
+function create_pie_highchart(id, chartData, dd_data = [], containerDiv = 'container', annotations_arr = []) {
+	console.log(id, chartData, dd_data)
+	var pie_colors = [ "#44A9A8","#F7A35C", "#90ed7d", "#f7a35c","#e4d354",  "#f45b5b", "#91e8e1" ]
+
+	chart = Highcharts.chart(containerDiv, {
+		credits: {
+			enabled: false
+		},
+
+
+		plotOptions: {
+			pie: {
+				/*    showInLegend: true, */
+				dataLabels: {
+					enabled: true,
+					distance: -10,
+					inside: true,
+					format: '{point.name} {point.y}',
+					crop: true,
+					overflow: 'allow'
+				},
+				colors:pie_colors
+			}
+		},
+		exporting: false,
+
+		chart: {
+			height: 150,
+			backgroundColor: "transparent"
+		},
+		dataLabels: {
+			/*  enabled: false */
+		},
+
+		title: false,
+
+		legend: {
+			verticalAlign: 'top',
+		},
+		tooltip: {
+			headerFormat: '<span style="font-size:11px">{series.name}</span><br>',
+			pointFormat: '<span style="color:{point.color}">{point.name}</span>: <b>{point.y:.2f}</b>'
+		},
+
+
+
+		series: chartData,
+		drilldown: {
+			series: dd_data,
+		},
+		/*  annotations: annotations_arr */
+
+	});
+
+	/*  Create the chart */
+
+
+	/*  charts[id] = chart */
+
+}
+
+
+function create_highchart(id, tabName, chartData, containerDiv = 'container', annotations_arr = []) {
 	console.log(id, tabName, chartData)
 
 	chart = Highcharts.chart(containerDiv, {
@@ -319,10 +382,10 @@ function create_highchart(id,tabName, chartData, containerDiv = 'container', ann
 			enabled: false
 		},
 		boost: {
-			// enabled: false,
+			/*  enabled: false, */
 			useGPUTranslations: true,
-			// allowForce:true,
-			// usePreallocated:true,
+			/*  allowForce:true, */
+			/*  usePreallocated:true, */
 			useAlpha: false
 		},
 		exporting: {
@@ -331,25 +394,25 @@ function create_highchart(id,tabName, chartData, containerDiv = 'container', ann
 		},
 
 		chart: {
-			// type: 'bar'
-			// zoomKey:'alt',
+			/*  type: 'bar' */
+			/*  zoomKey:'alt', */
 			zoomType: 'x',
 			panKey: 'ctrl',
 
 			panning: true,
 
 			events: {
-				// load: function () {
-				// 	const myChart = this;
+				/*  load: function () { */
+				/*  	const myChart = this; */
 
-				// 	console.log("loaded")
+				/*  	console.log("loaded") */
 
-				// },
-				// render: function () {
-				// 	// console.log("rendered")
-				// 	const myChart = this;
+				/*  }, */
+				/*  render: function () { */
+				/*  	 console.log("rendered") */
+				/*  	const myChart = this; */
 
-				// },
+				/*  }, */
 				redraw: function (event) {
 					var extremes = this.xAxis[0].getExtremes();
 					var border = 35942400000;
@@ -367,11 +430,11 @@ function create_highchart(id,tabName, chartData, containerDiv = 'container', ann
 							boost: {
 								enabled: boostEnabled
 							},
-							// plotOptions: {
-							//   series: {
-							// 	boostThreshold: boostEnabled
-							//   }
-							// }
+							/*  plotOptions: { */
+							/*    series: { */
+							/*  	boostThreshold: boostEnabled */
+							/*    } */
+							/*  } */
 						});
 						redrawEnabled = true
 					}
@@ -436,12 +499,12 @@ function create_highchart(id,tabName, chartData, containerDiv = 'container', ann
 			verticalAlign: 'top',
 		},
 		tooltip: {
-			// headerFormat: '<span style="font-size:10px">{point.key}</span><table>',
-			// pointFormat: '<tr><td style="color:{series.color};padding:0">{series.name}: </td>' +
-			// 	'<td style="padding:0"><b>{point.y:.1f} mm</b></td></tr>',
-			// footerFormat: '</table>',
+			/*  headerFormat: '<span style="font-size:10px">{point.key}</span><table>', */
+			/*  pointFormat: '<tr><td style="color:{series.color};padding:0">{series.name}: </td>' + */
+			/*  	'<td style="padding:0"><b>{point.y:.1f} mm</b></td></tr>', */
+			/*  footerFormat: '</table>', */
 			shared: true,
-			// split:true,
+			/*  split:true, */
 			useHTML: true,
 			followPointer: false,
 			outside: true
@@ -457,14 +520,14 @@ function create_highchart(id,tabName, chartData, containerDiv = 'container', ann
 			},
 		},
 
-		yAxis: [{ // Primary yAxis
-			// visible:id==TIMELINE_CHART_ID? false:trues,
+		yAxis: [{ /*  Primary yAxis */
+			/*  visible:id==TIMELINE_CHART_ID? false:trues, */
 			labels: {
 				enabled: id == TIMELINE_CHART_ID || id == CLTIMING_CHART_ID ? false : true,
-				// format: '{value}°C',
-				// style: {
-				// 	color: Highcharts.getOptions().colors[1]
-				// }
+				/*  format: '{value}°C', */
+				/*  style: { */
+				/*  	color: Highcharts.getOptions().colors[1] */
+				/*  } */
 			},
 			plotLines: [{
 				value: 0,
@@ -474,22 +537,22 @@ function create_highchart(id,tabName, chartData, containerDiv = 'container', ann
 			}],
 			title: {
 				text: chartOptions[id].yAxisTitle,
-				// style: {
-				// 	color: Highcharts.getOptions().colors[1]
-				// }
+				/*  style: { */
+				/*  	color: Highcharts.getOptions().colors[1] */
+				/*  } */
 			},
-			// max:  null,
+			/*  max:  null, */
 			max: chartOptions[id].yAxisMax ? chartOptions[id].yAxisMax : null,
 			min: chartOptions[id].yAxisMin ? chartOptions[id].yAxisMin : null,
 
-		}, { // Secondary yAxis
+		}, { /*  Secondary yAxis */
 			title: {
 				text: chartOptions[id].yAxisTitle2 ? chartOptions[id].yAxisTitle2 : null,
 
 
 			},
 			max: chartOptions[id].yAxis2Max ? chartOptions[id].yAxis2Max : null,
-			// const a = { ...(condition && {b: 1}) // if condition is true 'b' will be added. }
+			/*  const a = { ...(condition && {b: 1})  if condition is true 'b' will be added. } */
 
 			opposite: true
 		}],
@@ -502,6 +565,263 @@ function create_highchart(id,tabName, chartData, containerDiv = 'container', ann
 	charts[id] = chart
 
 }
+
+function drawPieChart_cl_newend() {
+
+
+	if (!jsonData.clstatsJson.hasOwnProperty('CL_NEW_END')) return;
+
+	jsonData_clnewend = jsonData.clstatsJson.CL_NEW_END
+
+	dd_clouts_data = []
+	for (const [key, value] of Object.entries(jsonData_clnewend.CL_NEW.drilldown.CL_OUT.drilldown)) {
+		dd_clouts_data.push({
+			name: key,
+			y: value
+		})
+	}
+	dd_clends_data = []
+	for (const [key, value] of Object.entries(jsonData_clnewend.CL_END.drilldown)) {
+		dd_clends_data.push({
+			name: key,
+			y: value
+		})
+	}
+
+	/*  create CL PIE CHART */
+	chartData = [
+		/* count */
+		{
+			type: "pie",
+			name: "CL",
+			/*  colorByPoint: true, */
+
+			data: [
+				{
+					name: "CL NEW",
+					y: jsonData_clnewend.CL_NEW.val,
+					drilldown: "dd_cl_new",
+					/*  color:'red', */
+				},
+				{
+					name: "CL END",
+					y: jsonData_clnewend.CL_END.val,
+					drilldown: "dd_cl_end"
+				},
+			],
+		},
+
+	]
+	dd_data = [
+		{
+			name: "CL NEW",
+			type: 'pie',
+			id: "dd_cl_new",
+			data: [
+				{
+					name: "CL_OUT",
+					y: jsonData_clnewend.CL_NEW.drilldown.CL_OUT.val,
+					drilldown: 'dd_cl_out'
+				},
+				{
+					name: "CL_IN",
+					y: jsonData_clnewend.CL_NEW.drilldown.CL_IN
+				},
+
+			]
+		}, {
+			name: "CL_OUT",
+			type: 'pie',
+			id: 'dd_cl_out',
+			data: dd_clouts_data
+
+		},
+		{
+			name: "CL_END",
+			type: 'pie',
+			id: 'dd_cl_end',
+			data: dd_clends_data
+
+		}
+	]
+	create_pie_highchart("clpietotal", chartData, dd_data, 'clpietotal')
+
+}
+
+function drawPieChart_cl_data_reqresp() {
+
+	if (!jsonData.clstatsJson.hasOwnProperty('CL_DATA_REQ_RESP')) return;
+
+	cl_data_reqresp_stats = jsonData.clstatsJson.CL_DATA_REQ_RESP
+
+	dd_cldata_reqresp_data = []
+	for (const [key, value] of Object.entries(cl_data_reqresp_stats.CL_DATA_RESP.drilldown)) {
+		dd_cldata_reqresp_data.push({
+			name: key,
+			y: value
+		})
+	}
+
+	/*  create CL PIE CHART */
+	chartData = [
+		/* count */
+		{
+			type: "pie",
+			name: "CL DATA",
+			colorByPoint: true,
+			data: [
+				{
+					name: "DATAREQ",
+					y: cl_data_reqresp_stats.CL_DATA_REQ.val,
+
+				},
+				{
+					name: "DATARESP",
+					y: cl_data_reqresp_stats.CL_DATA_RESP.val,
+					drilldown: "dd_cl_data_resp"
+				},
+			],
+		},
+
+	]
+	dd_data = [
+		{
+			name: "DATARESP",
+			type: 'pie',
+			id: "dd_cl_data_resp",
+			data: dd_cldata_reqresp_data
+		}
+	]
+	create_pie_highchart("clpiedatareqresp", chartData, dd_data, 'clpiedatareqresp')
+
+}
+function drawPieChart_cl_tx_rx() {
+
+	if (!jsonData.clstatsJson.hasOwnProperty('CL_TX_RX')) return;
+
+	jsonData_cltxrx = jsonData.clstatsJson.CL_TX_RX
+
+	dd_cltx_data = []
+	for (const [key, value] of Object.entries(jsonData_cltxrx.CL_TX.drilldown)) {
+		dd_cltx_data.push({
+			name: key,
+			y: value
+		})
+	}
+	dd_clrx_data = []
+	for (const [key, value] of Object.entries(jsonData_cltxrx.CL_RX.drilldown)) {
+		dd_clrx_data.push({
+			name: key,
+			y: value
+		})
+	}
+
+	/*  create CL PIE CHART */
+	chartData = [
+		/* count */
+		{
+			type: "pie",
+			name: "CL TX RX",
+			colorByPoint: true,
+			data: [
+				{
+					name: "TX",
+					y: jsonData_cltxrx.CL_TX.val,
+					drilldown: "dd_cl_tx"
+
+				},
+				{
+					name: "RX",
+					y: jsonData_cltxrx.CL_RX.val,
+					drilldown: "dd_cl_rx"
+				},
+			],
+		},
+
+	]
+	dd_data = [
+		{
+			name: "TX",
+			type: 'pie',
+			id: "dd_cl_tx",
+			data: dd_cltx_data
+		}, {
+			name: "RX",
+			type: 'pie',
+			id: "dd_cl_rx",
+			data: dd_clrx_data
+		}
+	]
+	create_pie_highchart("clpietxrx", chartData, dd_data, 'clpietxrx')
+
+}
+function drawPieChart_cl_txdone() {
+
+	if (!jsonData.clstatsJson.hasOwnProperty('CL_TXDONE')) return;
+
+	jsonData_cltxdone = jsonData.clstatsJson.CL_TXDONE
+
+	dd_cltx_done = []
+	for (const [key, value] of Object.entries(jsonData_cltxdone.drilldown)) {
+		dd_cltx_done.push({
+			name: key,
+			y: value
+		})
+	}
+
+
+	/*  create CL PIE CHART */
+	chartData = [
+		/* count */
+		{
+			type: "pie",
+			name: "CL TXDONE",
+			colorByPoint: true,
+			data: [
+				{
+					name: "TXDONE",
+					y: jsonData_cltxdone.val,
+					drilldown: "dd_cl_txdone"
+
+				},
+
+			],
+		},
+
+	]
+	dd_data = [
+		{
+			name: "TX",
+			type: 'pie',
+			id: "dd_cl_txdone",
+			data: dd_cltx_done
+		}
+	]
+	create_pie_highchart("clpietxdone", chartData, dd_data, 'clpietxdone')
+
+}
+
+function drawPieChart() {
+	if (!jsonData.hasOwnProperty('clstatsJson')) return;
+
+	clstats = jsonData.clstatsJson
+	console.log('clstats ', clstats)
+
+	/*  CL NEW END */
+	var totalCL = clstats.CL_NEW_END.CL_NEW.val + clstats.CL_NEW_END.CL_END.val
+	drawPieChart_cl_newend()
+
+	/*  CL DATA REQ RESP */
+	drawPieChart_cl_data_reqresp()
+
+	/* CL TX RX */
+	drawPieChart_cl_tx_rx()
+
+	/* CL TXDONE */
+	drawPieChart_cl_txdone()
+
+}
+
 
 
 function create_rtt_chart(tabName, renderFlag) {
@@ -524,9 +844,9 @@ function create_rtt_chart(tabName, renderFlag) {
 		{
 			type: "column",
 			name: "Freq",
-			// showInLegend: true,
-			// legendText: "Freq",
-			// visible: false, //***hidden
+			/*  showInLegend: true, */
+			/*  legendText: "Freq", */
+			/*  visible: false, ***hidden */
 			data: freqData,
 			color: Highcharts.getOptions().colors[0]
 		},
@@ -535,8 +855,8 @@ function create_rtt_chart(tabName, renderFlag) {
 			type: "line",
 			name: "PDF",
 			yAxis: 1,
-			// showInLegend: true,
-			// legendText: "PDF",
+			/*  showInLegend: true, */
+			/*  legendText: "PDF", */
 			data: pdfData,
 			color: Highcharts.getOptions().colors[3]
 		},
@@ -545,14 +865,14 @@ function create_rtt_chart(tabName, renderFlag) {
 			type: "line",
 			name: "CDF",
 			yAxis: 1,
-			// showInLegend: true,
-			// legendText: "CDF",
+			/*  showInLegend: true, */
+			/*  legendText: "CDF", */
 			data: cdfData,
 			color: Highcharts.getOptions().colors[2]
 		},
 
 	]
-	create_highchart(RTT_CHART_ID,tabName, chartData, RTT_CHART_ID)
+	create_highchart(RTT_CHART_ID, tabName, chartData, RTT_CHART_ID)
 
 
 
@@ -597,7 +917,7 @@ function create_mode_chart(tabName, renderFlag) {
 		},
 
 	]
-	create_highchart(MODE_CHART_ID,tabName, chartData, MODE_CHART_ID)
+	create_highchart(MODE_CHART_ID, tabName, chartData, MODE_CHART_ID)
 
 }
 function create_chan_chart(tabName, renderFlag) {
@@ -644,7 +964,7 @@ function create_chan_chart(tabName, renderFlag) {
 		},
 
 	]
-	create_highchart(CHAN_CHART_ID,tabName, chartData, CHAN_CHART_ID)
+	create_highchart(CHAN_CHART_ID, tabName, chartData, CHAN_CHART_ID)
 
 }
 
@@ -699,7 +1019,7 @@ function create_buffer_chart(tabName, renderFlag) {
 		},
 
 	]
-	create_highchart(BUFFER_CHART_ID,tabName, chartData, BUFFER_CHART_ID)
+	create_highchart(BUFFER_CHART_ID, tabName, chartData, BUFFER_CHART_ID)
 
 	console.log('creating buffer alloc')
 	chartData = []
@@ -732,12 +1052,12 @@ function create_buffer_chart(tabName, renderFlag) {
 				{
 					x: item.frt_dec + item.frt_diff / 2.0,
 					y: item.buffer_dec,
-					// dataLabels: { enabled: true, format: '{x} x {y}' }
+					/*  dataLabels: { enabled: true, format: '{x} x {y}' } */
 				},
 				[item.rel_frt, item.buffer_dec],
 				[item.rel_frt, 0],
 
-				// [item.ts_txend, 1],
+				/*  [item.ts_txend, 1], */
 
 			],
 			states: {
@@ -754,8 +1074,8 @@ function create_buffer_chart(tabName, renderFlag) {
 			lineWidth: 0.25,
 			fillOpacity: 0.1,
 			tooltip: {
-				// split: true,
-				// followPointer: true,
+				/*  split: true, */
+				/*  followPointer: true, */
 				useHTML: true,
 				headerFormat: '<span style="color: {series.color}">{series.name} </span>: 0x' + item.buffer_dec.toString(16),
 				pointFormat: '<br><span>claimedFRT: ' + item.frt_dec + '</span><br> releasedFRT:' + item.rel_frt + '<br>Dur: ' + item.frt_diff + " usec"
@@ -763,7 +1083,7 @@ function create_buffer_chart(tabName, renderFlag) {
 		})
 	});
 
-	create_highchart(BUFFER_CHART_ID+"2",tabName, chartData, BUFFER_CHART_ID+"2")
+	create_highchart(BUFFER_CHART_ID + "2", tabName, chartData, BUFFER_CHART_ID + "2")
 
 }
 
@@ -818,7 +1138,7 @@ function create_cltimings_chart(tabName, renderFlag) {
 			},
 		]
 
-		create_highchart(id,tabName, chartData, id)
+		create_highchart(id, tabName, chartData, id)
 
 	}
 }
@@ -961,7 +1281,7 @@ function create_cltiming_chart(tabName, renderFlag) {
 
 	cnt = 0
 	for (const [key, value] of Object.entries(jsonData.cltimingJson.points_dic)) {
-		// push lollipops data
+		/*  push lollipops data */
 		lollipopData.push({
 			x: value,
 			y: jsonData.cltimingJson.levels_dic[key],
@@ -970,12 +1290,12 @@ function create_cltiming_chart(tabName, renderFlag) {
 			name: jsonData.cltimingJson.names_label_dic[key],
 		})
 
-		// push annotations for lollipop labels
+		/*  push annotations for lollipop labels */
 		annotations.push({
 			labelOptions: {
 				backgroundColor: 'rgba(255,255,0,0.3)',
 				verticalAlign: jsonData.cltimingJson.levels_dic[key] < 0 ? 'top' : 'bottom',
-				// y: 15
+				/*  y: 15 */
 				distance: 10,
 			},
 			labels: [{
@@ -983,7 +1303,7 @@ function create_cltiming_chart(tabName, renderFlag) {
 				text: jsonData.cltimingJson.names_label_dic[key]
 			}]
 		})
-		// push annotations for arrows and its labels
+		/*  push annotations for arrows and its labels */
 		annotations.push({
 			draggable: '',
 
@@ -1005,8 +1325,8 @@ function create_cltiming_chart(tabName, renderFlag) {
 						xAxis: 0,
 						yAxis: 0
 					}],
-				// markerEnd: 'arrow',
-				// markerStart:'diamond',
+				/*  markerEnd: 'arrow', */
+				/*  markerStart:'diamond', */
 
 			}],
 			labelOptions: {
@@ -1035,7 +1355,7 @@ function create_cltiming_chart(tabName, renderFlag) {
 	}
 	/* for min/max/avg */
 	annotations.push({
-		//undefined - delayed value is inherited from plotOptions
+		/* undefined - delayed value is inherited from plotOptions */
 		labelOptions: {
 			backgroundColor: 'rgba(0,0,0,0.8)',
 		},
@@ -1061,7 +1381,7 @@ function create_cltiming_chart(tabName, renderFlag) {
 		},
 
 		showInLegend: false,
-		// color: '#8FBC8F',
+		/*  color: '#8FBC8F', */
 		connectorWidth: 2,
 		fillOpacity: 0.6,
 		toolTip: {
@@ -1071,7 +1391,7 @@ function create_cltiming_chart(tabName, renderFlag) {
 
 	})
 
-	create_highchart(CLTIMING_CHART_ID,tabName, chartData, CLTIMING_CHART_ID, annotations_arr = annotations)
+	create_highchart(CLTIMING_CHART_ID, tabName, chartData, CLTIMING_CHART_ID, annotations_arr = annotations)
 
 }
 
@@ -1093,12 +1413,12 @@ function create_timeline_chart(tabName, renderFlag) {
 				{
 					x: item.ts_txstart + item.tx_dur / 2.0,
 					y: 1,
-					// dataLabels: { enabled: true, format: '{x} x {y}' }
+					/*  dataLabels: { enabled: true, format: '{x} x {y}' } */
 				},
 				[item.ts_txend, 1],
 				[item.ts_txend, 0],
 
-				// [item.ts_txend, 1],
+				/*  [item.ts_txend, 1], */
 
 			],
 			states: {
@@ -1132,12 +1452,12 @@ function create_timeline_chart(tabName, renderFlag) {
 				{
 					x: item.ts_rxstart + item.rx_dur / 2.0,
 					y: -1,
-					// dataLabels: { enabled: true, format: '{x} x {y}',},
+					/*  dataLabels: { enabled: true, format: '{x} x {y}',}, */
 					toolTip: false
 				},
 				[item.ts_rxend, -1],
 				[item.ts_rxend, 0]
-				// [item.ts_rxend, -1],
+				/*  [item.ts_rxend, -1], */
 
 			],
 			turboThreshold: 0,
@@ -1152,7 +1472,7 @@ function create_timeline_chart(tabName, renderFlag) {
 			name: "RX",
 			color: item.color,
 			tooltip: {
-				// followPointer: true,
+				/*  followPointer: true, */
 				useHTML: true,
 				headerFormat: '<span style="color: {series.color}">{series.name}</span>: ',
 				pointFormat: '<span>FRT: {point.x}</span><br>' + item.hoverinfo
@@ -1163,7 +1483,7 @@ function create_timeline_chart(tabName, renderFlag) {
 	jsonData.timeline_clStartEndJson.forEach(item => {
 		chartData.push({
 			type: 'area',
-			// findNearestPointBy: 'xy',
+			/*  findNearestPointBy: 'xy', */
 			data: [
 				[item.clstart, 0], [item.clstart, 3],
 				{
@@ -1180,7 +1500,7 @@ function create_timeline_chart(tabName, renderFlag) {
 					opacity: 0.8
 				}
 			},
-			// dataLabels: { enabled: true, format: item.hoverinfo, inside: true },
+			/*  dataLabels: { enabled: true, format: item.hoverinfo, inside: true }, */
 			zIndex: 1,
 			showInLegend: false,
 			grouping: true,
@@ -1190,9 +1510,9 @@ function create_timeline_chart(tabName, renderFlag) {
 
 			turboThreshold: 0,
 
-			// tooltip:null
+			/*  tooltip:null */
 			tooltip: {
-				// followPointer: true,
+				/*  followPointer: true, */
 				useHTML: true,
 				headerFormat: '<span style="color: rgba(170, 135, 54,1)">{series.name}</span>: ',
 				pointFormat: '<span>FRT: {point.x}</span> ' + item.hoverinfo
@@ -1217,7 +1537,7 @@ function create_timeline_chart(tabName, renderFlag) {
 	chartData.push({
 		type: "scatter",
 		findNearestPointBy: 'xy',
-		// axisYType: 'primary',
+		/*  axisYType: 'primary', */
 		name: "phyData Indications",
 		showInLegend: true,
 		states: {
@@ -1225,16 +1545,16 @@ function create_timeline_chart(tabName, renderFlag) {
 				opacity: 0.8
 			}
 		},
-		visible: false, //***hidden
+		visible: false, /* ***hidden */
 		data: dataPoints,
 		tooltip: {
 			headerFormat: '<span style="font-size:10px">FRT: {point.key}</span><table>',
 			pointFormat: '<tr><td style="color:{series.color};padding:0">{point.info} </td></tr>',
 			footerFormat: '</table>',
-			// shared: true,
+			/*  shared: true, */
 			useHTML: true,
 			followPointer: false,
-			// outside: true
+			/*  outside: true */
 		},
 		marker: {
 			symbol: "triangle"
@@ -1258,7 +1578,7 @@ function create_timeline_chart(tabName, renderFlag) {
 	chartData.push({
 		type: "scatter",
 		findNearestPointBy: 'xy',
-		// axisYType: 'primary',
+		/*  axisYType: 'primary', */
 		name: "CL Traces",
 		showInLegend: true,
 		states: {
@@ -1270,22 +1590,22 @@ function create_timeline_chart(tabName, renderFlag) {
 			symbol: "triangle-down"
 		},
 		color: "red",
-		visible: false, //***hidden
+		visible: false, /* ***hidden */
 		data: dataPoints,
 		tooltip: {
 			headerFormat: '<span style="font-size:10px">FRT: {point.key}, CL id {point.clid}</span><table>',
 			pointFormat: '<tr><td style="color:{series.color};padding:0">{point.info} </td></tr>',
 			footerFormat: '</table>',
-			// shared: true,
+			/*  shared: true, */
 			useHTML: true,
 			followPointer: false,
-			// outside: true
+			/*  outside: true */
 		},
 		turboThreshold: 0,
 
 	})
 
-	create_highchart(TIMELINE_CHART_ID,tabName, chartData, TIMELINE_CHART_ID)
+	create_highchart(TIMELINE_CHART_ID, tabName, chartData, TIMELINE_CHART_ID)
 	console.log('creating timeline chart END')
 
 
@@ -1315,15 +1635,15 @@ window.onload = function () {
 	document.getElementById("firstTab").click();
 
 	$(document).on("click", ".removeMkrBtnClass", function (event) {
-		// console.log("clicked",event)
-		// console.log($(this))
+		/*  console.log("clicked",event) */
+		/*  console.log($(this)) */
 		parentRow = $(this).parent().parent().parent()
 		id = parentRow.attr('id').split('-')
 		$(`.marker${id[1]}Line`).remove()
 		$(`.marker${id[2]}Line`).remove()
 		$(`.markerLabel${id[1]}`).remove()
 		$(`.markerLabel${id[2]}`).remove()
-		// console.log("parent", parentRow.attr('id'))
+		/*  console.log("parent", parentRow.attr('id')) */
 		parentRow.remove()
 
 	});
@@ -1351,10 +1671,11 @@ window.onload = function () {
 		}
 	});
 
-	$('.popover-dismiss').popover({
-		trigger: 'focus'
-	  })
+	/* pie charts */
+	drawPieChart()
+
 
 }
+
 
 
