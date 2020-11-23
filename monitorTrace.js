@@ -1601,6 +1601,8 @@ function create_timeline_chart(tabName, renderFlag) {
 
 
 }
+
+/* function trigerred when clicked on the tab */
 function openGraph(evt, tabName) {
 	var i, tabcontent, tablinks;
 	tabcontent = document.getElementsByClassName("tabcontent");
@@ -1620,25 +1622,35 @@ function openGraph(evt, tabName) {
 
 }
 
+/* when everything is loaded */
 window.onload = function () {
-	console.log("document ready");
 
+	/* pie charts */
+	drawPieChart();
+
+	/* trigger a click on the first tab to show*/
 	document.getElementById("firstTab").click();
 
+	/* remove marker handler */
 	$(document).on("click", ".removeMkrBtnClass", function (event) {
-		/*  console.log("clicked",event) */
-		/*  console.log($(this)) */
 		parentRow = $(this).parent().parent().parent();
 		id = parentRow.attr('id').split('-');
 		$(`.marker${id[1]}Line`).remove();
 		$(`.marker${id[2]}Line`).remove();
 		$(`.markerLabel${id[1]}`).remove();
 		$(`.markerLabel${id[2]}`).remove();
-		/*  console.log("parent", parentRow.attr('id')) */;
 		parentRow.remove();
 
 	});
 
+	/* remove all markers handler */
+	$(document).on("click", "#removeAllMarkers", function (event) {
+		$('.marker').remove();
+		$('.markerLabel').remove();
+		markerCnt = 0;
+	});
+
+	/* refreshing the page */
 	refreshIntv = $('#refreshIntvDur').val() * $('#refreshIntUnit').val() * 1000;
 	console.log("refreshIntv", refreshIntv);
 	if (refreshIntv > 0) {
@@ -1647,11 +1659,7 @@ window.onload = function () {
 		}, refreshIntv);
 	}
 
-	$(document).on("click", "#removeAllMarkers", function (event) {
-		$('.marker').remove();
-		$('.markerLabel').remove();
-	});
-
+	/* handle change in the refresh interval */
 	$(document).on("change", "#refreshIntvDur", function (event) {
 		refreshIntv = $('#refreshIntvDur').val() * $('#refreshIntUnit').val() * 1000;
 		if (typeof refreshTimer !== 'undefined') clearTimeout(refreshTimer);
@@ -1661,10 +1669,6 @@ window.onload = function () {
 			}, refreshIntv);
 		}
 	});
-
-	/* pie charts */
-	drawPieChart();
-
 
 }
 
