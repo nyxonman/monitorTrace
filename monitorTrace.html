@@ -49,9 +49,8 @@
 			position: -webkit-sticky;
 			position: sticky;
 			top: 0;
-			z-index: 1020;
+			z-index: 1050;
 		}
-
 
 		.section-padding {
 			padding: 1rem 0;
@@ -59,6 +58,12 @@
 
 		.header {
 			padding-top: 10px;
+		}
+		.modal-tip{
+			cursor: pointer;
+		}
+		.modal-tip:hover{
+			color:orange;
 		}
 
 		.dashboard-counts .count-number {
@@ -105,6 +110,10 @@
 			padding: 6px 12px;
 			border: 1px solid #ccc;
 			border-top: none;
+		}
+
+		.markerTable {
+			margin-top: 12px;
 		}
 
 		.markerTableList {
@@ -169,12 +178,44 @@
 			<div class="row header">
 				<div class="col-sm-4">
 					<h3 class="text-white">Gen5Riva <span class="subtitle">MonitorTrace</span> <i
-							class="fas fa-info-circle"></i>
+							class="fas fa-info-circle modal-tip" data-toggle="modal" data-target="#monitorTraceTips" title="G5R MonitorTrace Tips"></i>
 					</h3>
+				</div>
+
+				<!-- Modal -->
+				<div class="modal fade" id="monitorTraceTips" tabindex="-1" role="dialog"
+					aria-labelledby="monitorTraceTipsTitle" aria-hidden="true">
+					<div class="modal-dialog modal-dialog-centered" role="document">
+						<div class="modal-content">
+							<div class="modal-header">
+								<h5 class="modal-title" id="exampleModalLongTitle">G5R Monitor Trace Tips Info</h5>
+								<button type="button" class="close" data-dismiss="modal" aria-label="Close">
+									<span aria-hidden="true">&times;</span>
+								</button>
+							</div>
+							<div class="modal-body">
+								<ul class="list-group">
+									<li class="list-group-item list-group-item-info"><u><b>To Zoom,</b></u> Left Click on a chart and move right or left</li>
+									<li class="list-group-item list-group-item-info"><u><b>To Pan,</b></u> Ctrl+ Left Click on a chart and move right or left</li>
+									<li class="list-group-item list-group-item-info"><u><b>To Reset Zoom/Pan.,</b></u> Left Click on a Reset zoom buton on the chart</li>
+									<li class="list-group-item list-group-item-info"><u><b>To Add a Marker,</b></u> Shift + Left Click on a chart. Available only in line charts</li>
+									<li class="list-group-item list-group-item-info"><u><b>To remove one marker,</b></u> Click on the x on marker in the 'Marker List' table </li>
+									<li class="list-group-item list-group-item-info"><u><b>To remove all markers,</b></u> Click on the Remove All Marker in the top</li>
+									<li class="list-group-item list-group-item-info"><u><b>To highlight a particlur series,</b></u> Hover on the series name in the legend</li>
+									<li class="list-group-item list-group-item-info"><u><b>To hide/show a particlur series,</b></u> Click on the series name in the legend</li>
+								</ul>
+
+							</div>
+							<div class="modal-footer">
+								<button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+							</div>
+						</div>
+					</div>
 				</div>
 				<div class="offset-sm-4 col-sm-1 ">
 
-					<button class="btn btn-sm btn-outline-warning float-right" id="removeAllMarkers">Remove all Markers</button>
+					<button class="btn btn-sm btn-outline-warning float-right" id="removeAllMarkers">Remove all
+						Markers</button>
 				</div>
 
 				<div class=" col-sm-3">
@@ -214,65 +255,30 @@
 				<div class="container-fluid">
 					<div class="row">
 						<!-- Count item widget-->
-						<div class="col-xl-2 col-md-3 col-sm-4 col-6">
-							<div class="wrapper count-title d-flex">
-								<div class="icon"><span class="glyphicon glyphicon-search" aria-hidden="true"></span>
-								</div>
-								<div class="name"><strong class="text-uppercase">Total CL</strong>
-									<div class="count-number">25</div>
-								</div>
-							</div>
+						<div class="col-md-3 ">
+
+							<div id="clpietotal" class="pieChartContainer"></div>
+
 						</div>
 						<!-- Count item widget-->
-						<div class="col-xl-2 col-md-4 col-6">
-							<div class="wrapper count-title d-flex">
-								<div class="icon"><i class="icon-padnote"></i></div>
-								<div class="name"><strong class="text-uppercase">Work Orders</strong><span>Last 5
-										days</span>
-									<div class="count-number">400</div>
-								</div>
-							</div>
+						<div class="col-md-3 ">
+
+							<div id="clpiedatareqresp" class="pieChartContainer"></div>
+
 						</div>
 						<!-- Count item widget-->
-						<div class="col-xl-2 col-md-4 col-6">
-							<div class="wrapper count-title d-flex">
-								<div class="icon"><i class="icon-check"></i></div>
-								<div class="name"><strong class="text-uppercase">New Quotes</strong><span>Last 2
-										months</span>
-									<div class="count-number">342</div>
-								</div>
-							</div>
+						<div class="col-md-3 ">
+
+							<div id="clpietxrx" class="pieChartContainer"></div>
+
 						</div>
 						<!-- Count item widget-->
-						<div class="col-xl-2 col-md-4 col-6">
-							<div class="wrapper count-title d-flex">
-								<div class="icon"><i class="icon-bill"></i></div>
-								<div class="name"><strong class="text-uppercase">New Invoices</strong><span>Last 2
-										days</span>
-									<div class="count-number">123</div>
-								</div>
-							</div>
+						<div class="col-md-3 ">
+
+							<div id="clpietxdone" class="pieChartContainer"></div>
+
 						</div>
-						<!-- Count item widget-->
-						<div class="col-xl-2 col-md-4 col-6">
-							<div class="wrapper count-title d-flex">
-								<div class="icon"><i class="icon-list"></i></div>
-								<div class="name"><strong class="text-uppercase">Open Cases</strong><span>Last 3
-										months</span>
-									<div class="count-number">92</div>
-								</div>
-							</div>
-						</div>
-						<!-- Count item widget-->
-						<div class="col-xl-2 col-md-4 col-6">
-							<div class="wrapper count-title d-flex">
-								<div class="icon"><i class="icon-list-1"></i></div>
-								<div class="name"><strong class="text-uppercase">New Cases</strong><span>Last 7
-										days</span>
-									<div class="count-number">70</div>
-								</div>
-							</div>
-						</div>
+
 					</div>
 				</div>
 			</section>
@@ -391,7 +397,7 @@
 	<script src="https://code.highcharts.com/modules/dumbbell.js"></script>
 	<script src="https://code.highcharts.com/modules/lollipop.js"></script>
 	<script src="https://code.highcharts.com/modules/annotations.js"></script>
-
+	<script src="http://code.highcharts.com/modules/drilldown.js"></script>
 
 	<script type="text/javascript" src="./myJson.js"></script>
 	<script type="text/javascript" src="./monitorTrace.js"></script>
