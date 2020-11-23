@@ -1,21 +1,19 @@
-
-
-console.log("jsonData", jsonData)
-RTT_CHART_ID = 'rtt'
-MODE_CHART_ID = 'mode'
-CHAN_CHART_ID = 'chan'
-TIMELINE_CHART_ID = 'timeline'
-BUFFER_CHART_ID = "buffer"
-CLTIMING_CHART_ID = "cltiming"
-CLTIMINGS_CHART_ID = "cltimings"
-TARGET2TXPHR_CHART_ID = "target2txphr"
-TXEND2RXSTART_CHART_ID = "txend2rxstart"
-RXEND2TARGETTIME_CHART_ID = "rxend2targettime"
-RXEND2TXTIME_CHART_ID = "rxend2txtime"
-TXCALL2TARGETTIME_CHART_ID = "txcall2targettime"
-RXEND2TXCALL_CHART_ID = "rxend2txcall"
-RXCALL2AFTERRX_CHART_ID = "rxcall2afterrx"
-CL_DUR_CHART_ID = "cl_dur"
+console.log("jsonData", jsonData);
+RTT_CHART_ID = 'rtt';
+MODE_CHART_ID = 'mode';
+CHAN_CHART_ID = 'chan';
+TIMELINE_CHART_ID = 'timeline';
+BUFFER_CHART_ID = "buffer";
+CLTIMING_CHART_ID = "cltiming";
+CLTIMINGS_CHART_ID = "cltimings";
+TARGET2TXPHR_CHART_ID = "target2txphr";
+TXEND2RXSTART_CHART_ID = "txend2rxstart";
+RXEND2TARGETTIME_CHART_ID = "rxend2targettime";
+RXEND2TXTIME_CHART_ID = "rxend2txtime";
+TXCALL2TARGETTIME_CHART_ID = "txcall2targettime";
+RXEND2TXCALL_CHART_ID = "rxend2txcall";
+RXCALL2AFTERRX_CHART_ID = "rxcall2afterrx";
+CL_DUR_CHART_ID = "cl_dur";
 
 /*  types of charts */
 charts = {
@@ -36,7 +34,7 @@ datasets = {
 	"timeline": [],
 	"buffer": [],
 	'modechan': [],
-}
+};
 
 /*  chart options for different charts */
 chartOptions = {
@@ -209,7 +207,7 @@ function drawChart(chartId, tabName, renderFlag) {
 			break;
 		case CHAN_CHART_ID:
 			create_chan_chart(tabName, renderFlag);
-			break
+			break;
 		case TIMELINE_CHART_ID:
 			create_timeline_chart(tabName, renderFlag);
 			break;
@@ -229,20 +227,20 @@ function drawChart(chartId, tabName, renderFlag) {
 }
 
 
-var markerCnt = 0
+var markerCnt = 0;
 
 function create_marker_line(tabName, markerNum, frt, markerColor, id) {
 
-	var markerListDiv = document.getElementById('markersList' + '-' + tabName)
-	var firstMarkerNum = 0
+	var markerListDiv = document.getElementById('markersList' + '-' + tabName);
+	var firstMarkerNum = 0;
 	var secondMarkerNum = 0;
 	var firstMarkerElem, secondMarkerElem;
 	var firstMarkerVal = 0, secondMarkerVal = 0;
 
 	/* create the marker div */
 	if (markerNum % 2 != 0) {
-		firstMarkerNum = markerNum
-		secondMarkerNum = markerNum + 1
+		firstMarkerNum = markerNum;
+		secondMarkerNum = markerNum + 1;
 		lineHtml = `<div class="marker col-sm-6 " style="border:2px solid ${markerColor}"id="divMarkerVal-${firstMarkerNum}-${secondMarkerNum}">
 			<div class="row">
 				<div class="col-sm-3"> M${firstMarkerNum}: <span name="marker1" class="markerVal" id="marker${firstMarkerNum}Val"> </span></div>
@@ -250,71 +248,71 @@ function create_marker_line(tabName, markerNum, frt, markerColor, id) {
 				<div class="col-sm-6"> Delta: <span class= "deltaVal" id="deltaVal${firstMarkerNum}${secondMarkerNum}"> </span>
 				<i style="color:${markerColor};" class="fas fa-backspace fs-lg removeMkrBtnClass float-right" id="removeMkrBtn${firstMarkerNum}${secondMarkerNum}"></i></div>
 			</div>
-		</div>`
+		</div>`;
 
-		markerListDiv.innerHTML = markerListDiv.innerHTML + lineHtml
+		markerListDiv.innerHTML = markerListDiv.innerHTML + lineHtml;
 	} else {
-		firstMarkerNum = markerNum - 1
-		secondMarkerNum = markerNum
+		firstMarkerNum = markerNum - 1;
+		secondMarkerNum = markerNum;
 	}
 
-	firstMarkerElem = document.getElementById(`marker${firstMarkerNum}Val`)
-	secondMarkerElem = document.getElementById(`marker${secondMarkerNum}Val`)
+	firstMarkerElem = document.getElementById(`marker${firstMarkerNum}Val`);
+	secondMarkerElem = document.getElementById(`marker${secondMarkerNum}Val`);
 
 	if (markerNum % 2 != 0) {
-		firstMarkerVal = parseInt(frt, 10)
-		firstMarkerElem.innerHTML = firstMarkerVal
-		secondMarkerVal = document.getElementById(`marker${secondMarkerNum}Val`).innerHTML
+		firstMarkerVal = parseInt(frt, 10);
+		firstMarkerElem.innerHTML = firstMarkerVal;
+		secondMarkerVal = document.getElementById(`marker${secondMarkerNum}Val`).innerHTML;
 	} else {
-		firstMarkerVal = document.getElementById(`marker${firstMarkerNum}Val`).innerHTML
-		secondMarkerVal = parseInt(frt, 10)
-		secondMarkerElem.innerHTML = secondMarkerVal
+		firstMarkerVal = document.getElementById(`marker${firstMarkerNum}Val`).innerHTML;
+		secondMarkerVal = parseInt(frt, 10);
+		secondMarkerElem.innerHTML = secondMarkerVal;
 	}
 
 	if (firstMarkerVal != 0 && secondMarkerVal != 0) {
-		var delta = parseInt(secondMarkerVal) - parseInt(firstMarkerVal)
-		var signStr = Math.sign(delta) == -1 ? "-" : ""
-		var deltaElem = document.getElementById(`deltaVal${firstMarkerNum}${secondMarkerNum}`)
-		var deltaSec = 0
-		var deltaMs = 0
-		var deltaUs = 0
-		var deltaStr = delta + ' usec ('
-		var deltaMsStr = ''
-		var deltaSecStr = ''
-		var deltaUsStr = delta + 'usec '
-		var extra = 0
+		var delta = parseInt(secondMarkerVal) - parseInt(firstMarkerVal);
+		var signStr = Math.sign(delta) == -1 ? "-" : "";
+		var deltaElem = document.getElementById(`deltaVal${firstMarkerNum}${secondMarkerNum}`);
+		var deltaSec = 0;
+		var deltaMs = 0;
+		var deltaUs = 0;
+		var deltaStr = delta + ' usec (';
+		var deltaMsStr = '';
+		var deltaSecStr = '';
+		var deltaUsStr = delta + 'usec ';
+		var extra = 0;
 
-		delta = Math.abs(delta)
+		delta = Math.abs(delta);
 		if (delta > 1000) {
-			deltaMs = parseInt(delta / 1000, 10)
-			deltaUs = delta % 1000
-			deltaMsStr = deltaMs + "ms "
-			extra = 1
+			deltaMs = parseInt(delta / 1000, 10);
+			deltaUs = delta % 1000;
+			deltaMsStr = deltaMs + "ms ";
+			extra = 1;
 		}
 
 		if (deltaMs > 1000) {
-			deltaSec = parseInt(deltaMs / 1000, 10)
-			deltaMs = deltaMs % 1000
-			deltaSecStr = deltaSec + " sec "
-			deltaMsStr = deltaMs + "ms "
+			deltaSec = parseInt(deltaMs / 1000, 10);
+			deltaMs = deltaMs % 1000;
+			deltaSecStr = deltaSec + " sec ";
+			deltaMsStr = deltaMs + "ms ";
 		}
 		if (deltaUs <= 0) {
-			deltaUs = ''
-			deltaUsStr = ''
+			deltaUs = '';
+			deltaUsStr = '';
 		} else {
-			deltaUsStr = deltaUs + "us"
+			deltaUsStr = deltaUs + "us";
 		}
 
-		deltaStr = extra ? delta + " ( " + deltaSecStr + deltaMsStr + deltaUsStr + " )" : delta
-		deltaElem.innerHTML = signStr + deltaStr
+		deltaStr = extra ? delta + " ( " + deltaSecStr + deltaMsStr + deltaUsStr + " )" : delta;
+		deltaElem.innerHTML = signStr + deltaStr;
 	}
 
 }
 var redrawEnabled = true;
 
 function create_pie_highchart(id, chartData, dd_data = [], containerDiv = 'container', annotations_arr = []) {
-	console.log(id, chartData, dd_data)
-	var pie_colors = [ "#44A9A8","#F7A35C", "#90ed7d", "#f7a35c","#e4d354",  "#f45b5b", "#91e8e1" ]
+	console.log(id, chartData, dd_data);
+	var pie_colors = [ "#44A9A8","#F7A35C", "#90ed7d", "#f7a35c","#e4d354",  "#f45b5b", "#91e8e1" ];
 
 	chart = Highcharts.chart(containerDiv, {
 		credits: {
@@ -366,16 +364,11 @@ function create_pie_highchart(id, chartData, dd_data = [], containerDiv = 'conta
 
 	});
 
-	/*  Create the chart */
-
-
-	/*  charts[id] = chart */
-
 }
 
 
 function create_highchart(id, tabName, chartData, containerDiv = 'container', annotations_arr = []) {
-	console.log(id, tabName, chartData)
+	console.log(id, tabName, chartData);
 
 	chart = Highcharts.chart(containerDiv, {
 		credits: {
@@ -419,13 +412,13 @@ function create_highchart(id, tabName, chartData, containerDiv = 'container', an
 					var border = 60000000;
 					var boostEnabled;
 
-					var diff = extremes.userMax - extremes.userMin
+					var diff = extremes.userMax - extremes.userMin;
 					if (Number.isNaN(diff))
-						diff = extremes.max - extremes.min
-					boostEnabled = diff < border ? 0 : 1
+						diff = extremes.max - extremes.min;
+					boostEnabled = diff < border ? 0 : 1;
 
 					if (redrawEnabled) {
-						redrawEnabled = false
+						redrawEnabled = false;
 						this.update({
 							boost: {
 								enabled: boostEnabled
@@ -436,23 +429,23 @@ function create_highchart(id, tabName, chartData, containerDiv = 'container', an
 							/*    } */
 							/*  } */
 						});
-						redrawEnabled = true
+						redrawEnabled = true;
 					}
 				},
 				click: function (e) {
-					if (!e.shiftKey && !e.ctrlKey) return
+					if (!e.shiftKey && !e.ctrlKey) return;
 					let chart = this;
 					let xAxis = chart.xAxis[0];
 					let xValue = xAxis.toValue(this.mouseDownX);
 
 					let clickX = 0;
 					if (markerCnt % 2 == 0)
-						colorCnt = markerCnt % 10
+						colorCnt = markerCnt % 10;
 					else
-						colorCnt = (markerCnt - 1) % 10
-					markerColor = Highcharts.getOptions().colors[colorCnt]
-					markerCnt++
-					create_marker_line(tabName, markerCnt, xValue, markerColor, id)
+						colorCnt = (markerCnt - 1) % 10;
+					markerColor = Highcharts.getOptions().colors[colorCnt];
+					markerCnt++;
+					create_marker_line(tabName, markerCnt, xValue, markerColor, id);
 
 					xAxis.addPlotLine({
 						value: xValue,
@@ -562,7 +555,7 @@ function create_highchart(id, tabName, chartData, containerDiv = 'container', an
 
 	});
 
-	charts[id] = chart
+	charts[id] = chart;
 
 }
 
@@ -571,21 +564,21 @@ function drawPieChart_cl_newend() {
 
 	if (!jsonData.clstatsJson.hasOwnProperty('CL_NEW_END')) return;
 
-	jsonData_clnewend = jsonData.clstatsJson.CL_NEW_END
+	jsonData_clnewend = jsonData.clstatsJson.CL_NEW_END;
 
-	dd_clouts_data = []
+	dd_clouts_data = [];
 	for (const [key, value] of Object.entries(jsonData_clnewend.CL_NEW.drilldown.CL_OUT.drilldown)) {
 		dd_clouts_data.push({
 			name: key,
 			y: value
-		})
+		});
 	}
-	dd_clends_data = []
+	dd_clends_data = [];
 	for (const [key, value] of Object.entries(jsonData_clnewend.CL_END.drilldown)) {
 		dd_clends_data.push({
 			name: key,
 			y: value
-		})
+		});
 	}
 
 	/*  create CL PIE CHART */
@@ -611,7 +604,7 @@ function drawPieChart_cl_newend() {
 			],
 		},
 
-	]
+	];
 	dd_data = [
 		{
 			name: "CL NEW",
@@ -643,8 +636,8 @@ function drawPieChart_cl_newend() {
 			data: dd_clends_data
 
 		}
-	]
-	create_pie_highchart("clpietotal", chartData, dd_data, 'clpietotal')
+	];
+	create_pie_highchart("clpietotal", chartData, dd_data, 'clpietotal');
 
 }
 
@@ -652,14 +645,14 @@ function drawPieChart_cl_data_reqresp() {
 
 	if (!jsonData.clstatsJson.hasOwnProperty('CL_DATA_REQ_RESP')) return;
 
-	cl_data_reqresp_stats = jsonData.clstatsJson.CL_DATA_REQ_RESP
+	cl_data_reqresp_stats = jsonData.clstatsJson.CL_DATA_REQ_RESP;
 
-	dd_cldata_reqresp_data = []
+	dd_cldata_reqresp_data = [];
 	for (const [key, value] of Object.entries(cl_data_reqresp_stats.CL_DATA_RESP.drilldown)) {
 		dd_cldata_reqresp_data.push({
 			name: key,
 			y: value
-		})
+		});
 	}
 
 	/*  create CL PIE CHART */
@@ -683,7 +676,7 @@ function drawPieChart_cl_data_reqresp() {
 			],
 		},
 
-	]
+	];
 	dd_data = [
 		{
 			name: "DATARESP",
@@ -691,29 +684,29 @@ function drawPieChart_cl_data_reqresp() {
 			id: "dd_cl_data_resp",
 			data: dd_cldata_reqresp_data
 		}
-	]
-	create_pie_highchart("clpiedatareqresp", chartData, dd_data, 'clpiedatareqresp')
+	];
+	create_pie_highchart("clpiedatareqresp", chartData, dd_data, 'clpiedatareqresp');
 
 }
 function drawPieChart_cl_tx_rx() {
 
 	if (!jsonData.clstatsJson.hasOwnProperty('CL_TX_RX')) return;
 
-	jsonData_cltxrx = jsonData.clstatsJson.CL_TX_RX
+	jsonData_cltxrx = jsonData.clstatsJson.CL_TX_RX;
 
-	dd_cltx_data = []
+	dd_cltx_data = [];
 	for (const [key, value] of Object.entries(jsonData_cltxrx.CL_TX.drilldown)) {
 		dd_cltx_data.push({
 			name: key,
 			y: value
-		})
+		});
 	}
-	dd_clrx_data = []
+	dd_clrx_data = [];
 	for (const [key, value] of Object.entries(jsonData_cltxrx.CL_RX.drilldown)) {
 		dd_clrx_data.push({
 			name: key,
 			y: value
-		})
+		});
 	}
 
 	/*  create CL PIE CHART */
@@ -738,7 +731,7 @@ function drawPieChart_cl_tx_rx() {
 			],
 		},
 
-	]
+	];
 	dd_data = [
 		{
 			name: "TX",
@@ -751,22 +744,21 @@ function drawPieChart_cl_tx_rx() {
 			id: "dd_cl_rx",
 			data: dd_clrx_data
 		}
-	]
-	create_pie_highchart("clpietxrx", chartData, dd_data, 'clpietxrx')
-
+	];
+	create_pie_highchart("clpietxrx", chartData, dd_data, 'clpietxrx');
 }
 function drawPieChart_cl_txdone() {
 
 	if (!jsonData.clstatsJson.hasOwnProperty('CL_TXDONE')) return;
 
-	jsonData_cltxdone = jsonData.clstatsJson.CL_TXDONE
+	jsonData_cltxdone = jsonData.clstatsJson.CL_TXDONE;
 
-	dd_cltx_done = []
+	dd_cltx_done = [];
 	for (const [key, value] of Object.entries(jsonData_cltxdone.drilldown)) {
 		dd_cltx_done.push({
 			name: key,
 			y: value
-		})
+		});
 	}
 
 
@@ -788,7 +780,7 @@ function drawPieChart_cl_txdone() {
 			],
 		},
 
-	]
+	];
 	dd_data = [
 		{
 			name: "TX",
@@ -796,29 +788,29 @@ function drawPieChart_cl_txdone() {
 			id: "dd_cl_txdone",
 			data: dd_cltx_done
 		}
-	]
-	create_pie_highchart("clpietxdone", chartData, dd_data, 'clpietxdone')
+	];
+	create_pie_highchart("clpietxdone", chartData, dd_data, 'clpietxdone');
 
 }
 
 function drawPieChart() {
 	if (!jsonData.hasOwnProperty('clstatsJson')) return;
 
-	clstats = jsonData.clstatsJson
-	console.log('clstats ', clstats)
+	clstats = jsonData.clstatsJson;
+	console.log('clstats ', clstats);
 
 	/*  CL NEW END */
-	var totalCL = clstats.CL_NEW_END.CL_NEW.val + clstats.CL_NEW_END.CL_END.val
-	drawPieChart_cl_newend()
+	var totalCL = clstats.CL_NEW_END.CL_NEW.val + clstats.CL_NEW_END.CL_END.val;
+	drawPieChart_cl_newend();
 
 	/*  CL DATA REQ RESP */
-	drawPieChart_cl_data_reqresp()
+	drawPieChart_cl_data_reqresp();
 
 	/* CL TX RX */
-	drawPieChart_cl_tx_rx()
+	drawPieChart_cl_tx_rx();
 
 	/* CL TXDONE */
-	drawPieChart_cl_txdone()
+	drawPieChart_cl_txdone();
 
 }
 
@@ -828,15 +820,15 @@ function create_rtt_chart(tabName, renderFlag) {
 
 	if (!jsonData.hasOwnProperty('rttJson')) return;
 
-	console.log('creating RTT')
-	let freqData = []
-	let pdfData = []
-	let cdfData = []
-	let x_data = []
+	console.log('creating RTT');
+	let freqData = [];
+	let pdfData = [];
+	let cdfData = [];
+	let x_data = [];
 	jsonData.rttJson.forEach(item => {
-		freqData.push({ x: item.diff, y: item.freq })
-		pdfData.push({ x: item.diff, y: item.pdf })
-		cdfData.push({ x: item.diff, y: item.cdf })
+		freqData.push({ x: item.diff, y: item.freq });
+		pdfData.push({ x: item.diff, y: item.pdf });
+		cdfData.push({ x: item.diff, y: item.cdf });
 	});
 
 	chartData = [
@@ -871,27 +863,27 @@ function create_rtt_chart(tabName, renderFlag) {
 			color: Highcharts.getOptions().colors[2]
 		},
 
-	]
-	create_highchart(RTT_CHART_ID, tabName, chartData, RTT_CHART_ID)
+	];
+	create_highchart(RTT_CHART_ID, tabName, chartData, RTT_CHART_ID);
 
 
 
-	return
+	return;
 
 }
 
 function create_mode_chart(tabName, renderFlag) {
 	if (!jsonData.hasOwnProperty('modeTxJson')) return;
 
-	console.log('creating modechanchart')
-	let modeRxData = []
-	let modeTxData = []
+	console.log('creating modechanchart');
+	let modeRxData = [];
+	let modeTxData = [];
 
-	jsonData.modeRxJson.forEach(item => {
+	jsonData.modeRxJson.forEach(item => {;
 		modeRxData.push({ name: item.mode, y: item.count })
 	});
 	jsonData.modeTxJson.forEach(item => {
-		modeTxData.push({ name: item.mode, y: item.count })
+		modeTxData.push({ name: item.mode, y: item.count });
 	});
 
 	chartData = [
@@ -916,29 +908,29 @@ function create_mode_chart(tabName, renderFlag) {
 			color: Highcharts.getOptions().colors[3]
 		},
 
-	]
-	create_highchart(MODE_CHART_ID, tabName, chartData, MODE_CHART_ID)
+	];
+	create_highchart(MODE_CHART_ID, tabName, chartData, MODE_CHART_ID);
 
 }
 function create_chan_chart(tabName, renderFlag) {
 	if (!jsonData.hasOwnProperty('chanTxJson')) return;
 
-	console.log('creating chanchanchart')
-	let chanRxData = []
-	let chanTxData = []
+	console.log('creating chanchanchart');
+	let chanRxData = [];
+	let chanTxData = [];
 
 	jsonData.chanRxJson.forEach(item => {
-		chanRxData.push({ label: item.chan, y: item.count })
+		chanRxData.push({ label: item.chan, y: item.count });
 	});
 	jsonData.chanTxJson.forEach(item => {
-		chanTxData.push({ label: item.chan, y: item.count })
+		chanTxData.push({ label: item.chan, y: item.count });
 	});
 
 	jsonData.chanRxJson.forEach(item => {
-		chanRxData.push({ name: item.chan, y: item.count })
+		chanRxData.push({ name: item.chan, y: item.count });
 	});
 	jsonData.chanTxJson.forEach(item => {
-		chanTxData.push({ name: item.chan, y: item.count })
+		chanTxData.push({ name: item.chan, y: item.count });
 	});
 
 	chartData = [
@@ -963,24 +955,24 @@ function create_chan_chart(tabName, renderFlag) {
 			color: Highcharts.getOptions().colors[3]
 		},
 
-	]
-	create_highchart(CHAN_CHART_ID, tabName, chartData, CHAN_CHART_ID)
+	];
+	create_highchart(CHAN_CHART_ID, tabName, chartData, CHAN_CHART_ID);
 
 }
 
 function create_buffer_chart(tabName, renderFlag) {
 	if (!jsonData.hasOwnProperty('buffer_Json')) return;
 
-	console.log('creating buffer summary chart')
-	let bufClaimData = []
-	let bufRelData = []
-	let bufLeakData = []
-	let chartData = []
+	console.log('creating buffer summary chart');
+	let bufClaimData = [];
+	let bufRelData = [];
+	let bufLeakData = [];
+	let chartData = [];
 
 	jsonData.buffer_summaryJson.forEach(item => {
-		bufClaimData.push({ name: item.owner, y: item.buf_claim })
-		bufRelData.push({ name: item.owner, y: item.buf_release })
-		bufLeakData.push({ name: item.owner, y: item.buf_leak })
+		bufClaimData.push({ name: item.owner, y: item.buf_claim });
+		bufRelData.push({ name: item.owner, y: item.buf_release });
+		bufLeakData.push({ name: item.owner, y: item.buf_leak });
 	});
 
 	chartData = [
@@ -1018,11 +1010,11 @@ function create_buffer_chart(tabName, renderFlag) {
 			color: Highcharts.getOptions().colors[5]
 		},
 
-	]
-	create_highchart(BUFFER_CHART_ID, tabName, chartData, BUFFER_CHART_ID)
+	];
+	create_highchart(BUFFER_CHART_ID, tabName, chartData, BUFFER_CHART_ID);
 
-	console.log('creating buffer alloc')
-	chartData = []
+	console.log('creating buffer alloc');
+	chartData = [];
 	buf_colors = {
 		'CL': '#ff0000',
 		'FH': '#00ff00',
@@ -1034,10 +1026,10 @@ function create_buffer_chart(tabName, renderFlag) {
 		"SA": "#dd5182",
 		"ELG": "#ff6e54",
 		"TXBCAST": "#ffa600",
-	}
+	};
 
 	if (!jsonData.hasOwnProperty('buffer_Json')) {
-		return
+		return;
 	}
 
 	/* Buffer allocated area*/
@@ -1083,34 +1075,34 @@ function create_buffer_chart(tabName, renderFlag) {
 		})
 	});
 
-	create_highchart(BUFFER_CHART_ID + "2", tabName, chartData, BUFFER_CHART_ID + "2")
+	create_highchart(BUFFER_CHART_ID + "2", tabName, chartData, BUFFER_CHART_ID + "2");
 
 }
 
 function create_cltimings_chart(tabName, renderFlag) {
-	let freqData = []
-	let pdfData = []
-	let cdfData = []
-	let chartData = []
-	console.log('creating cltimings')
+	let freqData = [];
+	let pdfData = [];
+	let cdfData = [];
+	let chartData = [];
+	console.log('creating cltimings');
 
 	for (const [key, value] of Object.entries(jsonData)) {
-		freqData = []
-		pdfData = []
-		cdfData = []
-		chartData = []
-		let id = ''
+		freqData = [];
+		pdfData = [];
+		cdfData = [];
+		chartData = [];
+		let id = '';
 
 		if (!key.startsWith('cltimings_'))
 			continue;
 
-		id = key.slice(10, -4)
+		id = key.slice(10, -4);
 
 		jsonData[key].forEach(item => {
-			freqData.push({ x: item[id], y: item.freq })
-			pdfData.push({ x: item[id], y: item.pdf })
-			cdfData.push({ x: item[id], y: item.cdf })
-		})
+			freqData.push({ x: item[id], y: item.freq });
+			pdfData.push({ x: item[id], y: item.pdf });
+			cdfData.push({ x: item[id], y: item.cdf });
+		});
 
 		chartData = [
 			/* count */
@@ -1136,9 +1128,9 @@ function create_cltimings_chart(tabName, renderFlag) {
 				data: cdfData,
 				color: Highcharts.getOptions().colors[2]
 			},
-		]
+		];
 
-		create_highchart(id, tabName, chartData, id)
+		create_highchart(id, tabName, chartData, id);
 
 	}
 }
@@ -1146,13 +1138,13 @@ function create_cltimings_chart(tabName, renderFlag) {
 function create_cltiming_chart(tabName, renderFlag) {
 	if (!jsonData.hasOwnProperty('cltimingJson')) return;
 
-	console.log("cltiming", jsonData.cltimingJson)
-	let chartData = []
-	tx_dur = 2000
+	console.log("cltiming", jsonData.cltimingJson);
+	let chartData = [];
+	tx_dur = 2000;
 
-	points_dic = jsonData.cltimingJson.points_dic
-	rx_dur = points_dic['rxEnd'] - (points_dic['rxPHR'])
-	txdiff = points_dic['TxPHR1'] - points_dic['TargetTx1']
+	points_dic = jsonData.cltimingJson.points_dic;
+	rx_dur = points_dic['rxEnd'] - (points_dic['rxPHR']);
+	txdiff = points_dic['TxPHR1'] - points_dic['TargetTx1'];
 	/* POLL ACK DATA */
 	chartData.push({
 		type: 'area',
@@ -1258,11 +1250,11 @@ function create_cltiming_chart(tabName, renderFlag) {
 		tooltip: {
 			enabled: false
 		},
-	})
+	});
 
 	/* lollipop */
-	let lollipopData = []
-	let annotations = []
+	let lollipopData = [];
+	let annotations = [];
 
 	value_levels = {
 		"WrapperCall1": -2,
@@ -1277,9 +1269,9 @@ function create_cltiming_chart(tabName, renderFlag) {
 		"WrapperCall2": 2,
 		"TargetTx2": -2,
 		"TxPHR2": -2,
-	}
+	};
 
-	cnt = 0
+	cnt = 0;
 	for (const [key, value] of Object.entries(jsonData.cltimingJson.points_dic)) {
 		/*  push lollipops data */
 		lollipopData.push({
@@ -1288,7 +1280,7 @@ function create_cltiming_chart(tabName, renderFlag) {
 			color: jsonData.cltimingJson.colors_dic[key],
 			id: key,
 			name: jsonData.cltimingJson.names_label_dic[key],
-		})
+		});
 
 		/*  push annotations for lollipop labels */
 		annotations.push({
@@ -1302,7 +1294,7 @@ function create_cltiming_chart(tabName, renderFlag) {
 				point: key,
 				text: jsonData.cltimingJson.names_label_dic[key]
 			}]
-		})
+		});
 		/*  push annotations for arrows and its labels */
 		annotations.push({
 			draggable: '',
@@ -1349,9 +1341,9 @@ function create_cltiming_chart(tabName, renderFlag) {
 				allowOverlap: true,
 				padding: 2
 			}]
-		})
+		});
 
-		cnt++
+		cnt++;
 	}
 	/* for min/max/avg */
 	annotations.push({
@@ -1365,7 +1357,7 @@ function create_cltiming_chart(tabName, renderFlag) {
 			},
 			text: "min/max/avg"
 		}]
-	})
+	});
 
 
 	chartData.push({
@@ -1389,18 +1381,18 @@ function create_cltiming_chart(tabName, renderFlag) {
 		},
 		enableMouseTracking: false,
 
-	})
+	});
 
-	create_highchart(CLTIMING_CHART_ID, tabName, chartData, CLTIMING_CHART_ID, annotations_arr = annotations)
+	create_highchart(CLTIMING_CHART_ID, tabName, chartData, CLTIMING_CHART_ID, annotations_arr = annotations);
 
 }
 
 function create_timeline_chart(tabName, renderFlag) {
 	if (!jsonData.hasOwnProperty('timeline_clStartEndJson')) return;
 
-	console.log('creating timeline chart')
-	let chartData = []
-	let dataPoints = []
+	console.log('creating timeline chart');
+	let chartData = [];
+	let dataPoints = [];
 
 	/* TX area*/
 	jsonData.timeline_txJson.forEach(item => {
@@ -1518,20 +1510,20 @@ function create_timeline_chart(tabName, renderFlag) {
 				pointFormat: '<span>FRT: {point.x}</span> ' + item.hoverinfo
 			},
 		})
-	})
+	});
 
 	/* Phy Data Indications */
 	dataPoints = [];
 	dataPoints = jsonData.timeline_phyIndJson.map((item) => {
 		if (!Number(item.frt_dec)) {
-			console.log("Error..", item)
+			console.log("Error..", item);
 		}
 		return {
 			x: item.frt_dec,
 			y: -6,
 			color: item.color,
 			info: item.trace_info
-		}
+		};
 	});
 
 	chartData.push({
@@ -1562,7 +1554,7 @@ function create_timeline_chart(tabName, renderFlag) {
 		turboThreshold: 0,
 
 
-	})
+	});
 
 	/* CL Traces */
 	dataPoints = [];
@@ -1573,7 +1565,7 @@ function create_timeline_chart(tabName, renderFlag) {
 			color: item.color,
 			info: item.trace_info,
 			clid: item.cl_id
-		}
+		};
 	});
 	chartData.push({
 		type: "scatter",
@@ -1603,10 +1595,9 @@ function create_timeline_chart(tabName, renderFlag) {
 		},
 		turboThreshold: 0,
 
-	})
+	});
 
-	create_highchart(TIMELINE_CHART_ID, tabName, chartData, TIMELINE_CHART_ID)
-	console.log('creating timeline chart END')
+	create_highchart(TIMELINE_CHART_ID, tabName, chartData, TIMELINE_CHART_ID);
 
 
 }
@@ -1622,34 +1613,34 @@ function openGraph(evt, tabName) {
 	}
 	document.getElementById(tabName).style.display = "block";
 	evt.currentTarget.className += " active";
-	graphId = evt.currentTarget.attributes.graphId.value
+	graphId = evt.currentTarget.attributes.graphId.value;
 
 	if (Object.keys(charts[graphId]).length == 0)
-		drawChart(graphId, tabName, true)
+		drawChart(graphId, tabName, true);
 
 }
 
 window.onload = function () {
-	console.log("document ready")
+	console.log("document ready");
 
 	document.getElementById("firstTab").click();
 
 	$(document).on("click", ".removeMkrBtnClass", function (event) {
 		/*  console.log("clicked",event) */
 		/*  console.log($(this)) */
-		parentRow = $(this).parent().parent().parent()
-		id = parentRow.attr('id').split('-')
-		$(`.marker${id[1]}Line`).remove()
-		$(`.marker${id[2]}Line`).remove()
-		$(`.markerLabel${id[1]}`).remove()
-		$(`.markerLabel${id[2]}`).remove()
-		/*  console.log("parent", parentRow.attr('id')) */
-		parentRow.remove()
+		parentRow = $(this).parent().parent().parent();
+		id = parentRow.attr('id').split('-');
+		$(`.marker${id[1]}Line`).remove();
+		$(`.marker${id[2]}Line`).remove();
+		$(`.markerLabel${id[1]}`).remove();
+		$(`.markerLabel${id[2]}`).remove();
+		/*  console.log("parent", parentRow.attr('id')) */;
+		parentRow.remove();
 
 	});
 
-	refreshIntv = $('#refreshIntvDur').val() * $('#refreshIntUnit').val() * 1000
-	console.log("refreshIntv", refreshIntv)
+	refreshIntv = $('#refreshIntvDur').val() * $('#refreshIntUnit').val() * 1000;
+	console.log("refreshIntv", refreshIntv);
 	if (refreshIntv > 0) {
 		refreshTimer = setTimeout(function () {
 			location.reload();
@@ -1657,12 +1648,12 @@ window.onload = function () {
 	}
 
 	$(document).on("click", "#removeAllMarkers", function (event) {
-		$('.marker').remove()
-		$('.markerLabel').remove()
+		$('.marker').remove();
+		$('.markerLabel').remove();
 	});
 
 	$(document).on("change", "#refreshIntvDur", function (event) {
-		refreshIntv = $('#refreshIntvDur').val() * $('#refreshIntUnit').val() * 1000
+		refreshIntv = $('#refreshIntvDur').val() * $('#refreshIntUnit').val() * 1000;
 		if (typeof refreshTimer !== 'undefined') clearTimeout(refreshTimer);
 		if (refreshIntv > 0) {
 			refreshTimer = setTimeout(function () {
@@ -1672,7 +1663,7 @@ window.onload = function () {
 	});
 
 	/* pie charts */
-	drawPieChart()
+	drawPieChart();
 
 
 }
