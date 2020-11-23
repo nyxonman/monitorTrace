@@ -88,6 +88,7 @@ valid_img_ext_list = [
 ]
 
 tracing_events_num_str = {
+
     0: "LMMGR_PRE_IND",
     1: "LMMGR_PHR_IND",
     2: "LMMGR_FC_IND",
@@ -148,6 +149,7 @@ tracing_events_num_str = {
     57: "LMMGR_HWTIMER",
     58: "LMMGR_SWTIMER",
     59: "PHYTST_DATA_CONF",
+    61: "sed",
     62: "PHY_CALLBACKS_CLAIM",
     63: "PHY_CALLBACKS_RELEASE",
     64: "LMFS_REMOVE_SCH_ENTRY",
@@ -198,18 +200,12 @@ tracing_events_num_str = {
     110: "T_TXDELAY",
     111: "T_PEER_CURSLOT",
     112: "T_RWIN_QUALTIME",
-    113: "PHY_TX_START",
-    114: "PHY_TX_STOP",
-    115: "PHY_TX_RX_START",
-    116: "PHY_TX_RX_STOP",
-    117: "PHY_RX_START_START",
-    118: "PHY_RX_START_STOP",
-
     120: "T_RESERVED",
     121: "FRT32_TX_START",
     122: "FRT32_TX_END",
     123: "FRT32_RX_START",
     124: "FRT32_RX_END",
+    125: "LMMGR_SRR_IND",
     129: "CL_FRT32_TX_CALL",
     130: "CL_FRT32_RX_CALL",
     131: "CL_NEW",
@@ -278,6 +274,9 @@ tracing_events_num_str = {
     229: "TTC_TX_UPDATE",
     230: "TTC_TMR_CB",
     231: "LMDC_EEROR_LN",
+    232: "LMDC_TMR_CB",
+    233: "LMDC_SWT_CATCHUP",
+    234: "SDC_BYPASS",
     235: "LMDC_RESERVED",
     241: "SA_HAPPY_RETURN",
     242: "SA_ERROR_RETURN",
@@ -289,12 +288,14 @@ tracing_events_num_str = {
     248: "SA_PRIM_UP",
     249: "SA_PRIM_DOWN",
     250: "SA_LMSM_TIMEOUT",
+    251: "SA_PHY_SR",
     270: "SA_RESERVED",
     271: "ELG",
     272: "ELG_TIMER",
     273: "ELG_EVENT",
     274: "ELG_IRQ",
     290: "ELG_RESERVED",
+
 
 
 }
@@ -1989,8 +1990,8 @@ def graph_timeline_visualiser():
     timeline_cl_startend_df = timeline_cl_start_df.merge(timeline_cl_end_df, on='cl_id', how='left')
     timeline_cl_startend_df['cldiff'] = timeline_cl_startend_df.clend - timeline_cl_startend_df.clstart
     timeline_cl_startend_df = timeline_cl_startend_df.dropna()
-    print(timeline_cl_startend_df.info())
-    timeline_cl_startend_df['hoverinfo'] = "CL " + timeline_cl_startend_df.cl_id.astype(str) + ", " + (timeline_cl_startend_df.cldiff/1000).astype(int).astype(str) + "msec<br>" + timeline_cl_startend_df.cl_mac_x.str[10:]
+    timeline_cl_startend_df['hoverinfo'] = "CL " + timeline_cl_startend_df.cl_id.astype(str) + ", " + (
+        timeline_cl_startend_df.cldiff/1000).astype(int).astype(str) + "msec<br>" + timeline_cl_startend_df.cl_mac_x.str[10:]
     err_df = timeline_cl_startend_df[timeline_cl_startend_df.cldiff <= 0]
 
     if(not (err_df.empty)):
@@ -2339,6 +2340,14 @@ def graph_mode_chan():
     # fig.show()
     print("Done", flush=True, end='\n')
 
+def create_html_file():
+    print("Creating HTML file...", end='')
+    myHtmlStr='''
+    <!DOCTYPE HTML><html><head><meta charset="utf-8"><title>Monitor Trace</title><meta name="description" content="Tool to monitor the DSP Traces"><meta name="author" content="SitePoint"><meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no"><link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous"><link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.0/css/all.css" integrity="sha384-lZN37f5QGtY3VHgisS14W3ExzMWZxybE1SJSEsQp9S+oqd12jhcu+A56Ebc1zFSJ" crossorigin="anonymous"><style>body{font-family:"Roboto",sans-serif}.page{background-color:#F4F7FA}p-0{padding:0 !important}.subtitle{color:orange;font-size:30px}.shadow,hr{box-shadow:0 .5rem 1rem rgba(0, 0, 0, .15) !important}.sticky-top{position:-webkit-sticky;position:sticky;top:0;z-index:1050}.section-padding{padding:1rem 0}.header{padding-top:10px}.modal-tip{cursor:pointer}.modal-tip:hover{color:orange}.dashboard-counts .count-number{font-size:2em}.chartContainer{min-height:500px}.tab{overflow:hidden;border:1px solid #ccc;background-color:#f1f1f1}.tab button{background-color:inherit;float:left;border:none;outline:none;cursor:pointer;padding:5px 20px;transition:0.3s;font-size:17px;border-right:1px solid #bbb}.tab button:hover{background-color:#ddd}.tab button.active{background-color:#ccc}.tabcontent{display:none;padding:6px 12px;border:1px solid #ccc;border-top:none}.markerTable{margin-top:12px}.markerTableList{max-height:120px;padding:16px;overflow-y:auto;overflow-x:hidden}.markerTableList .marker{border-radius:1px;max-height:28px;font-size:12px;margin-bottom:5px}.removeMkrBtnClass{font-size:20px;cursor:pointer}.removeMkrBtnClass:hover{color:rgb(174, 0, 0) !important}.highcharts-data-table table tr:nth-child(even){background-color:#f2f2f2}#pills-timings{display:flex !important}.dashboard-counts{color:#333}footer{height:100px}</style></head><body><nav class="navbar-dark sticky-top bg-dark flex-md-nowrap p-0 shadow"><div class="container-fluid"><div class="row header"><div class="col-sm-4"><h3 class="text-white">Gen5Riva <span class="subtitle">MonitorTrace</span> <i class="fas fa-info-circle modal-tip" data-toggle="modal" data-target="#monitorTraceTips" title="G5R MonitorTrace Tips"></i></h3></div><div class="modal fade" id="monitorTraceTips" tabindex="-1" role="dialog" aria-labelledby="monitorTraceTipsTitle" aria-hidden="true"><div class="modal-dialog modal-dialog-centered" role="document"><div class="modal-content"><div class="modal-header"><h5 class="modal-title" id="exampleModalLongTitle">G5R Monitor Trace Tips Info</h5> <button type="button" class="close" data-dismiss="modal" aria-label="Close"> <span aria-hidden="true">&times;</span> </button></div><div class="modal-body"><ul class="list-group"><li class="list-group-item list-group-item-info"><u><b>To Zoom,</b></u> Left Click on a chart and move right or left</li><li class="list-group-item list-group-item-info"><u><b>To Pan,</b></u> Ctrl+ Left Click on a chart and move right or left</li><li class="list-group-item list-group-item-info"><u><b>To Reset Zoom/Pan.,</b></u> Left Click on a Reset zoom buton on the chart</li><li class="list-group-item list-group-item-info"><u><b>To Add a Marker,</b></u> Shift + Left Click on a chart. Available only in line charts</li><li class="list-group-item list-group-item-info"><u><b>To remove one marker,</b></u> Click on the x on marker in the 'Marker List' table</li><li class="list-group-item list-group-item-info"><u><b>To remove all markers,</b></u> Click on the Remove All Marker in the top</li><li class="list-group-item list-group-item-info"><u><b>To highlight a particlur series,</b></u> Hover on the series name in the legend</li><li class="list-group-item list-group-item-info"><u><b>To hide/show a particlur series,</b></u> Click on the series name in the legend</li></ul></div><div class="modal-footer"> <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button></div></div></div></div><div class="offset-sm-4 col-sm-1 "><button class="btn btn-sm btn-outline-warning float-right" id="removeAllMarkers">Remove all Markers</button></div><div class=" col-sm-3"><div class="input-group mb-3"><div class="input-group-prepend"> <label class="input-group-text" for="refreshIntvDur">Refresh Interval</label></div> <select class="custom-select" id="refreshIntvDur"><option value="0" selected>None</option><option value="5">5</option><option value="10">10</option><option value="15">15</option><option value="30">30</option><option value="45">45</option><option value="60">60</option> </select> <select class="form-control" id="refreshIntUnit"><option value="1">sec</option><option value="60">min</option> </select></div></div></div></div></nav><div class="page"><div class="container-fluid"><section class="dashboard-counts section-padding"><div class="container-fluid"><div class="row"><div class="col-md-3 "><div id="clpietotal" class="pieChartContainer"></div></div><div class="col-md-3 "><div id="clpiedatareqresp" class="pieChartContainer"></div></div><div class="col-md-3 "><div id="clpietxrx" class="pieChartContainer"></div></div><div class="col-md-3 "><div id="clpietxdone" class="pieChartContainer"></div></div></div></div> </section><hr><div class="row"><div class="col-lg-12"><div class="tab"> <button class="tablinks" graphId="rtt" onclick="openGraph(event, 'rttTab')">RTT</button> <button class="tablinks" graphId="mode" onclick="openGraph(event, 'modeTab')">Mode Stats</button> <button class="tablinks" graphId="chan" onclick="openGraph(event, 'chanTab')">Chan Stats</button> <button class="tablinks" graphId="buffer" onclick="openGraph(event, 'bufferTab')">Buffer Mgmt</button> <button class="tablinks" graphId="timeline" id="firstTab" onclick="openGraph(event, 'timelineTab')">Timeline</button> <button class="tablinks" id="" graphId="cltiming" onclick="openGraph(event, 'cltimingTab')">CL Timing Summary</button> <button class="tablinks" id="" graphId="cltimings" onclick="openGraph(event, 'cltimingsTab')">CL Timings</button></div><div id="rttTab" class="tabcontent" style="width: 100%;"><div id="rtt" class="chartContainer"></div><div class="markerTable"> <i class="fas fa-tags"></i> Markers List<div class="row markerTableList" id="markersList-rttTab"></div></div></div><div id="modeTab" class="tabcontent" style="width: 100%;"><div id="mode" class="chartContainer"></div><div class="markerTable"> <i class="fas fa-tags"></i> Markers List<div class="row markerTableList" id="markersList-modeTab"></div></div></div><div id="chanTab" class="tabcontent" style="width: 100%;"><div id="chan" class="chartContainer"></div><div class="markerTable"> <i class="fas fa-tags"></i> Markers List<div class="row markerTableList" id="markersList-chanTab"></div></div></div><div id="timelineTab" class="tabcontent" style="width: 100%;"><div id="timeline" class="chartContainer"></div><div class="markerTable"> <i class="fas fa-tags"></i> Markers List<div class="row markerTableList" id="markersList-timelineTab"></div></div></div><div id="bufferTab" class="tabcontent" style="width: 100%;"><div id="buffer" class="chartContainer"></div><hr><div id="buffer2" class="chartContainer2"></div><div class="markerTable"> <i class="fas fa-tags"></i> Markers List<div class="row markerTableList" id="markersList-bufferTab"></div></div></div><div id="cltimingTab" class="tabcontent" style="width: 100%;"><div id="cltiming" class="chartContainer"></div><div class="markerTable"> <i class="fas fa-tags"></i> Markers List<div class="row markerTableList" id="markersList-cltimingTab"></div></div></div><div id="cltimingsTab" class="tabcontent" style="width: 100%;"><div id="cltimings" class="row"><div id="target2txphr" class="col-md-4 col-sm-6 chartContainer underCLTimings"></div><div id="txend2rxstart" class="col-md-4 col-sm-6 chartContainer underCLTimings"></div><div id="rxend2targettime" class="col-md-4 col-sm-6 chartContainer underCLTimings"></div><div id="rxend2txtime" class="col-md-4 col-sm-6 chartContainer underCLTimings"></div><div id="txcall2targettime" class="col-md-4 col-sm-6 chartContainer underCLTimings"></div><div id="rxend2txcall" class="col-md-4 col-sm-6 chartContainer underCLTimings"></div><div id="rxcall2afterrx" class="col-md-4 col-sm-6 chartContainer underCLTimings"></div><div id="cl_dur" class="col-md-4 col-sm-6 chartContainer underCLTimings"></div></div><div class="markerTable"> <i class="fas fa-tags"></i> Markers List <button class="btn btn-sm btn-outline-danger " id="removeAllMarkers">Remove all Markers</button><div class="row markerTableList" id="markersList-cltimingsTab"></div></div></div></div></div></div></div></div> <script src="https://code.jquery.com/jquery-3.5.1.min.js" 		integrity="sha256-9/aliU8dGd2tb6OSsuzixeV4y/faTqgFtohetphbbj0=" crossorigin="anonymous"></script> <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.9/umd/popper.min.js" 		integrity="sha384-ApNbgh9B+Y1QKtv3Rn7W3mgPxhU9K/ScQsAP7hUibX39j7fakFPskvXusvfa0b4Q" 		crossorigin="anonymous"></script> <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js" 		integrity="sha384-JZR6Spejh4U02d8jOt6vLEHfe/JQGiRRSQQxSfFWpi1MquVdAyjUar5+76PVCmYl" 		crossorigin="anonymous"></script> <script src="https://code.highcharts.com/highcharts.js"></script> <script src="https://code.highcharts.com/modules/data.js"></script> <script src="https://code.highcharts.com/modules/boost.js"></script> <script src="https://code.highcharts.com/modules/exporting.js"></script> <script src="https://code.highcharts.com/modules/export-data.js"></script> <script src="https://code.highcharts.com/modules/accessibility.js"></script> <script src="https://code.highcharts.com/highcharts-more.js"></script> <script src="https://code.highcharts.com/modules/dumbbell.js"></script> <script src="https://code.highcharts.com/modules/lollipop.js"></script> <script src="https://code.highcharts.com/modules/annotations.js"></script> <script src="http://code.highcharts.com/modules/drilldown.js"></script> <script type="text/javascript" src="./myJson.js"></script> <script type="text/javascript" >function drawChart(t,e,a){switch(t){case RTT_CHART_ID:create_rtt_chart(e,a);break;case MODE_CHART_ID:create_mode_chart(e,a);break;case CHAN_CHART_ID:create_chan_chart(e,a);break;case TIMELINE_CHART_ID:create_timeline_chart(e,a);break;case CLTIMING_CHART_ID:create_cltiming_chart(e,a);break;case CLTIMINGS_CHART_ID:create_cltimings_chart(e,a);break;case BUFFER_CHART_ID:create_buffer_chart(e,a);break;default:alert("Improper chart type "+t+" for ")}}console.log("jsonData",jsonData),RTT_CHART_ID="rtt",MODE_CHART_ID="mode",CHAN_CHART_ID="chan",TIMELINE_CHART_ID="timeline",BUFFER_CHART_ID="buffer",CLTIMING_CHART_ID="cltiming",CLTIMINGS_CHART_ID="cltimings",TARGET2TXPHR_CHART_ID="target2txphr",TXEND2RXSTART_CHART_ID="txend2rxstart",RXEND2TARGETTIME_CHART_ID="rxend2targettime",RXEND2TXTIME_CHART_ID="rxend2txtime",TXCALL2TARGETTIME_CHART_ID="txcall2targettime",RXEND2TXCALL_CHART_ID="rxend2txcall",RXCALL2AFTERRX_CHART_ID="rxcall2afterrx",CL_DUR_CHART_ID="cl_dur",charts={rtt:{},cltiming:{},cltimings:{},timeline:{},buffer:{},chan:{},mode:{}},datasets={rtt:[],cltiming:[],cltimings:[],timeline:[],buffer:[],modechan:[]},chartOptions={rtt:{chartTitle:"RTT between clData.get and clData.cnf",xAxisType:"linear",xAxisTitle:"RTT in usecs",yAxisTitle:"Count",yAxisTitle2:"PDF/CDF",yAxis2Max:1},mode:{chartTitle:"Mode Usage",xAxisType:"category",xAxisTitle:"Modes",yAxisTitle:"Count"},chan:{chartTitle:"Chan Usage",xAxisType:"category",xAxisTitle:"Channel",yAxisTitle:"Count"},buffer:{chartTitle:"Buffer Stats",xAxisType:"category",xAxisTitle:"Owner",yAxisTitle:"Count"},buffer2:{chartTitle:"Buffer Management",xAxisType:"linear",xAxisTitle:"Timestamp in usecs",yAxisTitle:"Buffer"},timeline:{chartTitle:"Timeline VIsualiser",xAxisType:"linear",xAxisTitle:"Timestamp in usecs",yAxisMax:7,yAxisMin:-7},cltiming:{chartTitle:"CL Timing Summary Report",xAxisType:"linear",xAxisTitle:"Timestamp in usecs",yAxisMax:3,yAxisMin:-3},target2txphr:{chartTitle:"Target 2 tx PHR",xAxisType:"linear",xAxisTitle:"target2txphr in usecs",yAxisTitle:"Count",yAxisTitle2:"PDF/CDF",yAxis2Max:1},txend2rxstart:{chartTitle:"txend2rxstart",xAxisType:"linear",xAxisTitle:"txend2rxstart in usecs",yAxisTitle:"Count",yAxisTitle2:"PDF/CDF",yAxis2Max:1},rxend2targettime:{chartTitle:"rxend2targettime",xAxisType:"linear",xAxisTitle:"rxend2targettime in usecs",yAxisTitle:"Count",yAxisTitle2:"PDF/CDF",yAxis2Max:1},rxend2txtime:{chartTitle:"rxend2txtime",xAxisType:"linear",xAxisTitle:"rxend2txtime in usecs",yAxisTitle:"Count",yAxisTitle2:"PDF/CDF",yAxis2Max:1},txcall2targettime:{chartTitle:"txcall2targettime",xAxisType:"linear",xAxisTitle:"txcall2targettime in usecs",yAxisTitle:"Count",yAxisTitle2:"PDF/CDF",yAxis2Max:1},rxend2txcall:{chartTitle:"rxend2txcall",xAxisType:"linear",xAxisTitle:"rxend2txcall in usecs",yAxisTitle:"Count",yAxisTitle2:"PDF/CDF",yAxis2Max:1},rxcall2afterrx:{chartTitle:"rxcall2afterrx",xAxisType:"linear",xAxisTitle:"rxcall2afterrx in usecs",yAxisTitle:"Count",yAxisTitle2:"PDF/CDF",yAxis2Max:1},cl_dur:{chartTitle:"cl_dur",xAxisType:"linear",xAxisTitle:"cl_dur in msecs",yAxisTitle:"Count",yAxisTitle2:"PDF/CDF",yAxis2Max:1}};var markerCnt=0;function create_marker_line(t,e,a,r,n){var o,s,i=document.getElementById("markersList-"+t),l=0,c=0,d=0,_=0;if(e%2!=0?(l=e,c=e+1,lineHtml=`<div class="marker col-sm-6 "style="border:2px solid ${r}"id="divMarkerVal-${l}-${c}">nttt<div class="row">ntttt<div class="col-sm-3">M${l}:<span name="marker1"class="markerVal"id="marker${l}Val"></span></div>ntttt<div class="col-sm-3">M${c}:<span name="marker2"class="markerVal"id="marker${c}Val"></span></div>ntttt<div class="col-sm-6">Delta:<span class="deltaVal"id="deltaVal${l}${c}"></span>ntttt<i style="color:${r};"class="fas fa-backspace fs-lg removeMkrBtnClass float-right"id="removeMkrBtn${l}${c}"></i></div>nttt</div>ntt</div>`,i.innerHTML=i.innerHTML+lineHtml):(l=e-1,c=e),o=document.getElementById(`marker${l}Val`),s=document.getElementById(`marker${c}Val`),e%2!=0?(d=parseInt(a,10),o.innerHTML=d,_=document.getElementById(`marker${c}Val`).innerHTML):(d=document.getElementById(`marker${l}Val`).innerHTML,_=parseInt(a,10),s.innerHTML=_),0!=d&&0!=_){var x,p=parseInt(_)-parseInt(d),h=-1==Math.sign(p)?"-":"",m=document.getElementById(`deltaVal${l}${c}`),T=0,y=0,f="",u="",g=p+"usec ",D=0;(p=Math.abs(p))>1e3&&(y=p%1e3,f=(T=parseInt(p/1e3,10))+"ms ",D=1),T>1e3&&(u=parseInt(T/1e3,10)+" sec ",f=(T%=1e3)+"ms "),y<=0?(y="",g=""):g=y+"us",x=D?p+" ( "+u+f+g+" )":p,m.innerHTML=h+x}}var redrawEnabled=!0;function create_pie_highchart(t,e,a=[],r="container",n=[]){console.log(t,e,a);chart=Highcharts.chart(r,{credits:{enabled:!1},plotOptions:{pie:{dataLabels:{enabled:!0,distance:-10,inside:!0,format:"{point.name} {point.y}",crop:!0,overflow:"allow"},colors:["#44A9A8","#F7A35C","#90ed7d","#f7a35c","#e4d354","#f45b5b","#91e8e1"]}},exporting:!1,chart:{height:150,backgroundColor:"transparent"},dataLabels:{},title:!1,legend:{verticalAlign:"top"},tooltip:{headerFormat:'<span style="font-size:11px">{series.name}</span><br>',pointFormat:'<span style="color:{point.color}">{point.name}</span>: <b>{point.y:.2f}</b>'},series:e,drilldown:{series:a}})}function create_highchart(t,e,a,r="container",n=[]){console.log(t,e,a),chart=Highcharts.chart(r,{credits:{enabled:!1},boost:{useGPUTranslations:!0,useAlpha:!1},exporting:{sourceWidth:1920,sourceHeight:920},chart:{zoomType:"x",panKey:"ctrl",panning:!0,events:{redraw:function(t){var e,a=this.xAxis[0].getExtremes(),r=a.userMax-a.userMin;Number.isNaN(r)&&(r=a.max-a.min),e=r<6e7?0:1,redrawEnabled&&(redrawEnabled=!1,this.update({boost:{enabled:e}}),redrawEnabled=!0)},click:function(a){if(!a.shiftKey&&!a.ctrlKey)return;let r=this,n=r.xAxis[0],o=n.toValue(this.mouseDownX);colorCnt=markerCnt%2==0?markerCnt%10:(markerCnt-1)%10,markerColor=Highcharts.getOptions().colors[colorCnt],create_marker_line(e,++markerCnt,o,markerColor,t),n.addPlotLine({value:o,cursor:"pointer",color:markerColor,width:1,label:{rotation:90,text:`M${markerCnt}`,className:"markerLabel markerLabel"+markerCnt},zIndex:99,className:`marker marker${markerCnt}Line`,dashStyle:"ShortDash",events:{mousedown:function(t){r.clickX=t.pageX,r.activePlotLine=this}}})}}},title:{text:chartOptions[t].chartTitle},plotOptions:{area:{marker:{enabled:!1,states:{hover:{enabled:!1}}}}},legend:{verticalAlign:"top"},tooltip:{shared:!0,useHTML:!0,followPointer:!1,outside:!0},xAxis:{title:{text:chartOptions[t].xAxisTitle},type:chartOptions[t].xAxisType,crosshair:{enabled:!0,snap:"category"==chartOptions[t].xAxisType}},yAxis:[{labels:{enabled:t!=TIMELINE_CHART_ID&&t!=CLTIMING_CHART_ID},plotLines:[{value:0,width:1,color:"#999",zIndex:10}],title:{text:chartOptions[t].yAxisTitle},max:chartOptions[t].yAxisMax?chartOptions[t].yAxisMax:null,min:chartOptions[t].yAxisMin?chartOptions[t].yAxisMin:null},{title:{text:chartOptions[t].yAxisTitle2?chartOptions[t].yAxisTitle2:null},max:chartOptions[t].yAxis2Max?chartOptions[t].yAxis2Max:null,opposite:!0}],series:a,annotations:n}),charts[t]=chart}function drawPieChart_cl_newend(){if(jsonData.clstatsJson.hasOwnProperty("CL_NEW_END")){jsonData_clnewend=jsonData.clstatsJson.CL_NEW_END,dd_clouts_data=[];for(const[t,e]of Object.entries(jsonData_clnewend.CL_NEW.drilldown.CL_OUT.drilldown))dd_clouts_data.push({name:t,y:e});dd_clends_data=[];for(const[t,e]of Object.entries(jsonData_clnewend.CL_END.drilldown))dd_clends_data.push({name:t,y:e});chartData=[{type:"pie",name:"CL",data:[{name:"CL NEW",y:jsonData_clnewend.CL_NEW.val,drilldown:"dd_cl_new"},{name:"CL END",y:jsonData_clnewend.CL_END.val,drilldown:"dd_cl_end"}]}],dd_data=[{name:"CL NEW",type:"pie",id:"dd_cl_new",data:[{name:"CL_OUT",y:jsonData_clnewend.CL_NEW.drilldown.CL_OUT.val,drilldown:"dd_cl_out"},{name:"CL_IN",y:jsonData_clnewend.CL_NEW.drilldown.CL_IN}]},{name:"CL_OUT",type:"pie",id:"dd_cl_out",data:dd_clouts_data},{name:"CL_END",type:"pie",id:"dd_cl_end",data:dd_clends_data}],create_pie_highchart("clpietotal",chartData,dd_data,"clpietotal")}}function drawPieChart_cl_data_reqresp(){if(jsonData.clstatsJson.hasOwnProperty("CL_DATA_REQ_RESP")){cl_data_reqresp_stats=jsonData.clstatsJson.CL_DATA_REQ_RESP,dd_cldata_reqresp_data=[];for(const[t,e]of Object.entries(cl_data_reqresp_stats.CL_DATA_RESP.drilldown))dd_cldata_reqresp_data.push({name:t,y:e});chartData=[{type:"pie",name:"CL DATA",colorByPoint:!0,data:[{name:"DATAREQ",y:cl_data_reqresp_stats.CL_DATA_REQ.val},{name:"DATARESP",y:cl_data_reqresp_stats.CL_DATA_RESP.val,drilldown:"dd_cl_data_resp"}]}],dd_data=[{name:"DATARESP",type:"pie",id:"dd_cl_data_resp",data:dd_cldata_reqresp_data}],create_pie_highchart("clpiedatareqresp",chartData,dd_data,"clpiedatareqresp")}}function drawPieChart_cl_tx_rx(){if(jsonData.clstatsJson.hasOwnProperty("CL_TX_RX")){jsonData_cltxrx=jsonData.clstatsJson.CL_TX_RX,dd_cltx_data=[];for(const[t,e]of Object.entries(jsonData_cltxrx.CL_TX.drilldown))dd_cltx_data.push({name:t,y:e});dd_clrx_data=[];for(const[t,e]of Object.entries(jsonData_cltxrx.CL_RX.drilldown))dd_clrx_data.push({name:t,y:e});chartData=[{type:"pie",name:"CL TX RX",colorByPoint:!0,data:[{name:"TX",y:jsonData_cltxrx.CL_TX.val,drilldown:"dd_cl_tx"},{name:"RX",y:jsonData_cltxrx.CL_RX.val,drilldown:"dd_cl_rx"}]}],dd_data=[{name:"TX",type:"pie",id:"dd_cl_tx",data:dd_cltx_data},{name:"RX",type:"pie",id:"dd_cl_rx",data:dd_clrx_data}],create_pie_highchart("clpietxrx",chartData,dd_data,"clpietxrx")}}function drawPieChart_cl_txdone(){if(jsonData.clstatsJson.hasOwnProperty("CL_TXDONE")){jsonData_cltxdone=jsonData.clstatsJson.CL_TXDONE,dd_cltx_done=[];for(const[t,e]of Object.entries(jsonData_cltxdone.drilldown))dd_cltx_done.push({name:t,y:e});chartData=[{type:"pie",name:"CL TXDONE",colorByPoint:!0,data:[{name:"TXDONE",y:jsonData_cltxdone.val,drilldown:"dd_cl_txdone"}]}],dd_data=[{name:"TX",type:"pie",id:"dd_cl_txdone",data:dd_cltx_done}],create_pie_highchart("clpietxdone",chartData,dd_data,"clpietxdone")}}function drawPieChart(){if(jsonData.hasOwnProperty("clstatsJson")){clstats=jsonData.clstatsJson,console.log("clstats ",clstats);clstats.CL_NEW_END.CL_NEW.val,clstats.CL_NEW_END.CL_END.val;drawPieChart_cl_newend(),drawPieChart_cl_data_reqresp(),drawPieChart_cl_tx_rx(),drawPieChart_cl_txdone()}}function create_rtt_chart(t,e){if(!jsonData.hasOwnProperty("rttJson"))return;console.log("creating RTT");let a=[],r=[],n=[];jsonData.rttJson.forEach(t=>{a.push({x:t.diff,y:t.freq}),r.push({x:t.diff,y:t.pdf}),n.push({x:t.diff,y:t.cdf})}),chartData=[{type:"column",name:"Freq",data:a,color:Highcharts.getOptions().colors[0]},{type:"line",name:"PDF",yAxis:1,data:r,color:Highcharts.getOptions().colors[3]},{type:"line",name:"CDF",yAxis:1,data:n,color:Highcharts.getOptions().colors[2]}],create_highchart(RTT_CHART_ID,t,chartData,RTT_CHART_ID)}function create_mode_chart(t,e){if(!jsonData.hasOwnProperty("modeTxJson"))return;console.log("creating modechanchart");let a=[],r=[];jsonData.modeRxJson.forEach(t=>{a.push({name:t.mode,y:t.count})}),jsonData.modeTxJson.forEach(t=>{r.push({name:t.mode,y:t.count})}),chartData=[{type:"column",name:"ModeRx",data:a,dataLabels:{enabled:!0},color:Highcharts.getOptions().colors[7]},{type:"column",name:"ModeTx",data:r,dataLabels:{enabled:!0},color:Highcharts.getOptions().colors[3]}],create_highchart(MODE_CHART_ID,t,chartData,MODE_CHART_ID)}function create_chan_chart(t,e){if(!jsonData.hasOwnProperty("chanTxJson"))return;console.log("creating chanchanchart");let a=[],r=[];jsonData.chanRxJson.forEach(t=>{a.push({label:t.chan,y:t.count})}),jsonData.chanTxJson.forEach(t=>{r.push({label:t.chan,y:t.count})}),jsonData.chanRxJson.forEach(t=>{a.push({name:t.chan,y:t.count})}),jsonData.chanTxJson.forEach(t=>{r.push({name:t.chan,y:t.count})}),chartData=[{type:"column",name:"Chan Rx",data:a,dataLabels:{enabled:!0},color:Highcharts.getOptions().colors[7]},{type:"column",name:"Chan Tx",data:r,dataLabels:{enabled:!0},color:Highcharts.getOptions().colors[3]}],create_highchart(CHAN_CHART_ID,t,chartData,CHAN_CHART_ID)}function create_buffer_chart(t,e){if(!jsonData.hasOwnProperty("buffer_Json"))return;console.log("creating buffer summary chart");let a=[],r=[],n=[],o=[];jsonData.buffer_summaryJson.forEach(t=>{a.push({name:t.owner,y:t.buf_claim}),r.push({name:t.owner,y:t.buf_release}),n.push({name:t.owner,y:t.buf_leak})}),o=[{type:"column",name:"Buff Claim",dataLabels:{enabled:!0,color:Highcharts.getOptions().colors[7]},data:a,color:Highcharts.getOptions().colors[7]},{type:"column",name:"Buff release",dataLabels:{enabled:!0,color:Highcharts.getOptions().colors[3]},data:r,color:Highcharts.getOptions().colors[3]},{type:"column",name:"Buff Leaks",dataLabels:{enabled:!0,color:Highcharts.getOptions().colors[5]},data:n,color:Highcharts.getOptions().colors[5]}],create_highchart(BUFFER_CHART_ID,t,o,BUFFER_CHART_ID),console.log("creating buffer alloc"),o=[],buf_colors={CL:"#ff0000",FH:"#00ff00",RXBCON:"#0000ff",ALINK:"#009999",MACMGR:"#003f5c",LMMGR:"#444e86",TXBCON:"#955196",SA:"#dd5182",ELG:"#ff6e54",TXBCAST:"#ffa600"},jsonData.hasOwnProperty("buffer_Json")&&(jsonData.buffer_Json.forEach(t=>{o.push({type:"area",findNearestPointBy:"xy",data:[[t.frt_dec,0],[t.frt_dec,t.buffer_dec],{x:t.frt_dec+t.frt_diff/2,y:t.buffer_dec},[t.rel_frt,t.buffer_dec],[t.rel_frt,0]],states:{inactive:{opacity:.6}},zIndex:5,name:t.owner,showInLegend:!1,color:buf_colors[t.owner],lineWidth:.25,fillOpacity:.1,tooltip:{useHTML:!0,headerFormat:'<span style="color: {series.color}">{series.name} </span>: 0x'+t.buffer_dec.toString(16),pointFormat:"<br><span>claimedFRT: "+t.frt_dec+"</span><br> releasedFRT:"+t.rel_frt+"<br>Dur: "+t.frt_diff+" usec"}})}),create_highchart(BUFFER_CHART_ID+"2",t,o,BUFFER_CHART_ID+"2"))}function create_cltimings_chart(t,e){let a=[],r=[],n=[],o=[];console.log("creating cltimings");for(const[e,s]of Object.entries(jsonData)){a=[],r=[],n=[],o=[];let s="";e.startsWith("cltimings_")&&(s=e.slice(10,-4),jsonData[e].forEach(t=>{a.push({x:t[s],y:t.freq}),r.push({x:t[s],y:t.pdf}),n.push({x:t[s],y:t.cdf})}),o=[{type:"column",name:"Freq",data:a,color:Highcharts.getOptions().colors[0]},{type:"line",name:"PDF",yAxis:1,data:r,color:Highcharts.getOptions().colors[3]},{type:"line",name:"CDF",yAxis:1,data:n,color:Highcharts.getOptions().colors[2]}],create_highchart(s,t,o,s))}}function create_cltiming_chart(t,e){if(!jsonData.hasOwnProperty("cltimingJson"))return;console.log("cltiming",jsonData.cltimingJson);let a=[];tx_dur=2e3,points_dic=jsonData.cltimingJson.points_dic,rx_dur=points_dic.rxEnd-points_dic.rxPHR,txdiff=points_dic.TxPHR1-points_dic.TargetTx1,a.push({type:"area",findNearestPointBy:"xy",data:[[points_dic.TxPHR1,0],[points_dic.TxPHR1,.5],{x:points_dic.TxPHR1+tx_dur/2,y:.5,dataLabels:{enabled:!0,format:"Transmission e.g. POLL"}},[points_dic.TxPHR1+tx_dur,.5],[points_dic.TxPHR1+tx_dur,0]],enableMouseTracking:!1,zIndex:5,states:{inactive:{opacity:1}},name:"POLL",showInLegend:!1,color:"#E9967A",lineWidth:2,fillOpacity:.6,tooltip:{enabled:!1}},{type:"area",findNearestPointBy:"xy",data:[[points_dic.rxPHR,0],[points_dic.rxPHR,-.5],{x:points_dic.rxPHR+rx_dur/2,y:-.5,dataLabels:{enabled:!0,format:"Reception e.g. ACK",verticalAlign:"top"}},[points_dic.rxPHR+rx_dur,-.5],[points_dic.rxPHR+rx_dur,0]],name:"ACK",enableMouseTracking:!1,zIndex:5,states:{inactive:{opacity:1}},showInLegend:!1,color:"#8FBC8F",lineWidth:2,fillOpacity:.6,tooltip:{enabled:!1}},{type:"area",findNearestPointBy:"xy",data:[[points_dic.TxPHR2,0],[points_dic.TxPHR2,.5],{x:points_dic.TxPHR2+(tx_dur+500)/2,y:.5,dataLabels:{enabled:!0,format:"Transmission e.g. DATA"}},[points_dic.TxPHR2+tx_dur+500,.5],[points_dic.TxPHR2+tx_dur+500,0]],enableMouseTracking:!1,zIndex:5,states:{inactive:{opacity:1}},name:"Data",showInLegend:!1,color:"#E9967A",lineWidth:2,fillOpacity:.6,tooltip:{enabled:!1}});let r=[],n=[];value_levels={WrapperCall1:-2,WrapperReturn:2,TargetTx1:-2,TxPHR1:-2,EndTxTime:-2,rxStart_beforeCall:2,rxStart_afterCall:2,rxPHR:2,rxEnd:-2,WrapperCall2:2,TargetTx2:-2,TxPHR2:-2},cnt=0;for(const[t,e]of Object.entries(jsonData.cltimingJson.points_dic))r.push({x:e,y:jsonData.cltimingJson.levels_dic[t],color:jsonData.cltimingJson.colors_dic[t],id:t,name:jsonData.cltimingJson.names_label_dic[t]}),n.push({labelOptions:{backgroundColor:"rgba(255,255,0,0.3)",verticalAlign:jsonData.cltimingJson.levels_dic[t]<0?"top":"bottom",distance:10},labels:[{point:t,text:jsonData.cltimingJson.names_label_dic[t]}]}),n.push({draggable:"",shapes:[{fill:"none",stroke:"red",strokeWidth:1,dashStyle:"LongDash",type:"path",points:[{x:jsonData.cltimingJson.arrows_x[cnt].x1,y:jsonData.cltimingJson.arrows_x[cnt].y,xAxis:0,yAxis:0},{x:jsonData.cltimingJson.arrows_x[cnt].x2,y:jsonData.cltimingJson.arrows_x[cnt].y,xAxis:0,yAxis:0}]}],labelOptions:{backgroundColor:"rgba(255,255,255,0.4)",borderColor:"rgba(0,0,0,0)",style:{color:"black"},verticalAlign:value_levels[t]<0?"bottom":"top",y:value_levels[t]},labels:[{point:{x:(jsonData.cltimingJson.arrows_x[cnt].x1+jsonData.cltimingJson.arrows_x[cnt].x2)/2,y:jsonData.cltimingJson.arrows_x[cnt].y,xAxis:0,yAxis:0},text:jsonData.cltimingJson.val_texts[cnt],allowOverlap:!0,padding:2}]}),cnt++;n.push({labelOptions:{backgroundColor:"rgba(0,0,0,0.8)"},labels:[{point:{x:100,y:0},text:"min/max/avg"}]}),a.push({type:"lollipop",findNearestPointBy:"xy",data:r,zIndex:7,states:{inactive:{opacity:1}},showInLegend:!1,connectorWidth:2,fillOpacity:.6,toolTip:{enabled:!1},enableMouseTracking:!1}),create_highchart(CLTIMING_CHART_ID,t,a,CLTIMING_CHART_ID,annotations_arr=n)}function create_timeline_chart(t,e){if(!jsonData.hasOwnProperty("timeline_clStartEndJson"))return;console.log("creating timeline chart");let a=[],r=[];jsonData.timeline_txJson.forEach(t=>{a.push({type:"area",findNearestPointBy:"xy",data:[[t.ts_txstart,0],[t.ts_txstart,1],{x:t.ts_txstart+t.tx_dur/2,y:1},[t.ts_txend,1],[t.ts_txend,0]],states:{inactive:{opacity:.8}},zIndex:5,name:"TX",showInLegend:!1,color:t.color,tooltip:{split:!0,useHTML:!0,headerFormat:'<span style="color: {series.color}">{series.name}</span>: ',pointFormat:"<span>FRT: {point.x}</span><br>"+t.hoverinfo},turboThreshold:0})}),jsonData.timeline_rxJson.forEach(t=>{a.push({type:"area",findNearestPointBy:"xy",data:[[t.ts_rxstart,0],[t.ts_rxstart,-1],{x:t.ts_rxstart+t.rx_dur/2,y:-1,toolTip:!1},[t.ts_rxend,-1],[t.ts_rxend,0]],turboThreshold:0,states:{inactive:{opacity:.8}},showInLegend:!1,zIndex:5,name:"RX",color:t.color,tooltip:{useHTML:!0,headerFormat:'<span style="color: {series.color}">{series.name}</span>: ',pointFormat:"<span>FRT: {point.x}</span><br>"+t.hoverinfo}})}),jsonData.timeline_clStartEndJson.forEach(t=>{a.push({type:"area",data:[[t.clstart,0],[t.clstart,3],{x:t.clstart+t.cldiff/2,y:3,dataLabels:{enabled:!0,format:t.hoverinfo}},[t.clend,3],[t.clend,-3],[t.clstart,-3],[t.clstart,0]],states:{inactive:{opacity:.8}},zIndex:1,showInLegend:!1,grouping:!0,name:"CL "+t.cl_id,fillColor:"rgba(247, 228, 194,0.35)",color:"rgba(247, 228, 194,1)",turboThreshold:0,tooltip:{useHTML:!0,headerFormat:'<span style="color: rgba(170, 135, 54,1)">{series.name}</span>: ',pointFormat:"<span>FRT: {point.x}</span> "+t.hoverinfo}})}),r=[],r=jsonData.timeline_phyIndJson.map(t=>(Number(t.frt_dec)||console.log("Error..",t),{x:t.frt_dec,y:-6,color:t.color,info:t.trace_info})),a.push({type:"scatter",findNearestPointBy:"xy",name:"phyData Indications",showInLegend:!0,states:{inactive:{opacity:.8}},visible:!1,data:r,tooltip:{headerFormat:'<span style="font-size:10px">FRT: {point.key}</span><table>',pointFormat:'<tr><td style="color:{series.color};padding:0">{point.info} </td></tr>',footerFormat:"</table>",useHTML:!0,followPointer:!1},marker:{symbol:"triangle"},turboThreshold:0}),r=[],r=jsonData.timeline_clTracesJson.map(t=>({x:t.frt_dec,y:6,color:t.color,info:t.trace_info,clid:t.cl_id})),a.push({type:"scatter",findNearestPointBy:"xy",name:"CL Traces",showInLegend:!0,states:{inactive:{opacity:.8}},marker:{symbol:"triangle-down"},color:"red",visible:!1,data:r,tooltip:{headerFormat:'<span style="font-size:10px">FRT: {point.key}, CL id {point.clid}</span><table>',pointFormat:'<tr><td style="color:{series.color};padding:0">{point.info} </td></tr>',footerFormat:"</table>",useHTML:!0,followPointer:!1},turboThreshold:0}),create_highchart(TIMELINE_CHART_ID,t,a,TIMELINE_CHART_ID),console.log("creating timeline chart END")}function openGraph(t,e){var a,r,n;for(r=document.getElementsByClassName("tabcontent"),a=0;a<r.length;a++)r[a].style.display="none";for(n=document.getElementsByClassName("tablinks"),a=0;a<n.length;a++)n[a].className=n[a].className.replace(" active","");document.getElementById(e).style.display="block",t.currentTarget.className+=" active",graphId=t.currentTarget.attributes.graphId.value,0==Object.keys(charts[graphId]).length&&drawChart(graphId,e,!0)}window.onload=function(){console.log("document ready"),document.getElementById("firstTab").click(),$(document).on("click",".removeMkrBtnClass",function(t){parentRow=$(this).parent().parent().parent(),id=parentRow.attr("id").split("-"),$(`.marker${id[1]}Line`).remove(),$(`.marker${id[2]}Line`).remove(),$(`.markerLabel${id[1]}`).remove(),$(`.markerLabel${id[2]}`).remove(),parentRow.remove()}),refreshIntv=$("#refreshIntvDur").val()*$("#refreshIntUnit").val()*1e3,console.log("refreshIntv",refreshIntv),refreshIntv>0&&(refreshTimer=setTimeout(function(){location.reload()},refreshIntv)),$(document).on("click","#removeAllMarkers",function(t){$(".marker").remove(),$(".markerLabel").remove()}),$(document).on("change","#refreshIntvDur",function(t){refreshIntv=$("#refreshIntvDur").val()*$("#refreshIntUnit").val()*1e3,"undefined"!=typeof refreshTimer&&clearTimeout(refreshTimer),refreshIntv>0&&(refreshTimer=setTimeout(function(){location.reload()},refreshIntv))}),drawPieChart()};</script> </body></html>
+    '''
+    with open('./tmp.html', 'w') as f:
+        f.write(myHtmlStr)
+    print("Ok")
 
 def graph_it():
 
@@ -2496,23 +2505,117 @@ def graph_it():
     cl_csv_df = cl_csv_df.drop(columns=['tracecode_hex'])
 
     # cl_csv_df = cl_csv_df.assign(sts=pd.Series(np.nan))
-    cl_csv_df['sts'] = cl_csv_df.trace_info.apply(lambda x: "" if "STS" not in x else x.split()[1].split('(')[0])
+    cl_csv_df['sts'] = cl_csv_df.trace_info.apply(lambda x: "" if ("STS" not in x) and ("SDU_" not in x) else x.split()[1].split('(')[0])
     cl_csv_df = cl_csv_df.merge(traceCodeMap_df, on="tracecode_dec")
     cl_csv_df.sort_values(by=['byte'], inplace=True)
 
     cl_stats = cl_csv_df.groupby(
-        ['tracecode_dec', 'trace_str', 'sts', ]).count()
+        ['trace_str', 'sts', ]).count()
     cl_stats = cl_stats['byte']
+    print(cl_csv_df.head(10))
+    print(cl_stats)
 
     # print(time.process_time() - start, flush=True)
     start = time.process_time()
+    cl_stats_data_df = cl_stats.reset_index().groupby(['trace_str']).sum().reset_index()
+    cl_stats_data_df.rename(columns={'byte': 'count'}, inplace=True)
+    # cl_stats_data_df.set_index('trace_str', inplace=True)
 
-    print(cl_stats)
+    cl_filter_list = ['CL_NEW', 'CL_END', 'CL_OUT_REQ', 'CL_OUT_CNF', 'CL_IN', 'CL_START', 'CL_TX', 'CL_RX', 'CL_DATA_REQ', 'CL_DATA_RESP', 'CL_TXDONE']
+
+    cl_stats_data_df = cl_stats_data_df[cl_stats_data_df.trace_str.isin(cl_filter_list)]
+    dd_cl_stats = {
+        'CL_NEW_END': {},
+        'CL_TX_RX': {},
+        'CL_DATA_REQ_RESP': {},
+        'CL_TXDONE': {},
+    }
+
+    if not cl_stats_data_df.empty:
+
+        cl_stats_data_df.set_index("trace_str", inplace=True)
+        # print(cl_stats_data_df)
+        print(cl_stats.reset_index())
+        cl_stats = cl_stats.reset_index()
+        # cl_ends = cl_stats.reset_index()
+
+        # print(cl_ends.to_dict())
+        # cl_ends = cl_ends.to_dict()['byte']
+        print(cl_stats_data_df.to_dict())
+        cl_stats_dict = cl_stats_data_df.to_dict()['count']
+        # print("cl stats dic", cl_stats_dict)
+        print("cl stats dic", json.dumps(cl_stats_dict, indent=4))
+
+        # cl new end
+        cl_ends = cl_stats[cl_stats.trace_str == 'CL_END'].drop(columns='trace_str').set_index('sts').to_dict()['byte']
+        print('cl ends', cl_ends)
+        dd_cl_stats['CL_NEW_END']['CL_END'] = {
+            'val': cl_stats_dict['CL_END'],
+            'drilldown': cl_ends
+        }
+        cl_out_cnfs = cl_stats[cl_stats.trace_str == 'CL_OUT_CNF'].drop(columns='trace_str').set_index('sts').to_dict()['byte']
+
+        dd_cl_stats['CL_NEW_END']['CL_NEW'] = {
+            'val': cl_stats_dict['CL_NEW'],
+            'drilldown': {
+                'CL_IN': cl_stats_dict['CL_IN'],
+                'CL_OUT': {
+                    'val': cl_stats_dict['CL_OUT_REQ'],
+                    'drilldown': cl_out_cnfs
+                }
+            }
+        }
+
+        # cl tx rx
+        cl_txs = cl_stats[cl_stats.trace_str == 'CL_TX'].drop(columns='trace_str').set_index('sts').to_dict()['byte']
+        cl_rxs = cl_stats[cl_stats.trace_str == 'CL_RX'].drop(columns='trace_str').set_index('sts').to_dict()['byte']
+        dd_cl_stats['CL_TX_RX']['CL_TX'] = {
+            'val': cl_stats_dict['CL_TX'],
+            'drilldown': cl_txs
+        }
+        dd_cl_stats['CL_TX_RX']['CL_RX'] = {
+            'val': cl_stats_dict['CL_RX'],
+            'drilldown': cl_rxs
+        }
+
+        # cl data req resp
+        cl_data_resps = cl_stats[cl_stats.trace_str == 'CL_DATA_RESP'].drop(columns='trace_str').set_index('sts').to_dict()['byte']
+        dd_cl_stats['CL_DATA_REQ_RESP']['CL_DATA_REQ'] = {
+            'val': cl_stats_dict['CL_DATA_REQ'],
+            'drilldown': {}
+        }
+        dd_cl_stats['CL_DATA_REQ_RESP']['CL_DATA_RESP'] = {
+            'val': cl_stats_dict['CL_DATA_RESP'],
+            'drilldown': cl_data_resps
+        }
+
+        # cl tx done
+        cl_tx_dones = cl_stats[cl_stats.trace_str == 'CL_TXDONE'].drop(columns='trace_str').set_index('sts').to_dict()['byte']
+        dd_cl_stats['CL_TXDONE'] = {
+            'val': cl_stats_dict['CL_TXDONE'],
+            'drilldown': cl_tx_dones
+        }
+
+        # print(json.dumps(dd_cl_stats, indent=4))
+    # exit(0)
+
+    # cl_stats_dic = {}
+    # cl_stats_dic['cl_new_end'] = {
+    #     'name': 'cl_new_end',
+    #     'cl_new': {'val': cl_stats_data['CL_NEW']},
+    #     'cl_end': {
+    #         'val': cl_stats_data['CL_END'],
+    #         'drilldown':{
+
+    #         }
+    #     }
+    # }
 
     if GRAPH_OPTION == GRAPH_HIGHCHARTS:
         with open('myJson.js', 'w') as f:
             f.write('// data logged at {}.\n\n'.format(get_datetime()))
             f.write('const jsonData={\n')
+        write_df_to_json('clstatsJson', dd_cl_stats, isdict=True)
 
     # obtain fastlink df
     if '0' in graph_ans_list or '1' in graph_ans_list:
@@ -2600,6 +2703,9 @@ def graph_it():
 
         with open('myJson.js', 'a') as f:
             f.write('\n}')
+
+    # create a html file
+    create_html_file()
 
 
 def check_system_dependency():
@@ -2701,7 +2807,7 @@ if __name__ == "__main__":
                           help='path to the local file to decode. The local file should be obtained from hexdump -C option')
     my_parser.add_argument('-g', '--graph',
                            type=str,
-                           help="Show Graphs live or using decoded csv file or the hex traces.\n You may select multiple separating by comma (,)\n  {}".format( '\n  '.join(str(key)+" : "+str(val) for key, val in GRAPH_NUM_STR.items())))
+                           help="Show Graphs live or using decoded csv file or the hex traces.\n You may select multiple separating by comma (,)\n  {}".format('\n  '.join(str(key)+" : "+str(val) for key, val in GRAPH_NUM_STR.items())))
     my_group.add_argument('-i', '--ip', metavar="IPv4",
                           type=str,
                           action=Ipv4Action,
@@ -2817,7 +2923,6 @@ if __name__ == "__main__":
             print("Error: Format not correct. Range format should be start:end")
             exit(0)
 
-
     if args.graph:
 
         graph_ans_list = args.graph.split(',')
@@ -2849,8 +2954,9 @@ if __name__ == "__main__":
 
         if args.graph:
             graph_it()
-            print('file://' + os.path.realpath('monitorTrace.html'))
-            webbrowser.open('file://' + os.path.realpath("monitorTrace.html"))
+
+            print('file://' + os.path.realpath('tmp.html'))
+            webbrowser.open('file://' + os.path.realpath("tmp.html"))
 
         exit()
 
