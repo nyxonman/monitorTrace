@@ -565,6 +565,7 @@ function drawPieChart_cl_newend() {
 	if (!jsonData.clstatsJson.hasOwnProperty('CL_NEW_END')) return;
 
 	jsonData_clnewend = jsonData.clstatsJson.CL_NEW_END;
+	if (Object.keys(jsonData_clnewend).length==0) return;
 
 	dd_clouts_data = [];
 	for (const [key, value] of Object.entries(jsonData_clnewend.CL_NEW.drilldown.CL_OUT.drilldown)) {
@@ -646,6 +647,7 @@ function drawPieChart_cl_data_reqresp() {
 	if (!jsonData.clstatsJson.hasOwnProperty('CL_DATA_REQ_RESP')) return;
 
 	cl_data_reqresp_stats = jsonData.clstatsJson.CL_DATA_REQ_RESP;
+	if (Object.keys(cl_data_reqresp_stats).length==0) return;
 
 	dd_cldata_reqresp_data = [];
 	for (const [key, value] of Object.entries(cl_data_reqresp_stats.CL_DATA_RESP.drilldown)) {
@@ -693,6 +695,7 @@ function drawPieChart_cl_tx_rx() {
 	if (!jsonData.clstatsJson.hasOwnProperty('CL_TX_RX')) return;
 
 	jsonData_cltxrx = jsonData.clstatsJson.CL_TX_RX;
+	if (Object.keys(jsonData_cltxrx).length==0) return;
 
 	dd_cltx_data = [];
 	for (const [key, value] of Object.entries(jsonData_cltxrx.CL_TX.drilldown)) {
@@ -752,6 +755,8 @@ function drawPieChart_cl_txdone() {
 	if (!jsonData.clstatsJson.hasOwnProperty('CL_TXDONE')) return;
 
 	jsonData_cltxdone = jsonData.clstatsJson.CL_TXDONE;
+	if (Object.keys(jsonData_cltxdone).length==0) return;
+
 
 	dd_cltx_done = [];
 	for (const [key, value] of Object.entries(jsonData_cltxdone.drilldown)) {
@@ -800,7 +805,6 @@ function drawPieChart() {
 	console.log('clstats ', clstats);
 
 	/*  CL NEW END */
-	var totalCL = clstats.CL_NEW_END.CL_NEW.val + clstats.CL_NEW_END.CL_END.val;
 	drawPieChart_cl_newend();
 
 	/*  CL DATA REQ RESP */
