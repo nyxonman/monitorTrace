@@ -1,3 +1,4 @@
+console.log("Monitoring on Node IP ", nodeip);
 console.log("jsonData", jsonData);
 RTT_CHART_ID = 'rtt';
 MODE_CHART_ID = 'mode';
@@ -61,7 +62,7 @@ chartOptions = {
 
 	},
 	'chan': {
-		"chartTitle": "Chan Usage",
+		"chartTitle": "Channel Usage",
 		"xAxisType": 'category',
 		"xAxisTitle": "Channel",
 		"yAxisTitle": "Count",
@@ -94,7 +95,7 @@ chartOptions = {
 
 	},
 	'timeline': {
-		"chartTitle": "Timeline VIsualiser",
+		"chartTitle": "Timeline Visualiser",
 		"xAxisType": 'linear',
 		"xAxisTitle": "Timestamp in usecs",
 		"yAxisMax": 7,
@@ -312,7 +313,7 @@ var redrawEnabled = true;
 
 function create_pie_highchart(id, chartData, dd_data = [], containerDiv = 'container', annotations_arr = []) {
 	console.log(id, chartData, dd_data);
-	var pie_colors = [ "#44A9A8","#F7A35C", "#90ed7d", "#f7a35c","#e4d354",  "#f45b5b", "#91e8e1" ];
+	var pie_colors = ["#44A9A8", "#F7A35C", "#90ed7d", "#f7a35c", "#e4d354", "#f45b5b", "#91e8e1"];
 
 	chart = Highcharts.chart(containerDiv, {
 		credits: {
@@ -331,7 +332,7 @@ function create_pie_highchart(id, chartData, dd_data = [], containerDiv = 'conta
 					crop: true,
 					overflow: 'allow'
 				},
-				colors:pie_colors
+				colors: pie_colors
 			}
 		},
 		exporting: false,
@@ -565,7 +566,7 @@ function drawPieChart_cl_newend() {
 	if (!jsonData.clstatsJson.hasOwnProperty('CL_NEW_END')) return;
 
 	jsonData_clnewend = jsonData.clstatsJson.CL_NEW_END;
-	if (Object.keys(jsonData_clnewend).length==0) return;
+	if (Object.keys(jsonData_clnewend).length == 0) return;
 
 	dd_clouts_data = [];
 	for (const [key, value] of Object.entries(jsonData_clnewend.CL_NEW.drilldown.CL_OUT.drilldown)) {
@@ -647,7 +648,7 @@ function drawPieChart_cl_data_reqresp() {
 	if (!jsonData.clstatsJson.hasOwnProperty('CL_DATA_REQ_RESP')) return;
 
 	cl_data_reqresp_stats = jsonData.clstatsJson.CL_DATA_REQ_RESP;
-	if (Object.keys(cl_data_reqresp_stats).length==0) return;
+	if (Object.keys(cl_data_reqresp_stats).length == 0) return;
 
 	dd_cldata_reqresp_data = [];
 	for (const [key, value] of Object.entries(cl_data_reqresp_stats.CL_DATA_RESP.drilldown)) {
@@ -695,7 +696,7 @@ function drawPieChart_cl_tx_rx() {
 	if (!jsonData.clstatsJson.hasOwnProperty('CL_TX_RX')) return;
 
 	jsonData_cltxrx = jsonData.clstatsJson.CL_TX_RX;
-	if (Object.keys(jsonData_cltxrx).length==0) return;
+	if (Object.keys(jsonData_cltxrx).length == 0) return;
 
 	dd_cltx_data = [];
 	for (const [key, value] of Object.entries(jsonData_cltxrx.CL_TX.drilldown)) {
@@ -755,7 +756,7 @@ function drawPieChart_cl_txdone() {
 	if (!jsonData.clstatsJson.hasOwnProperty('CL_TXDONE')) return;
 
 	jsonData_cltxdone = jsonData.clstatsJson.CL_TXDONE;
-	if (Object.keys(jsonData_cltxdone).length==0) return;
+	if (Object.keys(jsonData_cltxdone).length == 0) return;
 
 
 	dd_cltx_done = [];
@@ -883,7 +884,8 @@ function create_mode_chart(tabName, renderFlag) {
 	let modeRxData = [];
 	let modeTxData = [];
 
-	jsonData.modeRxJson.forEach(item => {;
+	jsonData.modeRxJson.forEach(item => {
+		;
 		modeRxData.push({ name: item.mode, y: item.count })
 	});
 	jsonData.modeTxJson.forEach(item => {
@@ -924,19 +926,17 @@ function create_chan_chart(tabName, renderFlag) {
 	let chanTxData = [];
 
 	jsonData.chanRxJson.forEach(item => {
-		chanRxData.push({ label: item.chan, y: item.count });
-	});
-	jsonData.chanTxJson.forEach(item => {
-		chanTxData.push({ label: item.chan, y: item.count });
-	});
-
-	jsonData.chanRxJson.forEach(item => {
 		chanRxData.push({ name: item.chan, y: item.count });
+	});
+	chanRxData.sort(function (a, b) {
+		return a.name - b.name;
 	});
 	jsonData.chanTxJson.forEach(item => {
 		chanTxData.push({ name: item.chan, y: item.count });
 	});
-
+	chanTxData.sort(function (a, b) {
+		return a.name - b.name;
+	});
 	chartData = [
 		/* Chan Rx */
 		{
@@ -946,7 +946,7 @@ function create_chan_chart(tabName, renderFlag) {
 			dataLabels: {
 				enabled: true,
 			},
-			color: Highcharts.getOptions().colors[7]
+			color: Highcharts.getOptions().colors[7],
 		},
 		/* Chan Tx */
 		{
@@ -956,7 +956,7 @@ function create_chan_chart(tabName, renderFlag) {
 			dataLabels: {
 				enabled: true,
 			},
-			color: Highcharts.getOptions().colors[3]
+			color: Highcharts.getOptions().colors[3],
 		},
 
 	];
@@ -1628,6 +1628,10 @@ function openGraph(evt, tabName) {
 
 /* when everything is loaded */
 window.onload = function () {
+
+	if (nodeip != 'none') {
+		$('#nodeip').html(nodeip);
+	}
 
 	/* pie charts */
 	drawPieChart();

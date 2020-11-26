@@ -63,6 +63,11 @@
 			color: orange;
 		}
 
+		#nodeip {
+			font-size: 1rem;
+			font-style: italic;
+		}
+
 		.dashboard-counts .count-number {
 			font-size: 2em;
 		}
@@ -173,9 +178,9 @@
 		<div class="container-fluid">
 
 			<div class="row header">
-				<div class="col-sm-4">
-					<h3 class="text-white">Gen5Riva <span class="subtitle">MonitorTrace</span> <i
-							class="fas fa-info-circle modal-tip" data-toggle="modal" data-target="#monitorTraceTips"
+				<div class="col-sm-6">
+					<h3 class="text-white">Gen5Riva <span class="subtitle">MonitorTrace</span> <span id="nodeip"></span>
+						<i class="fas fa-info-circle modal-tip" data-toggle="modal" data-target="#monitorTraceTips"
 							title="G5R MonitorTrace Tips"></i>
 					</h3>
 				</div>
@@ -193,6 +198,9 @@
 							</div>
 							<div class="modal-body">
 								<ul class="list-group">
+									<li class="list-group-item list-group-item-info"><u><b>For Pie Charts,</b></u> Left
+										Click
+										on the chart to get drilldown.</li>
 									<li class="list-group-item list-group-item-info"><u><b>To Zoom,</b></u> Left Click
 										on a chart and move right or left</li>
 									<li class="list-group-item list-group-item-info"><u><b>To Pan,</b></u> Ctrl+ Left
@@ -218,7 +226,7 @@
 						</div>
 					</div>
 				</div>
-				<div class="offset-sm-4 col-sm-1 ">
+				<div class="offset-sm-2 col-sm-1 ">
 
 					<button class="btn btn-sm btn-outline-warning float-right" id="removeAllMarkers">Remove all
 						Markers</button>
