@@ -11,6 +11,7 @@ import csv
 import random
 import json
 import webbrowser
+import math
 
 # list of global variables subject to change
 glob = {
@@ -2459,8 +2460,8 @@ def graph_it():
         csv_df = csv_df.ffill()
 
     # filter for clId Ranges
-    max_cl_val = str(int(csv_df.cl_id.astype(float).max()))
-    min_cl_val = str(int(csv_df.cl_id.astype(float).min()))
+    max_cl_val = str(int(csv_df.cl_id.astype(float).max())) if not math.isnan(csv_df.cl_id.astype(float).max()) else "0"
+    min_cl_val = str(int(csv_df.cl_id.astype(float).min())) if not math.isnan(csv_df.cl_id.astype(float).min()) else "0"
 
     if args.range:
         cl_range_start, cl_range_end = cl_id_range.split(':')
