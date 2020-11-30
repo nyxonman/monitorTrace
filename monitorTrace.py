@@ -2528,8 +2528,8 @@ def graph_it():
     print("="*30)
     print("Total CLs    : {} [{},{}]".format(int(max_cl_val, 10)-int(min_cl_val, 10), int(min_cl_val, 10), int(max_cl_val, 10)))
     if args.range:
-        print("Filtered CLs : {} [{},{}]\n".format(cl_range_end - cl_range_start, cl_range_start, cl_range_end))
-
+        print("Filtered CLs : {} [{},{}]".format(cl_range_end - cl_range_start, cl_range_start, cl_range_end))
+    print("")
     print(cl_stats)
 
     # print(time.process_time() - start, flush=True)
