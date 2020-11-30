@@ -2765,8 +2765,8 @@ if __name__ == "__main__":
         %(prog)s -i 10.70.100.118 -m 81FF6702BCFB033E60C78F3FFFBFFF01000000FFFFFFFFFFFFFDDFFDDFFFFFFFFF7FFCFFFF -t -c
 
     Example 6: Display some graphs using decoded file in csv
-        %(prog)s -f decoded.csv -g
-        %(prog)s -f hex_trace.txt -g
+        %(prog)s -f decoded.csv -g 1,3
+        %(prog)s -f hex_trace.txt -g 0
         In second example, the app will create the necessary csv file
 
     """
@@ -2775,7 +2775,7 @@ if __name__ == "__main__":
     outputfile = OUTPUT_FILE_NAME + "_" + date_today + OUTPUT_FILE_EXT
 
     my_parser = argparse.ArgumentParser(formatter_class=argparse.RawTextHelpFormatter,
-                                        description='''Decode the hex trace for DSP for G5R
+                                        description='''A CLI tool to decode the hex trace for DSP for G5R
             - Live with the IPv4 Wifi address of the node
             - From a local file
 
@@ -2792,10 +2792,10 @@ if __name__ == "__main__":
     my_parser.add_argument('-d', '--debug',
                            action='store_true',
                            help='Debug Mode')
-    my_parser.add_argument('-e', '--export', metavar="export",
-                           type=str,
-                           action=exportAction,
-                           help='Export Graph to a file. Supported extensions {}. \nWorks only with -g option. Currenlty not used.'.format(valid_img_ext_list))
+    # my_parser.add_argument('-e', '--export', metavar="export",
+    #                        type=str,
+    #                        action=exportAction,
+    #                        help='Export Graph to a file. Supported extensions {}. \nWorks only with -g option. Currenlty not used.'.format(valid_img_ext_list))
 
     my_group.add_argument('-f', '--file',
                           type=str,
@@ -2848,9 +2848,9 @@ if __name__ == "__main__":
         exit(0)
 
     # if export option is provided with graphing option exit
-    if args.export and not args.graph:
-        print("Error -e option works only with -g")
-        exit(0)
+    # if args.export and not args.graph:
+    #     print("Error -e option works only with -g")
+    #     exit(0)
 
     print("*** Monitoring traces v" + APP_VERSION +
           " started at " + get_datetime())
