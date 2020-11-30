@@ -370,6 +370,7 @@ function create_pie_highchart(id, chartData, dd_data = [], containerDiv = 'conta
 
 function create_highchart(id, tabName, chartData, containerDiv = 'container', annotations_arr = []) {
 	console.log(id, tabName, chartData);
+	var zoomRatio = 1;
 
 	chart = Highcharts.chart(containerDiv, {
 		credits: {
@@ -396,12 +397,48 @@ function create_highchart(id, tabName, chartData, containerDiv = 'container', an
 			panning: true,
 
 			events: {
-				/*  load: function () { */
-				/*  	const myChart = this; */
+				load: function (event) {
+					const myChart = this;
 
-				/*  	console.log("loaded") */
+					myChart.renderer.button('+', 30, 10)
+						.attr({
+							zIndex: 99,
+						})
+						.on('click', function () {
 
-				/*  }, */
+							var xMin = chart.xAxis[0].getExtremes().min;
+							var xMax = chart.xAxis[0].getExtremes().max;
+							delta = xMax - xMin;
+							chart.xAxis[0].setExtremes(xMin + delta / 4, xMax - delta / 4);
+						})
+						.add();
+					myChart.renderer.button('-', 60, 10)
+						.attr({
+							zIndex: 99,
+						})
+						.on('click', function () {
+							var xMin = chart.xAxis[0].getExtremes().min;
+							var xMax = chart.xAxis[0].getExtremes().max;
+							delta = xMax - xMin;
+							chart.xAxis[0].setExtremes(xMin - delta / 2, xMax + delta / 2);
+							// chart.xAxis[0].setExtremes(xMin + (1 - zoomRatio) * xMax, xMax * zoomRatio);
+						})
+						.add();
+					myChart.renderer.button('O', 90, 10)
+						.attr({
+							zIndex: 99
+						})
+						.on('click', function () {
+
+							var xMin = chart.xAxis[0].getExtremes().min;
+							var xMax = chart.xAxis[0].getExtremes().max;
+							chart.zoomOut();
+
+						})
+						.add();
+
+
+				},
 				/*  render: function () { */
 				/*  	 console.log("rendered") */
 				/*  	const myChart = this; */
@@ -1629,7 +1666,7 @@ function openGraph(evt, tabName) {
 /* when everything is loaded */
 window.onload = function () {
 
-	if (nodeip != 'none') {
+	if (nodeip != 'None' || nodeip.length != 4) {
 		$('#nodeip').html(nodeip);
 	}
 
