@@ -14,6 +14,7 @@ RXEND2TXTIME_CHART_ID = "rxend2txtime";
 TXCALL2TARGETTIME_CHART_ID = "txcall2targettime";
 RXEND2TXCALL_CHART_ID = "rxend2txcall";
 RXCALL2AFTERRX_CHART_ID = "rxcall2afterrx";
+RXCALDURINTX_CHART_ID = "rxCalDurInTx";
 CL_DUR_CHART_ID = "cl_dur";
 
 /*  types of charts */
@@ -179,6 +180,15 @@ chartOptions = {
 		"chartTitle": "RX CAL duration",
 		"xAxisType": 'linear',
 		"xAxisTitle": "rxcall2afterrx in usecs",
+		"yAxisTitle": "Count",
+		"yAxisTitle2": "PDF/CDF",
+		"yAxis2Max": 1,
+
+	},
+	"rxCalDurInTx": {
+		"chartTitle": "RX Calibration duration after TX",
+		"xAxisType": 'linear',
+		"xAxisTitle": "rxCalDurInTx in usecs",
 		"yAxisTitle": "Count",
 		"yAxisTitle2": "PDF/CDF",
 		"yAxis2Max": 1,
@@ -1303,6 +1313,7 @@ function create_cltiming_chart(tabName, renderFlag) {
 		"TargetTx1": -2,
 		"TxPHR1": -2,
 		"EndTxTime": -2,
+        'rxCalEndInTx': -2,
 		"rxStart_beforeCall": 2,
 		"rxStart_afterCall": 2,
 		"rxPHR": 2,
