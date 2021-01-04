@@ -122,7 +122,7 @@ chartOptions = {
 	},
 
 	"target2txphr": {
-		"chartTitle": "Target 2 tx PHR",
+		"chartTitle": "Target Time to  TX PHR",
 		"xAxisType": 'linear',
 		"xAxisTitle": "target2txphr in usecs",
 		"yAxisTitle": "Count",
@@ -131,7 +131,7 @@ chartOptions = {
 
 	},
 	"txend2rxstart": {
-		"chartTitle": "txend2rxstart",
+		"chartTitle": "txend to RX start Call",
 		"xAxisType": 'linear',
 		"xAxisTitle": "txend2rxstart in usecs",
 		"yAxisTitle": "Count",
@@ -140,7 +140,7 @@ chartOptions = {
 
 	},
 	"rxend2targettime": {
-		"chartTitle": "rxend2targettime",
+		"chartTitle": "RX end to Target Tx Time",
 		"xAxisType": 'linear',
 		"xAxisTitle": "rxend2targettime in usecs",
 		"yAxisTitle": "Count",
@@ -149,7 +149,7 @@ chartOptions = {
 
 	},
 	"rxend2txtime": {
-		"chartTitle": "rxend2txtime",
+		"chartTitle": "RX end to TX PHR time",
 		"xAxisType": 'linear',
 		"xAxisTitle": "rxend2txtime in usecs",
 		"yAxisTitle": "Count",
@@ -158,7 +158,7 @@ chartOptions = {
 
 	},
 	"txcall2targettime": {
-		"chartTitle": "txcall2targettime",
+		"chartTitle": "TX call to Target Time",
 		"xAxisType": 'linear',
 		"xAxisTitle": "txcall2targettime in usecs",
 		"yAxisTitle": "Count",
@@ -167,7 +167,7 @@ chartOptions = {
 
 	},
 	"rxend2txcall": {
-		"chartTitle": "rxend2txcall",
+		"chartTitle": "RX End to TX Call",
 		"xAxisType": 'linear',
 		"xAxisTitle": "rxend2txcall in usecs",
 		"yAxisTitle": "Count",
@@ -176,7 +176,7 @@ chartOptions = {
 
 	},
 	"rxcall2afterrx": {
-		"chartTitle": "rxcall2afterrx",
+		"chartTitle": "RX CAL duration",
 		"xAxisType": 'linear',
 		"xAxisTitle": "rxcall2afterrx in usecs",
 		"yAxisTitle": "Count",
@@ -185,7 +185,7 @@ chartOptions = {
 
 	},
 	"cl_dur": {
-		"chartTitle": "cl_dur",
+		"chartTitle": "CL Duration",
 		"xAxisType": 'linear',
 		"xAxisTitle": "cl_dur in msecs",
 		"yAxisTitle": "Count",

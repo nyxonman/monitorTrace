@@ -752,7 +752,20 @@ colors_list = [
     "#061203", "#DFFB71", "#868E7E", "#98D058", "#6C8F7D", "#D7BFC2", "#3C3E6E", "#D83D66",
 
     "#2F5D9B", "#6C5E46", "#D25B88", "#5B656C", "#00B57F", "#545C46", "#866097", "#365D25",
-    "#252F99", "#00CCFF", "#674E60", "#FC009C", "#92896B"]
+    "#252F99", "#00CCFF", "#674E60", "#FC009C", "#92896B",
+
+    "#000000", "#FFFF00", "#1CE6FF", "#FF34FF", "#FF4A46", "#008941", "#006FA6", "#A30059",
+    "#FFDBE5", "#7A4900", "#0000A6", "#63FFAC", "#B79762", "#004D43", "#8FB0FF", "#997D87",
+    "#5A0007", "#809693", "#FEFFE6", "#1B4400", "#4FC601", "#3B5DFF", "#4A3B53", "#FF2F80",
+    "#61615A", "#BA0900", "#6B7900", "#00C2A0", "#FFAA92", "#FF90C9", "#B903AA", "#D16100",
+    "#DDEFFF", "#000035", "#7B4F4B", "#A1C299", "#300018", "#0AA6D8", "#013349", "#00846F",
+    "#372101", "#FFB500", "#C2FFED", "#A079BF", "#CC0744", "#C0B9B2", "#C2FF99", "#001E09",
+    "#00489C", "#6F0062", "#0CBD66", "#EEC3FF", "#456D75", "#B77B68", "#7A87A1", "#788D66",
+    "#885578", "#FAD09F", "#FF8A9A", "#D157A0", "#BEC459", "#456648", "#0086ED", "#886F4C",
+
+    "#34362D", "#B4A8BD", "#00A6AA", "#452C2C", "#636375", "#A3C8C9", "#FF913F", "#938A81",
+    "#575329", "#00FECF", "#B05B6F", "#8CD0FF", "#3B9700", "#04F757", "#C8A1A1", "#1E6E00",
+]
 
 
 def check_and_install_package(pkg_list):
@@ -1509,7 +1522,7 @@ def graph_cl_timings():
     timings_df['dummy'] = timings_df.afterrx_col.shift(-1)
     timings_df['dummy_frt'] = timings_df.frt_dec.shift(-1)
     timings_df = timings_df.assign(rxcall2afterrx=pd.Series(np.nan))
-    timings_df.rxcall2afterrx = timings_df.apply(lambda x: x.dummy_frt-x.frt_dec if x.beforerx_col == 'beforeRx' and x.dummy == 'afterRx' else np.nan, axis=1)
+    # timings_df.rxcall2afterrx = timings_df.apply(lambda x: x.dummy_frt-x.frt_dec if x.beforerx_col == 'beforeRx' and x.dummy == 'afterRx' else np.nan, axis=1)
     timings_df['rxcall2afterrx'] = np.where(((timings_df.beforerx_col == 'beforeRx') & (timings_df.dummy == 'afterRx')), timings_df.dummy_frt-timings_df.frt_dec, np.nan)
     timings_df.drop(columns=['dummy', 'dummy_frt'], inplace=True)
     # freq
