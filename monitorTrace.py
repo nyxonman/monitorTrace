@@ -12,6 +12,9 @@ import random
 import json
 import webbrowser
 import math
+from inspect import getframeinfo, stack
+
+# from numpy.lib.function_base import _meshgrid_dispatcher
 
 # list of global variables subject to change
 glob = {
@@ -29,6 +32,7 @@ OUTPUT_FILE_NAME = "lastdecodedTraces"
 OUTPUT_FILE_EXT = ".log"
 FILE_HTML = "tmp_v" + __VERSION__ + ".html"
 HEX_TRACE_DIR = "/media/mmcblk0p1/"
+DEBUG_LOG_FILE = 'debug.log'
 
 # pings
 if os.name == OS_POSIX:
@@ -783,10 +787,30 @@ def check_and_install_package(pkg_list):
         print("")
 
 
-def LOG_DBG(str):
+def LOG_INFO(msg, console=True):
+    ''' string for debug logging info'''
     if args.debug == 0:
         return
-    print(str)
+    if console:
+        print("{}".format(msg), flush=True)
+
+    caller = getframeinfo(stack()[1][0])
+    printStr = "{} [INFO:{:04d}] : {}.\n".format(get_datetime(), caller.lineno, msg)
+    with open(DEBUG_LOG_FILE, 'a') as f:
+        f.write(printStr)
+
+
+def LOG_ERR(msg, console=True):
+    ''' string for debug logging error'''
+    if args.debug == 0:
+        return
+    if console:
+        print("ERR : {}".format(msg), flush=True)
+
+    caller = getframeinfo(stack()[1][0])
+    printStr = "{} [ERR :{:04d}] : {}.\n".format(get_datetime(), caller.lineno, msg)
+    with open(DEBUG_LOG_FILE, 'a') as f:
+        f.write(printStr)
 
 
 def convert_pib_val(pibval):
@@ -823,7 +847,7 @@ def test_ssh(host, command, acceptKey=False):
     raw_output = b''
     err = ''
 
-    LOG_DBG("Exec {} on {}".format(COMMAND, HOST))
+    LOG_INFO("Exec {} on {}".format(COMMAND, HOST), False)
     # run ssh or plink depending upon the os
     if os.name == OS_POSIX:
         p1 = subprocess.Popen(['sshpass', '-p', PWD, 'ssh', "-o StrictHostKeyChecking=no", "-o LogLevel=ERROR",
@@ -851,8 +875,8 @@ def test_ssh(host, command, acceptKey=False):
     # print(err, p1.returncode)
     # print(raw_output)
     if p1.returncode != RET_SUCC:
-        # print("### ERROR :" + str(err.decode('utf-8', 'ignore')).strip() + " ###")
-        LOG_DBG("not suc")
+        LOG_ERR("### ERROR :" + str(err.decode('utf-8', 'ignore')).strip() + " ###", False)
+        print("NOk")
     # LOG_DBG(raw_output)
 
     return p1.returncode, raw_output
@@ -860,6 +884,8 @@ def test_ssh(host, command, acceptKey=False):
 
 def checkNodeReachability(ipv4Addr):
     '''check the reachability of the Root by sending a small packet of size 8B'''
+
+    LOG_INFO(f"Checking Node reachability for {ipv4Addr}", False)
 
     if os.name == OS_WIN:
         p1 = subprocess.Popen([PING_CMD, PING_CNT, '1', PING_SIZE, '8', PING_RESP_TIME, '2000',
@@ -871,9 +897,10 @@ def checkNodeReachability(ipv4Addr):
 
     raw_output, err = p1.communicate()
 
-    LOG_DBG("ret ={},  {}".format(p1.returncode, (raw_output)))
+    LOG_INFO("ret ={},  {}".format(p1.returncode, (raw_output)), False)
 
     if p1.returncode != 0:
+        LOG_ERR("Failed to reach node")
         return RET_FAIL
 
     return RET_SUCC
@@ -1115,6 +1142,7 @@ def process_hexdump(hexdump, startLine=-1, showFirstLine=False):
     output = ''
     nlines = startLine
     firstLine = ' BYTENUM:   FRT_DEC   (0xFRT_HEXAD)  [TRACECODE]:       TRACE INFO '
+    mode = 'w'
 
     if showFirstLine:
         if not args.nolog:
@@ -1129,6 +1157,7 @@ def process_hexdump(hexdump, startLine=-1, showFirstLine=False):
 
         # print(byteArr, len(byteArr))
         if len(byteArr) != 18:
+            LOG_ERR("Illegal Line #{} => {}".format(nlines, line), False)
             continue
         nlines = nlines + 1
         # get timestamp
@@ -1140,6 +1169,7 @@ def process_hexdump(hexdump, startLine=-1, showFirstLine=False):
                         byteArr[10] + byteArr[9], 16)
 
         if tracecode >= MAX_TRACE_EVT:
+            LOG_ERR("Illegal Trace code {} in {}".format(tracecode, line), False)
             continue
 
         info = process_one_trace(tracecode, byteArr)
@@ -1162,15 +1192,15 @@ def process_hexdump(hexdump, startLine=-1, showFirstLine=False):
     if not args.nolog:
         print(("-"*halflen) + "( "+get_datetime() + " )" + ("-" * halflen))
 
-    with open(args.output, 'w') as fout:
+    with open(args.output, mode) as fout:
         fout.writelines(outputList)
 
     if args.csv:
-        with open(csvfile, 'w', newline='') as csvfileio:
+        with open(csvfile, mode, newline='') as csvfileio:
             writer = csv.writer(csvfileio)
             writer.writerows(csvList)
 
-    LOG_DBG("Written to {} lines to {}".format(nlines, args.output))
+    LOG_INFO("Written {} lines to {}".format(nlines, args.output), False)
 
     showFirstLine = False
 
@@ -1180,6 +1210,7 @@ def process_hexdump(hexdump, startLine=-1, showFirstLine=False):
 def cleanup_proc():
     pid = b''
     print(" - Cleaning Residues... ", end='')
+    LOG_INFO("Cleaning Residues", False)
 
     command = "ps | grep 'cat /dev/dsp_rf_tracing' | grep -v grep | awk '{print $1}'"
     ret, pid = test_ssh(args.ip, command)
@@ -1200,10 +1231,12 @@ def cleanup_proc():
         print("KILLED...", end='')
 
     print("old trace...", end='')
-    command = "rm " + HEX_TRACE_DIR + "hexTrace.log"
+    # command = "rm " +
+    command = "(ls "+HEX_TRACE_DIR + "hexTrace.log >> /dev/null 2>&1 && rm  "+HEX_TRACE_DIR + "hexTrace.log) || echo -1"
     ret, pid = test_ssh(args.ip, command)
 
     print("REMOVED")
+    LOG_INFO("Old Trace {} Removed".format(HEX_TRACE_DIR + "hexTrace.log"), False)
 
 
 def clear_local_logs():
@@ -2719,27 +2752,34 @@ def graph_it():
 
 def check_system_dependency():
     # run ssh or plink depending upon the os
+    LOG_INFO(f"Checking system dependency", False)
+
+    LOG_INFO(f"System OS={os.name}", False)
     if os.name == OS_POSIX:
         p1 = subprocess.Popen(['which', 'sshpass'], stdout=subprocess.PIPE,  stderr=subprocess.PIPE)
     else:
 
         p1 = subprocess.Popen(['where', "plink", ],
                               stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
+    LOG_INFO(f'{p1}', False)
     try:
         raw_output, err = p1.communicate(timeout=30)
     except:
         print("prob while communicating quit:{}", glob["QUIT"])
         print("err={}, retCode={}, raw_output={}".format(
             err, p1.returncode, raw_output))
+        LOG_ERR("prob while communicating")
         return False
 
     if "plink.exe" in raw_output.decode('utf-8') or "sshpass" in raw_output.decode('utf-8'):
+        LOG_INFO(f'plink or ssh exists', False)
         return True
 
     if os.name == OS_POSIX:
-        print("*** Requires sshpass to continue. Install using sudo apt install sshpass")
+        LOG_ERR("*** Requires sshpass to continue. Install using sudo apt install sshpass")
     else:
-        print("*** Requires plink.exe to continue. Please install plink.")
+        LOG_ERR("*** Requires plink.exe to continue. Please install plink.")
+
     return False
 
 
@@ -2857,6 +2897,14 @@ if __name__ == "__main__":
     except:
         exit()
 
+    if args.debug:
+        with open(DEBUG_LOG_FILE, 'w') as f:
+            f.write("MonitorTrace V{}\n".format(APP_VERSION))
+
+    LOG_INFO("System Version {}".format(sys.version_info), False)
+    LOG_INFO("CLI arguments Parsed", False)
+    LOG_INFO(args, False)
+
     # check for system dependcies i.e. sshpass for linux and plink for windows
     if not check_system_dependency():
         exit(0)
@@ -2866,8 +2914,8 @@ if __name__ == "__main__":
     #     print("Error -e option works only with -g")
     #     exit(0)
 
-    print("*** Monitoring traces v" + APP_VERSION +
-          " started at " + get_datetime())
+    LOG_INFO("*** Monitoring traces v" + APP_VERSION +
+             " started at " + get_datetime())
 
     tmp = args.output.split('.')
     hexfile = tmp[0]+"_hex."+tmp[1]
@@ -2919,17 +2967,18 @@ if __name__ == "__main__":
         args.ip = args.ip.strip()
         print(" - Node IP '{}'..VALID..".format(args.ip), end='')
         if checkNodeReachability(args.ip) == RET_FAIL:
-            print("UNREACHABLE!!!")
+            LOG_ERR("UNREACHABLE!!!")
             exit(1)
             # ret=os.system('echo Y | plink -pw itron -ssh root@10.70.100.118 uptime')
         print("REACHABLE")
+        LOG_INFO("Node {} REACHABLE".format(args.ip), False)
         REACHABLE = True
 
     if args.range:
         cl_id_range = args.range
         cnt_colon = cl_id_range.count(':')
         if cnt_colon > 1:
-            print("Error: Format not correct. Range format should be start:end")
+            LOG_ERR("Error: Format not correct. Range format should be start:end")
             exit(0)
 
     if args.graph:
@@ -2938,37 +2987,40 @@ if __name__ == "__main__":
         result = all(int(elem, 10) in list(GRAPH_NUM_STR.keys()) for elem in graph_ans_list)
 
         if not result:
-            print("Invalid entry {}. Choose from {}\n  {}".format(graph_ans_list,
-                                                                  list(GRAPH_NUM_STR.keys()),
-                                                                  '\n  '.join(str(key)+" : "+str(val) for key, val in GRAPH_NUM_STR.items())))
+            LOG_ERR("Invalid entry {}. Choose from {}\n  {}".format(graph_ans_list,
+                                                                    list(GRAPH_NUM_STR.keys()),
+                                                                    '\n  '.join(str(key)+" : "+str(val) for key, val in GRAPH_NUM_STR.items())))
             exit(0)
 
     # if file mode process and exit
     if args.file:
         extension = args.file.split('.')[-1].strip().lower()
         if not os.path.isfile(args.file):
-            print("\n*** Cannot find the file '{}'".format(args.file))
+            LOG_ERR("*** Cannot find the file '{}'".format(args.file))
             exit()
         if (extension == 'csv'):
+            LOG_INFO("{} is CSV, using it directly".format(args.file), False)
             graph_file = args.file
 
         else:
+            LOG_INFO("{} is NOT CSV, processing hexdump".format(args.file), False)
             with open(args.file, 'r') as file:
                 hexdump = file.read()
                 # print(hexdump)
                 process_hexdump(hexdump, 0, True)
             print("")
-            print(
+            LOG_INFO(
                 " - Decoded Traces are saved to {}\{}".format(get_current_path(), args.output))
 
         if args.graph:
+            LOG_INFO("Creating Graph", False)
             graph_it()
+            LOG_INFO("Opening in web at file://{}".format(os.path.realpath(FILE_HTML)), False)
             webbrowser.open('file://' + os.path.realpath(FILE_HTML))
 
         exit()
 
-    print(" - Reading the device... ", end='')
-    sys.stdout.flush()
+    print(" - Reading the device... ", end='', flush=True)
 
     ret, outputVer = test_ssh(
         args.ip, "cat /etc/Version.txt;echo -n 'RF MAC: '; pib -gi 030000A2  --raw;echo -n 'Uptime: ';uptime;echo -n 'MAC ADDR: ';pib -gi FFFFFFF4;", True)
@@ -2990,10 +3042,13 @@ if __name__ == "__main__":
     a7_build = int(a7_ver_list[2].split(':', 2)[1], 10)
     a7_ver = (a7_major, a7_minor, a7_build)
     if(a7_ver < MIN_A7_VER):
-        print("\n\n*** The node Version A7 {} is not compatible. Minimum Required {}".format(a7_ver, MIN_A7_VER))
+        LOG_ERR("\n\n*** The node Version A7 {} is not compatible. Minimum Required {}".format(a7_ver, MIN_A7_VER))
         choice = input("The APP may not function properly. Continue? (y/n)? ")
         if choice.lower() != 'y':
             exit(0)
+
+    LOG_INFO("macAddr {}".format(macAddr), False)
+    LOG_INFO("Version {}".format(a7_ver), False)
 
     # if mask is provided, set and read back
     if args.mask:
@@ -3002,7 +3057,7 @@ if __name__ == "__main__":
             args.ip, "pib -si E0000000 -v {} >/dev/null".format(args.mask))
         if (ret != RET_SUCC):
             print("FAILED")
-            print("Cannot write the pib. Check if DSP is running or NOT")
+            LOG_ERR("Cannot write the pib. Check if DSP is running or NOT")
             exit(1)
         print(" SUCCESS")
 
@@ -3025,28 +3080,29 @@ if __name__ == "__main__":
 
     # handle exit to cleanup pipe
     # atexit.register(exit_handler)
-
+    LOG_INFO("Running hexdump in the target", False)
     ret, output = test_ssh(
         args.ip, "cat /dev/dsp_rf_tracing |hexdump -C > " + HEX_TRACE_DIR + "hexTrace.log &")
 
     if ret != RET_SUCC:
-        print("error {}".format(ret))
+        LOG_ERR("error {}".format(ret))
         exit()
 
     cur_line = 0
     last_count = 0
     showFirstLine = True
 
-    print(" - Decoded Traces will be saved to {}\{}".format(get_current_path(), args.output))
+    LOG_INFO(" - Decoded Traces will be saved to {}\{}".format(get_current_path(), args.output))
     if args.trace:
-        print(" - Hex Traces will be saved to {}\{}".format(get_current_path(), hexfile))
+        LOG_INFO(" - Hex Traces will be saved to {}\{}".format(get_current_path(), hexfile))
     if args.csv:
-        print(" - decoded CSV will be saved to {}\{}".format(get_current_path(), csvfile))
+        LOG_INFO(" - decoded CSV will be saved to {}\{}".format(get_current_path(), csvfile))
 
-    print("\n*** Monitoring LIVE on {} (Poll intv:{} secs)".format(args.ip, args.poll))
+    LOG_INFO("\n*** Monitoring LIVE on {} (Poll intv:{} secs)".format(args.ip, args.poll))
     print("")
 
     graph_shown = False
+    new_count = 0
 
     # MAIN monitoring LOOP
     while True:
@@ -3059,8 +3115,13 @@ if __name__ == "__main__":
         #         REACHABLE = False
         #         my_wait(args.poll)
         #         continue
+        mode = 'w'
+
+        my_wait(args.poll, new_count)
 
         REACHABLE = True
+
+        # trace_cmd = "lastline=$( wc -l < " + HEX_TRACE_DIR + "hexTrace.log)p; sed -n " + str(hexTraceLastLine) + ",$lastline < " + HEX_TRACE_DIR + "hexTrace.log"
         ret, output = test_ssh(args.ip, "cat " + HEX_TRACE_DIR + "hexTrace.log")
 
         hexdump = output.decode('utf-8')
@@ -3071,11 +3132,11 @@ if __name__ == "__main__":
 
             last_count = new_count
             cur_line = process_hexdump(hexdump, cur_line, showFirstLine)
-            showFirstLine = False
 
             if (args.trace and hexdump):
-                with open(hexfile, 'w') as fout:
+                with open(hexfile, mode) as fout:
                     fout.writelines(hexdump)
+            showFirstLine = False
 
             if (args.graph and (not graph_shown or GRAPH_OPTION == GRAPH_HIGHCHARTS)):
                 if GRAPH_OPTION == GRAPH_PLOTLY:
@@ -3086,4 +3147,3 @@ if __name__ == "__main__":
                 graph_shown = True
 
         # time.sleep(args.poll)
-        my_wait(args.poll, new_count)
