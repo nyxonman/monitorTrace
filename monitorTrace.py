@@ -2696,7 +2696,10 @@ def graph_it():
             timings_df['beforetx_col'] = np.where((timings_df.tracecode_dec == tracing_events_str_num['CL_FRT32_TX_CALL']), "beforeTx", np.nan)
 
             # dc
-            timings_df['dc_col'] = np.where((timings_df.tracecode_dec == tracing_events_str_num['LMMGR_DATA_CONF']), "dc", np.nan)
+            timings_df['dummyAftertx'] = timings_df.aftertx_col.shift(1)
+            timings_df['dummyclid'] = timings_df.cl_id.shift(1)
+            timings_df['dc_col'] = np.where(((timings_df.tracecode_dec == tracing_events_str_num['LMMGR_DATA_CONF']) & (timings_df.dummyAftertx == "afterTx") & (timings_df.cl_id==timings_df.dummyclid)), "dc", np.nan)
+            timings_df.drop(columns=['dummyclid','dummyAftertx'], inplace=True)
 
             # txend
             timings_df['txend_col'] = np.where((timings_df.tracecode_dec == tracing_events_str_num['FRT32_TX_END']), "txEnd", np.nan)
@@ -2707,8 +2710,19 @@ def graph_it():
             # beforeRx
             timings_df['beforerx_col'] = np.where((timings_df.tracecode_dec == tracing_events_str_num['CL_FRT32_RX_CALL']), "beforeRx", np.nan)
 
+            # rxstart
+            timings_df['dummyAfterrx'] = timings_df.afterrx_col.shift(1)
+            timings_df['dummyclid'] = timings_df.cl_id.shift(1)
+            timings_df['rxstart_col'] = np.where(((timings_df.tracecode_dec == tracing_events_str_num['FRT32_RX_START']) & (timings_df.dummyAfterrx == "afterRx") & (timings_df.cl_id==timings_df.dummyclid)), "rxStart", np.nan)
+            timings_df.drop(columns=['dummyclid','dummyAfterrx'], inplace=True)
+
             # rxend
-            timings_df['rxend_col'] = np.where((timings_df.tracecode_dec == tracing_events_str_num['FRT32_RX_END']), "rxEnd", np.nan)
+            timings_df['dummyRxstart'] = timings_df.rxstart_col.shift(1)
+            timings_df['dummyclid'] = timings_df.cl_id.shift(1)
+            timings_df['rxend_col'] = np.where(((timings_df.tracecode_dec == tracing_events_str_num['FRT32_RX_END']) & (timings_df.dummyRxstart == "rxStart") & (timings_df.cl_id==timings_df.dummyclid)), "rxEnd", np.nan)
+            timings_df.drop(columns=['dummyclid','dummyRxstart'], inplace=True)
+
+            # timings_df['rxend_col'] = np.where((timings_df.tracecode_dec == tracing_events_str_num['FRT32_RX_END']), "rxEnd", np.nan)
 
             # # FRT_dec
             # timings_df['frt_dec'] = timings_df.apply(lambda x: int(x.frt_hex[-min(len(x.frt_hex)-2, 8):], 16), axis=1)
