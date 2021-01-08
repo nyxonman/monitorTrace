@@ -405,7 +405,6 @@ function create_highchart(id, tabName, chartData, containerDiv = 'container', an
 							zIndex: 99,
 						})
 						.on('click', function () {
-
 							var xMin = chart.xAxis[0].getExtremes().min;
 							var xMax = chart.xAxis[0].getExtremes().max;
 							delta = xMax - xMin;
@@ -421,7 +420,6 @@ function create_highchart(id, tabName, chartData, containerDiv = 'container', an
 							var xMax = chart.xAxis[0].getExtremes().max;
 							delta = xMax - xMin;
 							chart.xAxis[0].setExtremes(xMin - delta / 2, xMax + delta / 2);
-							// chart.xAxis[0].setExtremes(xMin + (1 - zoomRatio) * xMax, xMax * zoomRatio);
 						})
 						.add();
 					myChart.renderer.button('O', 90, 10)
@@ -429,14 +427,9 @@ function create_highchart(id, tabName, chartData, containerDiv = 'container', an
 							zIndex: 99
 						})
 						.on('click', function () {
-
-							var xMin = chart.xAxis[0].getExtremes().min;
-							var xMax = chart.xAxis[0].getExtremes().max;
 							chart.zoomOut();
-
 						})
 						.add();
-
 
 				},
 				/*  render: function () { */
@@ -1394,7 +1387,7 @@ function create_cltiming_chart(tabName, renderFlag) {
 		},
 		labels: [{
 			point: {
-				x: 100, y: 0,
+				x: 150, y: 0,
 			},
 			text: "min/max/avg"
 		}]
