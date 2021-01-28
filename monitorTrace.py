@@ -30,7 +30,7 @@ __VERSION__ = "3.2"
 APP_VERSION = __VERSION__ + " {OS: " + os.name + "}"
 OUTPUT_FILE_NAME = "lastdecodedTraces"
 OUTPUT_FILE_EXT = ".log"
-FILE_HTML = "tmp_v" + __VERSION__ + ".html"
+FILE_HTML = "monitorTrace_v" + __VERSION__ + ".html"
 HEX_TRACE_DIR = "/media/mmcblk0p1/"
 DEBUG_LOG_FILE = 'debug.log'
 
