@@ -1744,6 +1744,12 @@ window.onload = function () {
 	init_timeline_cl_filter();
 
 	$(document).on("click", ".filterBtn", prepare_timeline_cl_filter);
+	$('.filterInput').keypress(function(event){
+		var keycode = (event.keyCode ? event.keyCode : event.which);
+		if(keycode == '13'){
+			prepare_timeline_cl_filter(event);
+		}
+	});
 
 	/* trigger a click on the first tab to show*/
 	document.getElementById("firstTab").click();
