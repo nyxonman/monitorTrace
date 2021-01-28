@@ -267,6 +267,11 @@
 
 
 	</nav>
+
+	<!--will be filled by js during any failures  -->
+	<div id="alertDiv">
+	</div>
+
 	<div class="page">
 
 		<div class="container-fluid">
@@ -348,6 +353,25 @@
 						</div>
 					</div>
 					<div id="timelineTab" class="tabcontent" style="width: 100%;">
+						<div class="col-sm-4 offset-sm-8 input-group input-group-sm clFilter">
+							<div class="input-group-prepend">
+								<span class="input-group-text" id="inputGroup-sizing-sm">Filter CL Id</span>
+							</div>
+							<input type="text" class="form-control" aria-label="Start CL ID"
+								aria-describedby="inputGroup-sizing-sm" id="timelineStartClId">
+
+							<input type="text" class="form-control" aria-label="Last CL ID"
+								aria-describedby="inputGroup-sizing-sm" id="timelineEndClId">
+
+							<div class="input-group-append">
+								<button class="btn btn-outline-primary filterBtn" type="button"
+									id="timelineFilterBtn">Filter</button>
+								<button class="btn btn-outline-danger filterBtn" type="button"
+									id="timelineResetBtn">Reset</button>
+
+							</div>
+						</div>
+
 						<div id="timeline" class="chartContainer"></div>
 						<div class="markerTable">
 							<i class="fas fa-tags"></i> Markers List

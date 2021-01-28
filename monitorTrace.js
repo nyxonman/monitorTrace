@@ -227,6 +227,10 @@ function drawChart(chartId, tabName, renderFlag) {
 
 }
 
+function display_alert(type = 'warning', msg = "") {
+	var alertDivStr = '<div class="alert alert-' + type + ' alert-dismissible fade show" role="alert">' + msg + '<button type = "button" class="close" data-dismiss="alert" aria- label="Close" ><span aria-hidden="true">&times;</span></button ></div>';
+	$('#alertDiv').html(alertDivStr);
+}
 
 var markerCnt = 0;
 
@@ -381,6 +385,7 @@ function create_highchart(id, tabName, chartData, containerDiv = 'container', an
 			useGPUTranslations: true,
 			/*  allowForce:true, */
 			/*  usePreallocated:true, */
+			seriesThreshold: 252,
 			useAlpha: false
 		},
 		exporting: {
@@ -1428,8 +1433,25 @@ function create_timeline_chart(tabName, renderFlag) {
 	let chartData = [];
 	let dataPoints = [];
 
+	new_timeline_txJson = jsonData.timeline_txJson.filter((item) => {
+		return ((parseInt(item.cl_id) >= new_start_cl_id) && ((parseInt(item.cl_id) <= new_end_cl_id)));
+	});
+	new_timeline_rxJson = jsonData.timeline_rxJson.filter((item) => {
+		return ((parseInt(item.cl_id) >= new_start_cl_id) && (parseInt(item.cl_id) <= new_end_cl_id));
+	});
+	new_timeline_clStartEndJson = jsonData.timeline_clStartEndJson.filter((item) => {
+		return ((parseInt(item.cl_id) >= new_start_cl_id) && (parseInt(item.cl_id) <= new_end_cl_id));
+	});
+	new_timeline_phyIndJson = jsonData.timeline_phyIndJson.filter((item) => {
+		return ((parseInt(item.cl_id) >= new_start_cl_id) && (parseInt(item.cl_id) <= new_end_cl_id));
+	});
+	new_timeline_clTracesJson = jsonData.timeline_clTracesJson.filter((item) => {
+		return ((parseInt(item.cl_id) >= new_start_cl_id) && (parseInt(item.cl_id) <= new_end_cl_id));
+	});
+
+
 	/* TX area*/
-	jsonData.timeline_txJson.forEach(item => {
+	new_timeline_txJson.forEach(item => {
 		chartData.push({
 			type: 'area',
 			findNearestPointBy: 'xy',
@@ -1469,7 +1491,7 @@ function create_timeline_chart(tabName, renderFlag) {
 	});
 
 	/* RX area */
-	jsonData.timeline_rxJson.forEach(item => {
+	new_timeline_rxJson.forEach(item => {
 		chartData.push({
 			type: 'area',
 			findNearestPointBy: 'xy',
@@ -1506,7 +1528,7 @@ function create_timeline_chart(tabName, renderFlag) {
 		})
 	});
 	/* CL area */
-	jsonData.timeline_clStartEndJson.forEach(item => {
+	new_timeline_clStartEndJson.forEach(item => {
 		chartData.push({
 			type: 'area',
 			/*  findNearestPointBy: 'xy', */
@@ -1548,7 +1570,7 @@ function create_timeline_chart(tabName, renderFlag) {
 
 	/* Phy Data Indications */
 	dataPoints = [];
-	dataPoints = jsonData.timeline_phyIndJson.map((item) => {
+	dataPoints = new_timeline_phyIndJson.map((item) => {
 		if (!Number(item.frt_dec)) {
 			console.log("Error..", item);
 		}
@@ -1592,7 +1614,7 @@ function create_timeline_chart(tabName, renderFlag) {
 
 	/* CL Traces */
 	dataPoints = [];
-	dataPoints = jsonData.timeline_clTracesJson.map((item) => {
+	dataPoints = new_timeline_clTracesJson.map((item) => {
 		return {
 			x: item.frt_dec,
 			y: 6,
@@ -1656,6 +1678,58 @@ function openGraph(evt, tabName) {
 
 }
 
+function init_timeline_cl_filter() {
+	if (!jsonData.hasOwnProperty('timeline_clStartEndJson')) return;
+	orig_start_cl_id = Math.min(parseInt(jsonData.timeline_txJson[0].cl_id), parseInt(jsonData.timeline_rxJson[0].cl_id));
+	orig_end_cl_id = Math.max(jsonData.timeline_txJson[jsonData.timeline_txJson.length - 1].cl_id, jsonData.timeline_rxJson[jsonData.timeline_rxJson.length - 1].cl_id);
+	$('#timelineStartClId').val(orig_start_cl_id);
+	$('#timelineEndClId').val(orig_end_cl_id);
+	old_start_cl_id = orig_start_cl_id;
+	old_end_cl_id = orig_end_cl_id;
+	new_start_cl_id = orig_start_cl_id;
+	new_end_cl_id = orig_end_cl_id;
+	/* console.log("Filter init ", { new_start_cl_id, new_end_cl_id }); */
+
+}
+var new_start_cl_id = 0;
+var new_end_cl_id = 0;
+var old_start_cl_id = 0;
+var old_end_cl_id = 0;
+var orig_start_cl_id = 0;
+var orig_end_cl_id = 0;
+function prepare_timeline_cl_filter(evt = false) {
+
+	if (evt.target.id == "timelineResetBtn") {
+		new_start_cl_id = Math.min(parseInt(jsonData.timeline_txJson[0].cl_id), parseInt(jsonData.timeline_rxJson[0].cl_id));
+		new_end_cl_id = Math.max(jsonData.timeline_txJson[jsonData.timeline_txJson.length - 1].cl_id, jsonData.timeline_rxJson[jsonData.timeline_rxJson.length - 1].cl_id);
+		$('#timelineStartClId').val(new_start_cl_id);
+		$('#timelineEndClId').val(new_end_cl_id);
+
+	} else {
+		new_start_cl_id = parseInt($('#timelineStartClId').val());
+		new_end_cl_id = parseInt($('#timelineEndClId').val());
+	}
+
+
+	if (new_start_cl_id < orig_start_cl_id || new_start_cl_id > orig_end_cl_id) {
+		new_start_cl_id = orig_start_cl_id;
+		$('#timelineStartClId').val(new_start_cl_id);
+		display_alert('warning', `<b>The provided CL Id is out of range [${orig_start_cl_id},${orig_end_cl_id}].</b> Resetting to the min possible value.`);
+	}
+	if (new_end_cl_id > orig_end_cl_id) {
+		new_end_cl_id = orig_end_cl_id;
+		$('#timelineEndClId').val(new_end_cl_id);
+		display_alert('warning', `<b>The provided CL Id is out of range [${orig_start_cl_id},${orig_end_cl_id}].</b> Resetting to the max possible value.`);
+	}
+
+	/* do nothing if filters has not changed */
+	if (new_start_cl_id == old_start_cl_id && new_end_cl_id == old_end_cl_id) return;
+	/* console.log("Filtered ", { new_start_cl_id, new_end_cl_id }); */
+	drawChart(TIMELINE_CHART_ID, "timelineTab", true);
+	old_start_cl_id = new_start_cl_id;
+	old_end_cl_id = new_end_cl_id;
+}
+
 /* when everything is loaded */
 window.onload = function () {
 
@@ -1665,6 +1739,11 @@ window.onload = function () {
 
 	/* pie charts */
 	drawPieChart();
+
+	/* prepare timeline cl_id filters */
+	init_timeline_cl_filter();
+
+	$(document).on("click", ".filterBtn", prepare_timeline_cl_filter);
 
 	/* trigger a click on the first tab to show*/
 	document.getElementById("firstTab").click();
@@ -1709,6 +1788,3 @@ window.onload = function () {
 	});
 
 }
-
-
-
