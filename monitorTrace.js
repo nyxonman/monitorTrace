@@ -1688,7 +1688,9 @@ function init_timeline_cl_filter() {
 	old_end_cl_id = orig_end_cl_id;
 	new_start_cl_id = orig_start_cl_id;
 	new_end_cl_id = orig_end_cl_id;
-	/* console.log("Filter init ", { new_start_cl_id, new_end_cl_id }); */
+	$('.clFilter .totalCls').html((new_end_cl_id - new_start_cl_id + 1) + " CL(s)");
+	console.log("total CLs", new_end_cl_id - new_start_cl_id);
+	console.log("Filter init ", { new_start_cl_id, new_end_cl_id });
 
 }
 var new_start_cl_id = 0;
@@ -1697,6 +1699,7 @@ var old_start_cl_id = 0;
 var old_end_cl_id = 0;
 var orig_start_cl_id = 0;
 var orig_end_cl_id = 0;
+var diff = 0;
 function prepare_timeline_cl_filter(evt = false) {
 
 	if (evt.target.id == "timelineResetBtn") {
@@ -1704,6 +1707,7 @@ function prepare_timeline_cl_filter(evt = false) {
 		new_end_cl_id = Math.max(jsonData.timeline_txJson[jsonData.timeline_txJson.length - 1].cl_id, jsonData.timeline_rxJson[jsonData.timeline_rxJson.length - 1].cl_id);
 		$('#timelineStartClId').val(new_start_cl_id);
 		$('#timelineEndClId').val(new_end_cl_id);
+		$(".alert").alert('close');
 
 	} else {
 		new_start_cl_id = parseInt($('#timelineStartClId').val());
@@ -1712,19 +1716,29 @@ function prepare_timeline_cl_filter(evt = false) {
 
 
 	if (new_start_cl_id < orig_start_cl_id || new_start_cl_id > orig_end_cl_id) {
+		display_alert('warning', `<b>Start CL Id ${new_start_cl_id}&nbsp;is out of range [${orig_start_cl_id},${orig_end_cl_id}].</b> Resetting to the min possible value.`);
 		new_start_cl_id = orig_start_cl_id;
 		$('#timelineStartClId').val(new_start_cl_id);
-		display_alert('warning', `<b>The provided CL Id is out of range [${orig_start_cl_id},${orig_end_cl_id}].</b> Resetting to the min possible value.`);
 	}
-	if (new_end_cl_id > orig_end_cl_id) {
+	if (new_end_cl_id > orig_end_cl_id || new_end_cl_id < orig_start_cl_id) {
+		display_alert('warning', `<b>End CL Id ${new_end_cl_id}&nbsp;is out of range [${orig_start_cl_id},${orig_end_cl_id}].</b> Resetting to the max possible value.`);
 		new_end_cl_id = orig_end_cl_id;
 		$('#timelineEndClId').val(new_end_cl_id);
-		display_alert('warning', `<b>The provided CL Id is out of range [${orig_start_cl_id},${orig_end_cl_id}].</b> Resetting to the max possible value.`);
 	}
 
 	/* do nothing if filters has not changed */
 	if (new_start_cl_id == old_start_cl_id && new_end_cl_id == old_end_cl_id) return;
+
+	diff = new_end_cl_id - new_start_cl_id;
+	if (diff < 0) {
+		display_alert('warning', `<b> End CL id ${new_end_cl_id}&nbsp;> Start CL id ${new_start_cl_id}</b>. Resetting to the range [${orig_start_cl_id}, ${orig_end_cl_id}] `);
+		new_start_cl_id = orig_start_cl_id;
+		new_end_cl_id = orig_end_cl_id;
+		$('#timelineStartClId').val(new_start_cl_id);
+		$('#timelineEndClId').val(new_end_cl_id);
+	}
 	/* console.log("Filtered ", { new_start_cl_id, new_end_cl_id }); */
+	$('.clFilter .totalCls').html((new_end_cl_id - new_start_cl_id + 1) + " CL(s)");
 	drawChart(TIMELINE_CHART_ID, "timelineTab", true);
 	old_start_cl_id = new_start_cl_id;
 	old_end_cl_id = new_end_cl_id;
@@ -1744,9 +1758,9 @@ window.onload = function () {
 	init_timeline_cl_filter();
 
 	$(document).on("click", ".filterBtn", prepare_timeline_cl_filter);
-	$('.filterInput').keypress(function(event){
+	$('.filterInput').keypress(function (event) {
 		var keycode = (event.keyCode ? event.keyCode : event.which);
-		if(keycode == '13'){
+		if (keycode == '13') {
 			prepare_timeline_cl_filter(event);
 		}
 	});
@@ -1775,22 +1789,36 @@ window.onload = function () {
 
 	/* refreshing the page */
 	refreshIntv = $('#refreshIntvDur').val() * $('#refreshIntUnit').val() * 1000;
+	var seconds = refreshIntv / 1000;
+	var secondTimer;
 	console.log("refreshIntv", refreshIntv);
 	if (refreshIntv > 0) {
 		refreshTimer = setTimeout(function () {
 			location.reload();
 		}, refreshIntv);
+		secondTimer = setInterval(function () {
+			$('.countdownString').html(`<i class="fas fa-sync"></i>&nbsp;in ${seconds--}...`);
+		}, 1000);
 	}
 
 	/* handle change in the refresh interval */
-	$(document).on("change", "#refreshIntvDur", function (event) {
+	$(document).on("change", "#refreshIntvDur,#refreshIntUnit", function (event) {
 		refreshIntv = $('#refreshIntvDur').val() * $('#refreshIntUnit').val() * 1000;
+		seconds = refreshIntv / 1000;
 		if (typeof refreshTimer !== 'undefined') clearTimeout(refreshTimer);
+		if (secondTimer) clearInterval(secondTimer);
 		if (refreshIntv > 0) {
 			refreshTimer = setTimeout(function () {
 				location.reload();
 			}, refreshIntv);
+			secondTimer = setInterval(function () {
+				$('.countdownString').html(`<i class="fas fa-sync"></i>&nbsp;in ${seconds--}...`);
+			}, 1000);
+		} else {
+			$('.countdownString').html('');
+
 		}
 	});
+
 
 }

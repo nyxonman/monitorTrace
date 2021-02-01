@@ -55,6 +55,11 @@
 			padding-top: 10px;
 		}
 
+		.countdownString.float-right {
+			color: #f5deb3;
+			margin-top: 5px;
+		}
+
 		.modal-tip {
 			cursor: pointer;
 		}
@@ -234,8 +239,12 @@
 						</div>
 					</div>
 				</div>
-				<div class="offset-sm-2 col-sm-1 ">
 
+				<div class="col-sm-1">
+					<span class="countdownString float-right"></span>
+
+				</div>
+				<div class=" col-sm-2 ">
 					<button class="btn btn-sm btn-outline-warning float-right" id="removeAllMarkers">Remove all
 						Markers</button>
 				</div>
@@ -330,7 +339,7 @@
 					<div id="rttTab" class="tabcontent" style="width: 100%;">
 						<div id="rtt" class="chartContainer"></div>
 						<div class="markerTable">
-							<i class="fas fa-tags"></i> Markers List
+							<i class="fas fa-tags"></i> Markers List <sup>(Shift + LeftClick to add Markers.)</sup>
 
 							<div class="row markerTableList" id="markersList-rttTab"></div>
 						</div>
@@ -339,18 +348,10 @@
 
 					<div id="modeTab" class="tabcontent" style="width: 100%;">
 						<div id="mode" class="chartContainer"></div>
-						<div class="markerTable">
-							<i class="fas fa-tags"></i> Markers List
-							<div class="row markerTableList" id="markersList-modeTab"></div>
-						</div>
 					</div>
 
 					<div id="chanTab" class="tabcontent" style="width: 100%;">
 						<div id="chan" class="chartContainer"></div>
-						<div class="markerTable">
-							<i class="fas fa-tags"></i> Markers List
-							<div class="row markerTableList" id="markersList-chanTab"></div>
-						</div>
 					</div>
 					<div id="timelineTab" class="tabcontent" style="width: 100%;">
 						<div class="col-sm-4 offset-sm-8 input-group input-group-sm clFilter">
@@ -364,6 +365,8 @@
 								aria-describedby="inputGroup-sizing-sm" id="timelineEndClId">
 
 							<div class="input-group-append">
+								<span class="input-group-text totalCls" id="inputGroup-sizing-sm"></span>
+
 								<button class="btn btn-outline-primary filterBtn" type="button"
 									id="timelineFilterBtn">Filter</button>
 								<button class="btn btn-outline-danger filterBtn" type="button"
@@ -374,7 +377,7 @@
 
 						<div id="timeline" class="chartContainer"></div>
 						<div class="markerTable">
-							<i class="fas fa-tags"></i> Markers List
+							<i class="fas fa-tags"></i> Markers List <sup>(Shift + LeftClick to add Markers.)</sup>
 							<div class="row markerTableList" id="markersList-timelineTab"></div>
 						</div>
 					</div>
@@ -383,14 +386,14 @@
 						<hr>
 						<div id="buffer2" class="chartContainer2"></div>
 						<div class="markerTable">
-							<i class="fas fa-tags"></i> Markers List
+							<i class="fas fa-tags"></i> Markers List <sup>(Shift + LeftClick to add Markers.)</sup>
 							<div class="row markerTableList" id="markersList-bufferTab"></div>
 						</div>
 					</div>
 					<div id="cltimingTab" class="tabcontent" style="width: 100%;">
 						<div id="cltiming" class="chartContainer"></div>
 						<div class="markerTable">
-							<i class="fas fa-tags"></i> Markers List
+							<i class="fas fa-tags"></i> Markers List <sup>(Shift + LeftClick to add Markers.)</sup>
 							<div class="row markerTableList" id="markersList-cltimingTab"></div>
 						</div>
 					</div>
