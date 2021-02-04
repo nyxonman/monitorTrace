@@ -322,6 +322,7 @@ state_arr = [
     "LMSM_SA",
     "LMSM_LLS",
     "LMSM_ELG",
+    "LMSM_PHYTST",
 ]
 
 cl_substate_arr = {
@@ -385,6 +386,7 @@ owner_ids_arr = [
     "OID_TXBCAST",
     "OID_LMDC",
     "OID_PHYTST",
+    "OID_LG",
     "OID_MAX"
 ]
 
@@ -402,12 +404,13 @@ elg_event_code_str = {
     2: "ELG_EV_AC_LOSS",
     3: "ELG_EV_AC_RESTORED",
     4: "ELG_EV_EPF",
-    5: "ELG_EV_SFP_START",
+    5: "ELG_EV_SFP",
     6: "ELG_EV_SFP_TXDONE",
     7: "ELG_EV_MOLF_WAKEUP",
     8: "ELG_EV_TX_BUNDLE",
     9: "ELG_EV_TX_BUNDLE_DONE",
-    10: "ELG_EV_MAX",
+    10: "ELG_EV_ENTER_SLPM",
+    11: "ELG_EV_MAX",
 }
 
 sts_code_str = {
