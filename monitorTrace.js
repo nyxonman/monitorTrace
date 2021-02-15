@@ -14,6 +14,7 @@ RXEND2TARGETTIME_CHART_ID = "rxend2targettime";
 RXEND2TXTIME_CHART_ID = "rxend2txtime";
 TXCALL2TARGETTIME_CHART_ID = "txcall2targettime";
 TXCALL2AFTERTX_CHART_ID = "txcall2aftertx";
+TXCALL2TXPHR_CHART_ID = "txcall2txphr";
 RXEND2TXCALL_CHART_ID = "rxend2txcall";
 RXCALL2AFTERRX_CHART_ID = "rxcall2afterrx";
 CL_DUR_CHART_ID = "cl_dur";
@@ -160,7 +161,7 @@ chartOptions = {
 
 	},
 	"txcall2targettime": {
-		"chartTitle": "TX call to Target Time",
+		"chartTitle": "TX Wrapper call to Target Time",
 		"xAxisType": 'linear',
 		"xAxisTitle": "txcall2targettime in usecs",
 		"yAxisTitle": "Count",
@@ -169,14 +170,22 @@ chartOptions = {
 
 	},
 	"txcall2aftertx": {
-		"chartTitle": "TX call to after Tx",
+		"chartTitle": "TX Wrapper call to Wrapper Return",
 		"xAxisType": 'linear',
 		"xAxisTitle": "txcall2afterTx in usecs",
 		"yAxisTitle": "Count",
 		"yAxisTitle2": "PDF/CDF",
 		"yAxis2Max": 1,
-
 	},
+	"txcall2txphr": {
+		"chartTitle": "TX Wrapper call to Tx PHR",
+		"xAxisType": 'linear',
+		"xAxisTitle": "txcall2txphr in usecs",
+		"yAxisTitle": "Count",
+		"yAxisTitle2": "PDF/CDF",
+		"yAxis2Max": 1,
+	},
+
 	"rxend2txcall": {
 		"chartTitle": "RX End to TX Call",
 		"xAxisType": 'linear',
