@@ -974,9 +974,16 @@ def process_cl(code, infoArr):
             sts_code_str[status], status, status, prim_code_str[primId], primId, primId)
 
     elif tracing_events_num_str[code] == "CL_NEXT_CLI":
-        rx_time = int(infoArr[14] + infoArr[13], 16)
-        tx_time = int(infoArr[16] + infoArr[15], 16)
-        processClInfo = "rxTime {:d}ms, txTime {:d}ms".format(rx_time, tx_time)
+        # rx_time = int(infoArr[14] + infoArr[13], 16)
+        # tx_time = int(infoArr[16] + infoArr[15], 16)
+        rx_time = int(infoArr[13], 16)
+        rx_prio = int(infoArr[14], 16)
+        tx_time = int(infoArr[15], 16)
+        tx_prio = int(infoArr[16], 16)
+        next_32 = int(infoArr[16] + infoArr[15] +
+                      infoArr[14] + infoArr[13], 16)
+
+        processClInfo = "rxTime {:d}ms, txTime {:d}ms rxPrio {:d} txPrio {:d}".format(rx_time, tx_time, rx_prio, tx_prio)
 
     elif tracing_events_num_str[code] == "CL_NEXT_RX_TX":
         next_time = int(infoArr[16] + infoArr[15] +
@@ -2765,11 +2772,10 @@ def graph_it():
                 break
 
             # nextCLI
-
             nextcli_df = timings_df[timings_df.tracecode_dec == tracing_events_str_num['CL_NEXT_CLI']][['byte', 'trace_info']].rename(columns={'trace_info': 'nextcli'})
-            nextcli_df[['rx', 'tx']] = nextcli_df.nextcli.str.split(' ', expand=True).drop(columns=[0, 1, 3], axis=1)
-            nextcli_df.nextcli = "CLI(" + nextcli_df.tx + "," + nextcli_df.rx.str[:-1] + ")"
-            nextcli_df.drop(columns=['rx', 'tx'], inplace=True)
+            nextcli_df[['rx', 'tx', 'rxPrio', 'txPrio']] = nextcli_df.nextcli.str.split(' ', expand=True,).drop(columns=[0, 1, 3, 5, 7], axis=1)
+            nextcli_df.nextcli = "CLI(" + nextcli_df.tx + "[" + nextcli_df.txPrio + "]," + nextcli_df.rx.str[:-1] + "[" + nextcli_df.rxPrio + "])"
+            nextcli_df.drop(columns=['rx', 'tx', 'rxPrio', 'txPrio'], inplace=True)
 
             timings_df = timings_df.merge(nextcli_df, on='byte', how='left')
             timings_df.nextcli = timings_df.nextcli.fillna(method='bfill')
@@ -3055,7 +3061,7 @@ if __name__ == "__main__":
             TRACING_DEBUG_VALUES_LIST = list(correctedbinaryStr)
 
             for key, val in tracing_events_num_str.items():
-                print("{:>28s} => {:10s} [{:3d}, 0x{:03X}] ".format( val, "ENABLED" if TRACING_DEBUG_VALUES_LIST[key] == '0' else "DISABLED", key, key),
+                print("{:>28s} => {:10s} [{:3d}, 0x{:03X}] ".format(val, "ENABLED" if TRACING_DEBUG_VALUES_LIST[key] == '0' else "DISABLED", key, key),
                       end='\n' if even == True else'\t')
                 even = not even
         if args.listid == ID_ALL or args.listid == ID_STS:
