@@ -148,7 +148,6 @@ tracing_events_num_str = {
     49: "CHMGR_RX_TX_SEQ_NUM",
     50: "LMMGR_NHL_DATA_IN",
     51: "LMMGR_NHL_MGMNT_IN",
-    52: "ed",
     53: "LMFS_EXTEND_SCH_ENTRY",
     54: "LMFS_EXTEND_SCH_EXIT",
     55: "LMFS_ADD_SCH_ENTRY",
@@ -156,13 +155,13 @@ tracing_events_num_str = {
     57: "LMMGR_HWTIMER",
     58: "LMMGR_SWTIMER",
     59: "PHYTST_DATA_CONF",
-    61: "sed",
+    60: "CL",
+    61: "CL_HSM",
     62: "PHY_CALLBACKS_CLAIM",
     63: "PHY_CALLBACKS_RELEASE",
     64: "LMFS_REMOVE_SCH_ENTRY",
     65: "LMFS_REMOVE_SCH_EXIT",
-    68: "HSM_EVENT",
-    68: "HSM_EVENT_ENTRY",
+    68: "HSM_EVENT_AND_ENTRY",
     69: "HSM_EVENT_INITIAL",
     70: "HSM_EVENT_DO",
     71: "HSM_EVENT_EXIT",
@@ -190,24 +189,24 @@ tracing_events_num_str = {
     93: "UPCALL_CALL",
     94: "UPCALL_INVALID_ID",
     95: "UPCALL_INVALID_CB",
-    96: "T_MACADDR_L",
-    97: "T_MACADDR_H",
-    98: "T_EPOCH_START_L",
-    99: "T_EPOCH_START_H",
-    100: "T_DESIRED_TXTIME_L",
-    101: "T_DESIRED_TXTIME_H",
-    102: "T_PEER_EPOCHLEN",
-    103: "T_PEER_TIME_IN_EPOCH",
-    104: "T_PEER_TIME_IN_SLOT",
-    105: "T_DRIFT",
-    106: "T_LWIN",
-    107: "T_RWIN",
-    108: "T_TARGET_SLOT",
-    109: "T_CH",
-    110: "T_TXDELAY",
-    111: "T_PEER_CURSLOT",
-    112: "T_RWIN_QUALTIME",
-    120: "T_RESERVED",
+    96: "CLT_MACADDR_L",
+    97: "CLT_MACADDR_H",
+    98: "CLT_EPOCH_START_L",
+    99: "CLT_EPOCH_START_H",
+    100: "CLT_DESIRED_TXTIME_L",
+    101: "CLT_DESIRED_TXTIME_H",
+    102: "CLT_PEER_EPOCHLEN",
+    103: "CLT_PEER_TIME_IN_EPOCH",
+    104: "CLT_PEER_TIME_IN_SLOT",
+    105: "CLT_DRIFT",
+    106: "CLT_LWIN",
+    107: "CLT_RWIN",
+    108: "CLT_TARGET_SLOT",
+    109: "CLT_CH",
+    110: "CLT_TXDELAY",
+    111: "CLT_PEER_CURSLOT",
+    112: "CLT_RWIN_QUALTIME",
+    120: "CLT_RESERVED",
     121: "FRT32_TX_START",
     122: "FRT32_TX_END",
     123: "FRT32_RX_START",
@@ -260,6 +259,7 @@ tracing_events_num_str = {
     189: "BCAST_CANCELLED_SCHID",
     200: "BCAST_RESERVED",
     201: "UPCALL_RX_TX_DELAY",
+    202: "UPCALL_RX_TX_DELAY",
     211: "LMDC_ERROR",
     212: "RLT_LINK",
     213: "LDC_CHECK",
@@ -310,6 +310,7 @@ tracing_events_str_num = {value: key for key, value in tracing_events_num_str.it
 MAX_TRACE_EVT = list(tracing_events_num_str.keys())[-1] + 1
 
 TRACING_DEBUG_MASK_LEN = int(MAX_TRACE_EVT/8) + 1
+DEFAULT_DEBUG_MASK = "81FF6702BCFB033EF0C78FFFFFFFFFFF07F4FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF07"
 
 state_arr = [
     "LMSM_TOP",
@@ -3037,9 +3038,24 @@ if __name__ == "__main__":
         even = False
 
         if args.listid == ID_ALL or args.listid == ID_TRACE:
-            print("\n~~~ TRACE IDs MAP ~~~")
+            hexMaskStr = args.mask if args.mask else DEFAULT_DEBUG_MASK
+            print("\n~~~ TRACE IDs MAP (0x{}) ~~~\n".format(hexMaskStr))
+            # hexMaskStr = 80FF6702BCFB033E00C78F3FFFBFFF01000000FFFFFFFFFFFFF9F7FFFFFFFFFFFF7FF8FFFF
+
+            newHexStr = ""
+            for index in range(0, len(hexMaskStr), 2):
+                newHexStr += str(hexMaskStr[index+1]) + str(hexMaskStr[index])
+            # newHexStr = 08FF7620CBBF30E3007CF8F3FFFBFF10000000FFFFFFFFFFFF9F7FFFFFFFFFFFFFF78FFFFF
+
+            correctedbinaryStr = ""
+            for nib in newHexStr:
+                bitStr = "{:04b}".format(int(nib, 16))[::-1]
+                correctedbinaryStr = correctedbinaryStr + bitStr
+            # correctedbinaryStr = 00000001111111111110011001000000001111011101111111000000011111000000000011100011111100011111110011111111111111011111111110000000000000000000000000000000111111111111111111111111111111111111111111111111100111111110111111111111111111111111111111111111111111111111111111111110000111111111111111111111
+            TRACING_DEBUG_VALUES_LIST = list(correctedbinaryStr)
+
             for key, val in tracing_events_num_str.items():
-                print("{:3d} 0x{:03X} {:50s} ".format(key, key, val),
+                print("{:>28s} => {:10s} [{:3d}, 0x{:03X}] ".format( val, "ENABLED" if TRACING_DEBUG_VALUES_LIST[key] == '0' else "DISABLED", key, key),
                       end='\n' if even == True else'\t')
                 even = not even
         if args.listid == ID_ALL or args.listid == ID_STS:
