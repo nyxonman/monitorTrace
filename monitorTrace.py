@@ -161,7 +161,7 @@ tracing_events_num_str = {
     63: "PHY_CALLBACKS_RELEASE",
     64: "LMFS_REMOVE_SCH_ENTRY",
     65: "LMFS_REMOVE_SCH_EXIT",
-    68: "HSM_EVENT_AND_ENTRY",
+    68: "HSM_EVENT_ENTRY",
     69: "HSM_EVENT_INITIAL",
     70: "HSM_EVENT_DO",
     71: "HSM_EVENT_EXIT",
@@ -2925,13 +2925,13 @@ if __name__ == "__main__":
         %(prog)s -i 100.70.100.118
 
     Example 3: Setting the debug mask and monitoring a live trace
-        %(prog)s -m 81FF6702BCFB033E60C78F3FFFBFFF01000000FFFFFFFFFFFFFDDFFDDFFFFFFFFF7FFCFFFF -i 100.70.100.118
+        %(prog)s -m 81FF6702BCFB033E00C78F3FFFBFFF01000000FFFFFFFFFFFFF9F7FFFFFFFFFFFF7FF8FFFF -i 100.70.100.118
 
     Example 4: Outputing the decoded file (e.g. for live tracing)
         %(prog)s -i 100.70.100.118 -o decodedTraces.log
 
     Example 5: Monitoring a live trace with mask and save the hex traces and decoded file in csv as well
-        %(prog)s -i 10.70.100.118 -m 81FF6702BCFB033E60C78F3FFFBFFF01000000FFFFFFFFFFFFFDDFFDDFFFFFFFFF7FFCFFFF -t -c
+        %(prog)s -i 10.70.100.118 -m 81FF6702BCFB033E00C78F3FFFBFFF01000000FFFFFFFFFFFFF9F7FFFFFFFFFFFF7FF8FFFF -t -c
 
     Example 6: Display some graphs using decoded file in csv
         %(prog)s -f decoded.csv -g 1,3
@@ -2939,7 +2939,7 @@ if __name__ == "__main__":
         In second example, the app will create the necessary csv file
 
     Example 7: Monitoring a live trace with mask,save the hex traces and decoded file in csv and plot the graphs 1,2,3
-        %(prog)s -i 10.70.100.118 -m 81FF6702BCFB033E60C78F3FFFBFFF01000000FFFFFFFFFFFFFDDFFDDFFFFFFFFF7FFCFFFF -t -c -g 1,2,3
+        %(prog)s -i 10.70.100.118 -m 81FF6702BCFB033E00C78F3FFFBFFF01000000FFFFFFFFFFFFF9F7FFFFFFFFFFFF7FF8FFFF -t -c -g 1,2,3
     """
 
     # write to a file per day
@@ -3022,6 +3022,7 @@ if __name__ == "__main__":
 
     # check for system dependcies i.e. sshpass for linux and plink for windows
     if not check_system_dependency():
+        print("system check failed")
         exit(0)
 
     # if export option is provided with graphing option exit
