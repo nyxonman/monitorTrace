@@ -26,7 +26,7 @@ MIN_A7_VER = (10, 0, 519)
 
 OS_POSIX = "posix"
 OS_WIN = "nt"
-__VERSION__ = "3.4"
+__VERSION__ = "3.5"
 APP_VERSION = __VERSION__ + " {OS: " + os.name + "}"
 OUTPUT_FILE_NAME = "lastdecodedTraces"
 OUTPUT_FILE_EXT = ".log"
@@ -148,6 +148,7 @@ tracing_events_num_str = {
     49: "CHMGR_RX_TX_SEQ_NUM",
     50: "LMMGR_NHL_DATA_IN",
     51: "LMMGR_NHL_MGMNT_IN",
+    52: "LMFS_UPD_END_TIME",
     53: "LMFS_EXTEND_SCH_ENTRY",
     54: "LMFS_EXTEND_SCH_EXIT",
     55: "LMFS_ADD_SCH_ENTRY",
@@ -155,8 +156,6 @@ tracing_events_num_str = {
     57: "LMMGR_HWTIMER",
     58: "LMMGR_SWTIMER",
     59: "PHYTST_DATA_CONF",
-    60: "CL",
-    61: "CL_HSM",
     62: "PHY_CALLBACKS_CLAIM",
     63: "PHY_CALLBACKS_RELEASE",
     64: "LMFS_REMOVE_SCH_ENTRY",
@@ -259,7 +258,6 @@ tracing_events_num_str = {
     189: "BCAST_CANCELLED_SCHID",
     200: "BCAST_RESERVED",
     201: "UPCALL_RX_TX_DELAY",
-    202: "UPCALL_RX_TX_DELAY",
     211: "LMDC_ERROR",
     212: "RLT_LINK",
     213: "LDC_CHECK",
