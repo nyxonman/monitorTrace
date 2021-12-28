@@ -294,7 +294,17 @@ tracing_events_num_str = {
     249: "SA_PRIM_DOWN",
     250: "SA_LMSM_TIMEOUT",
     251: "SA_PHY_SR",
-    270: "SA_RESERVED",
+    255: "SA_RESERVED",
+    256: "LLS_RETURN",
+    257: "LLS_BLS_RETURN",
+    258: "LLS_ASSOC_HAPPY_RETURN",
+    259: "LLS_ASSOC_ERROR_RETURN",
+    260: "LLS_DISC_MAC",
+    261: "LLS_DISC_REQ",
+    262: "LLS_DISC_RES",
+    263: "LLS_DISC_RES_FRT32",
+    264: "LLS_DISC_CANCEL_CB",
+    265: "LLS_DISC_TXD_CB",
     271: "ELG",
     272: "ELG_TIMER",
     273: "ELG_EVENT",
@@ -359,6 +369,12 @@ rxb_substate_arr = [
     "RXB_FC",
     "RXB_EDI",
     "RXB_DIND"
+]
+
+lls_substate_arr=[
+    "LLS_TX",
+    "LLS_TA",
+    "LLS_RX"
 ]
 
 
@@ -539,6 +555,7 @@ sts_code_str = {
     584: "STS_RLT_TX_PKT_NOT_ALLOWED",
     585: "STS_RLT_TX_PKT_OK",
     586: "STS_RLT_TX_PKT_LAST",
+    587: "STS_WAIT_NETWORK",
 }
 
 txsts_code_str = {
@@ -907,6 +924,59 @@ def checkNodeReachability(ipv4Addr):
 
     return RET_SUCC
 
+def process_llsdisc(code, infoArr):
+    """ process all cl related tracing codes """
+    info = ""
+    # LLS_DISC_MAC
+    # LLS_DISC_REQ
+    # LLS_DISC_RES
+    # LLS_DISC_RES_FRT32
+    # LLS_DISC_CANCEL_CB
+    # LLS_DISC_TXD_CB
+
+
+    if tracing_events_num_str[code] == "LLS_DISC_MAC":
+        mac_add = "{:s}:{:s}:{:s}:{:s}".format(
+            infoArr[13], infoArr[14], infoArr[15], infoArr[16])
+        processLLSDiscInfo = "addr=> xx:xx:xx:xx:{}".format(mac_add)
+        
+    elif tracing_events_num_str[code] == "LLS_DISC_REQ":
+        status = int(infoArr[14] + infoArr[13], 16)
+        version = int(infoArr[16], 16)
+        rxwin = int(infoArr[15], 16)
+        processLLSDiscInfo = "{:s}({:d},0x{:X}) version {:d} rxwin {:d}msec".format(
+            sts_code_str[status], status, status, version, rxwin)
+
+    elif tracing_events_num_str[code] == "LLS_DISC_RES":
+        status = int(infoArr[14] + infoArr[13], 16)
+        resplen = int(infoArr[16] + infoArr[15], 16)
+        processLLSDiscInfo = "{:s}({:d},0x{:X}) resplen {:d}B".format(
+            sts_code_str[status], status, status, resplen)
+    
+    elif tracing_events_num_str[code] == "LLS_DISC_RES_FRT32":
+        param32 = int(infoArr[16] + infoArr[15] +
+                        infoArr[14] + infoArr[13], 16)
+        processLLSDiscInfo = "{:d} 0x{:08X}".format(param32, param32)    
+        
+    elif tracing_events_num_str[code] == "LLS_DISC_CANCEL_CB":
+        param32 = int(infoArr[16] + infoArr[15] +
+                        infoArr[14] + infoArr[13], 16)
+        processLLSDiscInfo = "sch id {:d} 0x{:X}".format(param32, param32)    
+        
+    elif tracing_events_num_str[code] == "LLS_DISC_TXD_CB":
+        status = int(infoArr[14] + infoArr[13], 16)
+        channel = int(infoArr[16] + infoArr[15], 16)
+        processLLSDiscInfo = "{:s}({:d},0x{:X}) chan {:02d}".format(
+            sts_code_str[status], status, status, channel)
+    
+    else:
+        next_32 = int(infoArr[16] + infoArr[15] +
+                      infoArr[14] + infoArr[13], 16)
+
+        processLLSDiscInfo = "UNKNOWN LLS TRACE {} param32{:08X}".format(
+            code, next_32)
+
+    return processLLSDiscInfo
 
 def process_cl(code, infoArr):
     """ process all cl related tracing codes """
@@ -1080,6 +1150,8 @@ def get_substate_str(state, substate):
         return rxb_substate_arr[substate]
     elif stateStr == "LMSM_CL":
         return cl_substate_arr[substate]
+    elif stateStr == "LMSM_LLS":
+	    return lls_substate_arr[substate]
     else:
         return "NONE"
 
@@ -1102,6 +1174,7 @@ def process_one_trace(code, infoArr):
         if subStateStr != "NONE":
             info = info + "-->{:s}(0x{:X})".format(subStateStr, substate)
 
+    # CL
     elif (code >= tracing_events_str_num["CL_NEW"]) and (code <= tracing_events_str_num["CL_DEBUG"]):
         info = process_cl(code, infoArr)
 
@@ -1140,6 +1213,9 @@ def process_one_trace(code, infoArr):
 
         else:
             info = "param 0x{:08X}".format(field_32)
+    # LLS DISC
+    elif (code >= tracing_events_str_num["LLS_DISC_MAC"]) and (code <= tracing_events_str_num["LLS_DISC_TXD_CB"]):
+        info = process_llsdisc(code, infoArr)
     else:
         field32 = int(infoArr[16] + infoArr[15] +
                       infoArr[14] + infoArr[13], 16)
@@ -3183,7 +3259,7 @@ if __name__ == "__main__":
     if args.mask:
         print(" - Setting the mask... {} ...".format(args.mask), end='')
         ret, output = test_ssh(
-            args.ip, "pib -si E0000000 -v {} >/dev/null".format(args.mask))
+            args.ip, "pib -sai E0000000 -v {} >/dev/null".format(args.mask))
         if (ret != RET_SUCC):
             print("FAILED")
             LOG_ERR("Cannot write the pib. Check if DSP is running or NOT")
@@ -3196,7 +3272,9 @@ if __name__ == "__main__":
         print("FAILED")
         exit(1)
     output = str_decode(output).strip()
-    output = convert_pib_val(output)
+    
+    if (a7_ver <= (10,4,140)) :
+        output = convert_pib_val(output)
     if (args.mask and output != args.mask):
         print("{} ... MISMATCH".format(output))
         exit(1)
@@ -3259,12 +3337,13 @@ if __name__ == "__main__":
 
         if (last_count != new_count):
 
-            last_count = new_count
-            cur_line = process_hexdump(hexdump, cur_line, showFirstLine)
-
             if (args.trace and hexdump):
                 with open(hexfile, mode) as fout:
                     fout.writelines(hexdump)
+
+            last_count = new_count
+            cur_line = process_hexdump(hexdump, cur_line, showFirstLine)
+            
             showFirstLine = False
 
             if (args.graph and (not graph_shown or GRAPH_OPTION == GRAPH_HIGHCHARTS)):
