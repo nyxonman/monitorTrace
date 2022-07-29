@@ -80,13 +80,20 @@ graphs = {
     'timeline': {}
 }
 
+GRAPH_ALL = 0
+GRAPH_RTT = 1
+GRAPH_CL_TIMINGS = 2
+GRAPH_TIMELINE = 3
+GRAPH_BUFFER = 4
+GRAPH_CHAN_MODE = 5
+
 GRAPH_NUM_STR = {
-    0: 'ALL',
-    1: 'RTT Between clata.get and cldata.cnf',
-    2: 'CL Timings',
-    3: 'Timeline Visualiser',
-    4: 'Buffer Management',
-    5: 'CL Mode/Channel Stats'
+    GRAPH_ALL: 'ALL',
+    GRAPH_RTT: 'RTT Between clata.get and cldata.cnf',
+    GRAPH_CL_TIMINGS: 'CL Timings',
+    GRAPH_TIMELINE: 'Timeline Visualiser',
+    GRAPH_BUFFER: 'Buffer Management',
+    GRAPH_CHAN_MODE: 'CL Mode/Channel Stats'
 }
 DEFAULT_GRAPH = 0
 
@@ -371,7 +378,7 @@ rxb_substate_arr = [
     "RXB_DIND"
 ]
 
-lls_substate_arr=[
+lls_substate_arr = [
     "LLS_TX",
     "LLS_TA",
     "LLS_RX"
@@ -672,6 +679,17 @@ prim_code_str = {
 
 }
 
+shr_dur_usec = {
+    1: 720,
+    3: 853.333,
+    4: 920,
+    5: 800,
+    10: 533.333,
+    35: 720,
+    47: 720,
+    49: 720,
+}
+
 mode_str = {
     0: "ILLEGAL",
     1: "100KBPS_MSK",
@@ -839,6 +857,7 @@ def convert_pib_val(pibval):
     for i in range(0, size, 2):
         # print(i, pibval[size-i-2,size-i])
         ret = ret + pibval[size-i-2:size-i]
+
     return ret
 
 
@@ -924,6 +943,7 @@ def checkNodeReachability(ipv4Addr):
 
     return RET_SUCC
 
+
 def process_llsdisc(code, infoArr):
     """ process all cl related tracing codes """
     info = ""
@@ -934,12 +954,11 @@ def process_llsdisc(code, infoArr):
     # LLS_DISC_CANCEL_CB
     # LLS_DISC_TXD_CB
 
-
     if tracing_events_num_str[code] == "LLS_DISC_MAC":
         mac_add = "{:s}:{:s}:{:s}:{:s}".format(
             infoArr[13], infoArr[14], infoArr[15], infoArr[16])
         processLLSDiscInfo = "addr=> xx:xx:xx:xx:{}".format(mac_add)
-        
+
     elif tracing_events_num_str[code] == "LLS_DISC_REQ":
         status = int(infoArr[14] + infoArr[13], 16)
         version = int(infoArr[16], 16)
@@ -952,23 +971,23 @@ def process_llsdisc(code, infoArr):
         resplen = int(infoArr[16] + infoArr[15], 16)
         processLLSDiscInfo = "{:s}({:d},0x{:X}) resplen {:d}B".format(
             sts_code_str[status], status, status, resplen)
-    
+
     elif tracing_events_num_str[code] == "LLS_DISC_RES_FRT32":
         param32 = int(infoArr[16] + infoArr[15] +
-                        infoArr[14] + infoArr[13], 16)
-        processLLSDiscInfo = "{:d} 0x{:08X}".format(param32, param32)    
-        
+                      infoArr[14] + infoArr[13], 16)
+        processLLSDiscInfo = "{:d} 0x{:08X}".format(param32, param32)
+
     elif tracing_events_num_str[code] == "LLS_DISC_CANCEL_CB":
         param32 = int(infoArr[16] + infoArr[15] +
-                        infoArr[14] + infoArr[13], 16)
-        processLLSDiscInfo = "sch id {:d} 0x{:X}".format(param32, param32)    
-        
+                      infoArr[14] + infoArr[13], 16)
+        processLLSDiscInfo = "sch id {:d} 0x{:X}".format(param32, param32)
+
     elif tracing_events_num_str[code] == "LLS_DISC_TXD_CB":
         status = int(infoArr[14] + infoArr[13], 16)
         channel = int(infoArr[16] + infoArr[15], 16)
         processLLSDiscInfo = "{:s}({:d},0x{:X}) chan {:02d}".format(
             sts_code_str[status], status, status, channel)
-    
+
     else:
         next_32 = int(infoArr[16] + infoArr[15] +
                       infoArr[14] + infoArr[13], 16)
@@ -977,6 +996,7 @@ def process_llsdisc(code, infoArr):
             code, next_32)
 
     return processLLSDiscInfo
+
 
 def process_cl(code, infoArr):
     """ process all cl related tracing codes """
@@ -1051,7 +1071,8 @@ def process_cl(code, infoArr):
         next_32 = int(infoArr[16] + infoArr[15] +
                       infoArr[14] + infoArr[13], 16)
 
-        processClInfo = "rxTime {:d}ms, txTime {:d}ms rxPrio {:d} txPrio {:d}".format(rx_time, tx_time, rx_prio, tx_prio)
+        processClInfo = "rxTime {:d}ms, txTime {:d}ms rxPrio {:d} txPrio {:d}".format(
+            rx_time, tx_time, rx_prio, tx_prio)
 
     elif tracing_events_num_str[code] == "CL_NEXT_RX_TX":
         next_time = int(infoArr[16] + infoArr[15] +
@@ -1151,7 +1172,7 @@ def get_substate_str(state, substate):
     elif stateStr == "LMSM_CL":
         return cl_substate_arr[substate]
     elif stateStr == "LMSM_LLS":
-	    return lls_substate_arr[substate]
+        return lls_substate_arr[substate]
     else:
         return "NONE"
 
@@ -1473,7 +1494,8 @@ def write_df_to_json(key, df, mode='a', isdict=False):
 def graph_fastlink():
     filter_list = [149, 148]
 
-    fast_link_df = cl_csv_df[(cl_csv_df.tracecode_dec.isin(filter_list))][['byte', 'frt_dec', 'tracecode_dec', 'sts', 'cl_id']]
+    fast_link_df = cl_csv_df[(cl_csv_df.tracecode_dec.isin(filter_list))][[
+        'byte', 'frt_dec', 'tracecode_dec', 'sts', 'cl_id']]
     trace_list = list(set(list(fast_link_df.tracecode_dec)))
     if sorted(trace_list) != sorted(filter_list):
         print("\n**** All required traces {} are not present {}. Cannot draw the graph".format(filter_list, trace_list))
@@ -1484,7 +1506,8 @@ def graph_fastlink():
         fast_link_df['A_dif'] = fast_link_df['frt_dec'].diff()
         fast_link_df['shifted_frt'] = fast_link_df['frt_dec'].shift()
         fast_link_df['prev_trace'] = fast_link_df['tracecode_dec'].shift()
-        fast_link_df['diff'] = fast_link_df.apply(lambda x: np.NaN if (x['tracecode_dec'] == x['prev_trace'] or x['tracecode_dec'] == 148) else x['A_dif'], axis=1)
+        fast_link_df['diff'] = fast_link_df.apply(lambda x: np.NaN if (
+            x['tracecode_dec'] == x['prev_trace'] or x['tracecode_dec'] == 148) else x['A_dif'], axis=1)
         fast_link_df.drop(columns=['A_dif', 'shifted_frt', 'prev_trace'], inplace=True)
 
         # obtain rtt_df
@@ -1548,11 +1571,13 @@ def graph_cl_timings():
     # target2txphr
     timings_df['dummy'] = timings_df.dc_col.shift(-2)
     timings_df['dummy_frt'] = timings_df.frt_val.shift(-2)
-    timings_df['target2txphr'] = np.where(((timings_df.beforetx_col == 'beforeTx') & (timings_df.dummy == 'dc')), timings_df.dummy_frt-timings_df.frt_val, np.nan)
+    timings_df['target2txphr'] = np.where(((timings_df.beforetx_col == 'beforeTx') & (
+        timings_df.dummy == 'dc')), timings_df.dummy_frt-timings_df.frt_val, np.nan)
     timings_df.drop(columns=['dummy', 'dummy_frt'], inplace=True)
 
     # freq
-    target2txphr_df = timings_df[['byte', 'target2txphr']].groupby('target2txphr').agg('count').rename(columns={'byte': 'freq'}).reset_index()
+    target2txphr_df = timings_df[['byte', 'target2txphr']].groupby(
+        'target2txphr').agg('count').rename(columns={'byte': 'freq'}).reset_index()
     target2txphr_df = target2txphr_df.astype({'target2txphr': int})
     # PDF
     target2txphr_df['pdf'] = target2txphr_df['freq'] / sum(target2txphr_df['freq'])
@@ -1564,11 +1589,13 @@ def graph_cl_timings():
     # txcall2txphr
     timings_df['dummy'] = timings_df.dc_col.shift(-2)
     timings_df['dummy_frt'] = timings_df.frt_val.shift(-2)
-    timings_df['txcall2txphr'] = np.where(((timings_df.beforetx_col == 'beforeTx') & (timings_df.dummy == 'dc')), timings_df.dummy_frt-timings_df.frt_dec, np.nan)
+    timings_df['txcall2txphr'] = np.where(((timings_df.beforetx_col == 'beforeTx') & (
+        timings_df.dummy == 'dc')), timings_df.dummy_frt-timings_df.frt_dec, np.nan)
     timings_df.drop(columns=['dummy', 'dummy_frt'], inplace=True)
 
     # freq
-    txcall2txphr_df = timings_df[['byte', 'txcall2txphr']].groupby('txcall2txphr').agg('count').rename(columns={'byte': 'freq'}).reset_index()
+    txcall2txphr_df = timings_df[['byte', 'txcall2txphr']].groupby(
+        'txcall2txphr').agg('count').rename(columns={'byte': 'freq'}).reset_index()
     txcall2txphr_df = txcall2txphr_df.astype({'txcall2txphr': int})
     # PDF
     txcall2txphr_df['pdf'] = txcall2txphr_df['freq'] / sum(txcall2txphr_df['freq'])
@@ -1579,10 +1606,12 @@ def graph_cl_timings():
     # txend2rxstart
     timings_df['dummy'] = timings_df.beforerx_col.shift(-1)
     timings_df['dummy_frt'] = timings_df.frt_dec.shift(-1)
-    timings_df['txend2rxstart'] = np.where(((timings_df.txend_col == 'txEnd') & (timings_df.dummy == 'beforeRx')), timings_df.dummy_frt-timings_df.frt_val, np.nan)
+    timings_df['txend2rxstart'] = np.where(((timings_df.txend_col == 'txEnd') & (
+        timings_df.dummy == 'beforeRx')), timings_df.dummy_frt-timings_df.frt_val, np.nan)
     timings_df.drop(columns=['dummy', 'dummy_frt'], inplace=True)
     # freq
-    txend2rxstart_df = timings_df[['byte', 'txend2rxstart']].groupby('txend2rxstart').agg('count').rename(columns={'byte': 'freq'}).reset_index()
+    txend2rxstart_df = timings_df[['byte', 'txend2rxstart']].groupby(
+        'txend2rxstart').agg('count').rename(columns={'byte': 'freq'}).reset_index()
     txend2rxstart_df = txend2rxstart_df.astype({'txend2rxstart': int})
     # PDF
     txend2rxstart_df['pdf'] = txend2rxstart_df['freq'] / sum(txend2rxstart_df['freq'])
@@ -1598,7 +1627,8 @@ def graph_cl_timings():
         timings_df.cl_id == timings_df.dummy_cl_id)), timings_df.dummy_frt-timings_df.frt_val, np.nan)
     timings_df.drop(columns=['dummy', 'dummy_frt', 'dummy_cl_id'], inplace=True)
     # freq
-    rxend2targettime_df = timings_df[['byte', 'rxend2targettime']].groupby('rxend2targettime').agg('count').rename(columns={'byte': 'freq'}).reset_index()
+    rxend2targettime_df = timings_df[['byte', 'rxend2targettime']].groupby(
+        'rxend2targettime').agg('count').rename(columns={'byte': 'freq'}).reset_index()
     rxend2targettime_df = rxend2targettime_df.astype({'rxend2targettime': int})
     # PDF
     rxend2targettime_df['pdf'] = rxend2targettime_df['freq'] / sum(rxend2targettime_df['freq'])
@@ -1614,7 +1644,8 @@ def graph_cl_timings():
         timings_df.cl_id == timings_df.dummy_cl_id)), timings_df.dummy_frt-timings_df.frt_val, np.nan)
     timings_df.drop(columns=['dummy', 'dummy_frt', 'dummy_cl_id'], inplace=True)
     # freq
-    rxend2txtime_df = timings_df[['byte', 'rxend2txtime']].groupby('rxend2txtime').agg('count').rename(columns={'byte': 'freq'}).reset_index()
+    rxend2txtime_df = timings_df[['byte', 'rxend2txtime']].groupby(
+        'rxend2txtime').agg('count').rename(columns={'byte': 'freq'}).reset_index()
     rxend2txtime_df = rxend2txtime_df.astype({'rxend2txtime': int})
     # PDF
     rxend2txtime_df['pdf'] = rxend2txtime_df['freq'] / sum(rxend2txtime_df['freq'])
@@ -1623,9 +1654,11 @@ def graph_cl_timings():
     rxend2txtime_df = rxend2txtime_df.reset_index()
 
     # txcall2targettime
-    timings_df['txcall2targettime'] = np.where(((timings_df.beforetx_col == 'beforeTx')), timings_df.frt_val-timings_df.frt_dec, np.nan)
+    timings_df['txcall2targettime'] = np.where(
+        ((timings_df.beforetx_col == 'beforeTx')), timings_df.frt_val-timings_df.frt_dec, np.nan)
     # freq
-    txcall2targettime_df = timings_df[['byte', 'txcall2targettime']].groupby('txcall2targettime').agg('count').rename(columns={'byte': 'freq'}).reset_index()
+    txcall2targettime_df = timings_df[['byte', 'txcall2targettime']].groupby(
+        'txcall2targettime').agg('count').rename(columns={'byte': 'freq'}).reset_index()
     txcall2targettime_df = txcall2targettime_df.astype({'txcall2targettime': int})
     # PDF
     txcall2targettime_df['pdf'] = txcall2targettime_df['freq'] / sum(txcall2targettime_df['freq'])
@@ -1636,10 +1669,12 @@ def graph_cl_timings():
     # txcall2aftertx
     timings_df['dummy'] = timings_df.aftertx_col.shift(-1)
     timings_df['dummy_frt'] = timings_df.frt_dec.shift(-1)
-    timings_df['txcall2aftertx'] = np.where(((timings_df.beforetx_col == 'beforeTx') & (timings_df.dummy == 'afterTx')), timings_df.dummy_frt-timings_df.frt_dec, np.nan)
+    timings_df['txcall2aftertx'] = np.where(((timings_df.beforetx_col == 'beforeTx') & (
+        timings_df.dummy == 'afterTx')), timings_df.dummy_frt-timings_df.frt_dec, np.nan)
     timings_df.drop(columns=['dummy', 'dummy_frt'], inplace=True)
     # freq
-    txcall2aftertx_df = timings_df[['byte', 'txcall2aftertx']].groupby('txcall2aftertx').agg('count').rename(columns={'byte': 'freq'}).reset_index()
+    txcall2aftertx_df = timings_df[['byte', 'txcall2aftertx']].groupby(
+        'txcall2aftertx').agg('count').rename(columns={'byte': 'freq'}).reset_index()
     txcall2aftertx_df = txcall2aftertx_df.astype({'txcall2aftertx': int})
     # PDF
     txcall2aftertx_df['pdf'] = txcall2aftertx_df['freq'] / sum(txcall2aftertx_df['freq'])
@@ -1655,7 +1690,8 @@ def graph_cl_timings():
         timings_df.cl_id == timings_df.dummy_cl_id)), timings_df.dummy_frt-timings_df.frt_val, np.nan)
     timings_df.drop(columns=['dummy', 'dummy_frt', 'dummy_cl_id'], inplace=True)
     # freq
-    rxend2txcall_df = timings_df[['byte', 'rxend2txcall']].groupby('rxend2txcall').agg('count').rename(columns={'byte': 'freq'}).reset_index()
+    rxend2txcall_df = timings_df[['byte', 'rxend2txcall']].groupby(
+        'rxend2txcall').agg('count').rename(columns={'byte': 'freq'}).reset_index()
     rxend2txcall_df = rxend2txcall_df.astype({'rxend2txcall': int})
     # PDF
     rxend2txcall_df['pdf'] = rxend2txcall_df['freq'] / sum(rxend2txcall_df['freq'])
@@ -1668,10 +1704,12 @@ def graph_cl_timings():
     timings_df['dummy_frt'] = timings_df.frt_dec.shift(-1)
     timings_df = timings_df.assign(rxcall2afterrx=pd.Series(np.nan))
     # timings_df.rxcall2afterrx = timings_df.apply(lambda x: x.dummy_frt-x.frt_dec if x.beforerx_col == 'beforeRx' and x.dummy == 'afterRx' else np.nan, axis=1)
-    timings_df['rxcall2afterrx'] = np.where(((timings_df.beforerx_col == 'beforeRx') & (timings_df.dummy == 'afterRx')), timings_df.dummy_frt-timings_df.frt_dec, np.nan)
+    timings_df['rxcall2afterrx'] = np.where(((timings_df.beforerx_col == 'beforeRx') & (
+        timings_df.dummy == 'afterRx')), timings_df.dummy_frt-timings_df.frt_dec, np.nan)
     timings_df.drop(columns=['dummy', 'dummy_frt'], inplace=True)
     # freq
-    rxcall2afterrx_df = timings_df[['byte', 'rxcall2afterrx']].groupby('rxcall2afterrx').agg('count').rename(columns={'byte': 'freq'}).reset_index()
+    rxcall2afterrx_df = timings_df[['byte', 'rxcall2afterrx']].groupby(
+        'rxcall2afterrx').agg('count').rename(columns={'byte': 'freq'}).reset_index()
     rxcall2afterrx_df = rxcall2afterrx_df.astype({'rxcall2afterrx': int})
     # PDF
     rxcall2afterrx_df['pdf'] = rxcall2afterrx_df['freq'] / sum(rxcall2afterrx_df['freq'])
@@ -1696,11 +1734,13 @@ def graph_cl_timings():
     # rxcall2rxPHR
     timings_df['dummy_frt'] = timings_df.ts_rxstart.shift(-1)
     timings_df = timings_df.assign(afterRx2rxPHR=pd.Series(np.nan))
-    timings_df.afterRx2rxPHR = timings_df.apply(lambda x: x.dummy_frt - x.frt_dec if x.afterrx_col == 'afterRx' and x.dummy_frt != np.nan else np.nan, axis=1)
+    timings_df.afterRx2rxPHR = timings_df.apply(
+        lambda x: x.dummy_frt - x.frt_dec if x.afterrx_col == 'afterRx' and x.dummy_frt != np.nan else np.nan, axis=1)
     timings_df.drop(columns=['dummy_frt'], inplace=True)
 
     # drop values higher than 3sec
-    timings_df.afterRx2rxPHR = timings_df.apply(lambda x: np.nan if np.isnan([x.afterRx2rxPHR]) or x.afterRx2rxPHR > 3000.0 else x.afterRx2rxPHR, axis=1)
+    timings_df.afterRx2rxPHR = timings_df.apply(lambda x: np.nan if np.isnan(
+        [x.afterRx2rxPHR]) or x.afterRx2rxPHR > 3000.0 else x.afterRx2rxPHR, axis=1)
 
     if not args.quiet:
         print("Done...Rendering/Preparing Graph...Report...", flush=True, end='')
@@ -1761,38 +1801,47 @@ def graph_cl_timings():
 
     # Obtain the min/max/avg NaN safe
     txcall2aftertx_mean = int(timings_df.txcall2aftertx.mean()) if not np.isnan(timings_df.txcall2aftertx.mean()) else 0
-    txcall2targettime_mean = int(timings_df.txcall2targettime.mean()) if not np.isnan(timings_df.txcall2targettime.mean()) else 0
+    txcall2targettime_mean = int(timings_df.txcall2targettime.mean()) if not np.isnan(
+        timings_df.txcall2targettime.mean()) else 0
     target2txphr_mean = int(timings_df.target2txphr.mean()) if not np.isnan(timings_df.target2txphr.mean()) else 0
     txend2rxstart_mean = int(timings_df.txend2rxstart.mean()) if not np.isnan(timings_df.txend2rxstart.mean()) else 0
     rxcall2afterrx_mean = int(timings_df.rxcall2afterrx.mean()) if not np.isnan(timings_df.rxcall2afterrx.mean()) else 0
     rxend2txcall_mean = int(timings_df.rxend2txcall.mean()) if not np.isnan(timings_df.rxend2txcall.mean()) else 0
     afterRx2rxPHR_mean = int(timings_df.afterRx2rxPHR.mean()) if not np.isnan(timings_df.afterRx2rxPHR.mean()) else 0
-    txcall2targettime_mean = int(timings_df.txcall2targettime.mean()) if not np.isnan(timings_df.txcall2targettime.mean()) else 0
-    rxend2targettime_mean = int(timings_df.rxend2targettime.mean()) if not np.isnan(timings_df.rxend2targettime.mean()) else 0
+    txcall2targettime_mean = int(timings_df.txcall2targettime.mean()) if not np.isnan(
+        timings_df.txcall2targettime.mean()) else 0
+    rxend2targettime_mean = int(timings_df.rxend2targettime.mean()) if not np.isnan(
+        timings_df.rxend2targettime.mean()) else 0
     rxend2txtime_mean = int(timings_df.rxend2txtime.mean()) if not np.isnan(timings_df.rxend2txtime.mean()) else 0
     target2txphr_mean = int(timings_df.target2txphr.mean()) if not np.isnan(timings_df.target2txphr.mean()) else 0
 
     txcall2aftertx_max = int(timings_df.txcall2aftertx.max()) if not np.isnan(timings_df.txcall2aftertx.max()) else 0
-    txcall2targettime_max = int(timings_df.txcall2targettime.max()) if not np.isnan(timings_df.txcall2targettime.max()) else 0
+    txcall2targettime_max = int(timings_df.txcall2targettime.max()) if not np.isnan(
+        timings_df.txcall2targettime.max()) else 0
     target2txphr_max = int(timings_df.target2txphr.max()) if not np.isnan(timings_df.target2txphr.max()) else 0
     txend2rxstart_max = int(timings_df.txend2rxstart.max()) if not np.isnan(timings_df.txend2rxstart.max()) else 0
     rxcall2afterrx_max = int(timings_df.rxcall2afterrx.max()) if not np.isnan(timings_df.rxcall2afterrx.max()) else 0
     rxend2txcall_max = int(timings_df.rxend2txcall.max()) if not np.isnan(timings_df.rxend2txcall.max()) else 0
     afterRx2rxPHR_max = int(timings_df.afterRx2rxPHR.max()) if not np.isnan(timings_df.afterRx2rxPHR.max()) else 0
-    txcall2targettime_max = int(timings_df.txcall2targettime.max()) if not np.isnan(timings_df.txcall2targettime.max()) else 0
-    rxend2targettime_max = int(timings_df.rxend2targettime.max()) if not np.isnan(timings_df.rxend2targettime.max()) else 0
+    txcall2targettime_max = int(timings_df.txcall2targettime.max()) if not np.isnan(
+        timings_df.txcall2targettime.max()) else 0
+    rxend2targettime_max = int(timings_df.rxend2targettime.max()) if not np.isnan(
+        timings_df.rxend2targettime.max()) else 0
     rxend2txtime_max = int(timings_df.rxend2txtime.max()) if not np.isnan(timings_df.rxend2txtime.max()) else 0
     target2txphr_max = int(timings_df.target2txphr.max()) if not np.isnan(timings_df.target2txphr.max()) else 0
 
     txcall2aftertx_min = int(timings_df.txcall2aftertx.min()) if not np.isnan(timings_df.txcall2aftertx.min()) else 0
-    txcall2targettime_min = int(timings_df.txcall2targettime.min()) if not np.isnan(timings_df.txcall2targettime.min()) else 0
+    txcall2targettime_min = int(timings_df.txcall2targettime.min()) if not np.isnan(
+        timings_df.txcall2targettime.min()) else 0
     target2txphr_min = int(timings_df.target2txphr.min()) if not np.isnan(timings_df.target2txphr.min()) else 0
     txend2rxstart_min = int(timings_df.txend2rxstart.min()) if not np.isnan(timings_df.txend2rxstart.min()) else 0
     rxcall2afterrx_min = int(timings_df.rxcall2afterrx.min()) if not np.isnan(timings_df.rxcall2afterrx.min()) else 0
     rxend2txcall_min = int(timings_df.rxend2txcall.min()) if not np.isnan(timings_df.rxend2txcall.min()) else 0
     afterRx2rxPHR_min = int(timings_df.afterRx2rxPHR.min()) if not np.isnan(timings_df.afterRx2rxPHR.min()) else 0
-    txcall2targettime_min = int(timings_df.txcall2targettime.min()) if not np.isnan(timings_df.txcall2targettime.min()) else 0
-    rxend2targettime_min = int(timings_df.rxend2targettime.min()) if not np.isnan(timings_df.rxend2targettime.min()) else 0
+    txcall2targettime_min = int(timings_df.txcall2targettime.min()) if not np.isnan(
+        timings_df.txcall2targettime.min()) else 0
+    rxend2targettime_min = int(timings_df.rxend2targettime.min()) if not np.isnan(
+        timings_df.rxend2targettime.min()) else 0
     rxend2txtime_min = int(timings_df.rxend2txtime.min()) if not np.isnan(timings_df.rxend2txtime.min()) else 0
     target2txphr_min = int(timings_df.target2txphr.min()) if not np.isnan(timings_df.target2txphr.min()) else 0
 
@@ -1969,7 +2018,8 @@ def graph_cl_timings():
         rx_dur = points_dic['rxEnd']-(points_dic['rxPHR'])
         txdiff = points_dic['TxPHR1'] - points_dic['TargetTx1']
         fig.add_bar(
-            x=[(points_dic['TxPHR1']-txdiff+(tx_dur+txdiff)/2), (points_dic['rxPHR']-txdiff+(rx_dur+txdiff)/2), (points_dic['TxPHR2']-txdiff+(tx_dur+txdiff+100)/2)],
+            x=[(points_dic['TxPHR1']-txdiff+(tx_dur+txdiff)/2), (points_dic['rxPHR']-txdiff +
+                                                                 (rx_dur+txdiff)/2), (points_dic['TxPHR2']-txdiff+(tx_dur+txdiff+100)/2)],
             y=[0.25, -0.25, 0.25],
             width=[tx_dur+txdiff, rx_dur+txdiff, (tx_dur+100+txdiff)],
             text=["POLL", "ACK", "DATA"],
@@ -2029,33 +2079,54 @@ def graph_cl_timings():
                             )
 
         # Add traces
-        fig.add_bar(x=target2txphr_df['target2txphr'], y=target2txphr_df['freq'], name="Count", opacity=0.8, row=1, col=1)
-        fig.add_scatter(x=target2txphr_df['target2txphr'], y=target2txphr_df['pdf'], name="PDF", secondary_y=True, row=1, col=1)
-        fig.add_scatter(x=target2txphr_df['target2txphr'], y=target2txphr_df['cdf'], name="CDF", secondary_y=True, row=1, col=1)
+        fig.add_bar(x=target2txphr_df['target2txphr'], y=target2txphr_df['freq'],
+                    name="Count", opacity=0.8, row=1, col=1)
+        fig.add_scatter(x=target2txphr_df['target2txphr'], y=target2txphr_df['pdf'],
+                        name="PDF", secondary_y=True, row=1, col=1)
+        fig.add_scatter(x=target2txphr_df['target2txphr'], y=target2txphr_df['cdf'],
+                        name="CDF", secondary_y=True, row=1, col=1)
 
-        fig.add_bar(x=txend2rxstart_df['txend2rxstart'], y=txend2rxstart_df['freq'], name="Count", opacity=0.8, row=1, col=2)
-        fig.add_scatter(x=txend2rxstart_df['txend2rxstart'], y=txend2rxstart_df['pdf'], name="PDF", secondary_y=True, row=1, col=2)
-        fig.add_scatter(x=txend2rxstart_df['txend2rxstart'], y=txend2rxstart_df['cdf'], name="CDF", secondary_y=True, row=1, col=2)
+        fig.add_bar(x=txend2rxstart_df['txend2rxstart'], y=txend2rxstart_df['freq'],
+                    name="Count", opacity=0.8, row=1, col=2)
+        fig.add_scatter(x=txend2rxstart_df['txend2rxstart'], y=txend2rxstart_df['pdf'],
+                        name="PDF", secondary_y=True, row=1, col=2)
+        fig.add_scatter(x=txend2rxstart_df['txend2rxstart'], y=txend2rxstart_df['cdf'],
+                        name="CDF", secondary_y=True, row=1, col=2)
 
-        fig.add_bar(x=rxend2targettime_df['rxend2targettime'], y=rxend2targettime_df['freq'], name="Count", opacity=0.8, row=2, col=1)
-        fig.add_scatter(x=rxend2targettime_df['rxend2targettime'], y=rxend2targettime_df['pdf'], name="PDF", secondary_y=True, row=2, col=1)
-        fig.add_scatter(x=rxend2targettime_df['rxend2targettime'], y=rxend2targettime_df['cdf'], name="CDF", secondary_y=True, row=2, col=1)
+        fig.add_bar(x=rxend2targettime_df['rxend2targettime'],
+                    y=rxend2targettime_df['freq'], name="Count", opacity=0.8, row=2, col=1)
+        fig.add_scatter(x=rxend2targettime_df['rxend2targettime'],
+                        y=rxend2targettime_df['pdf'], name="PDF", secondary_y=True, row=2, col=1)
+        fig.add_scatter(x=rxend2targettime_df['rxend2targettime'],
+                        y=rxend2targettime_df['cdf'], name="CDF", secondary_y=True, row=2, col=1)
 
-        fig.add_bar(x=rxend2txtime_df['rxend2txtime'], y=rxend2txtime_df['freq'], name="Count", opacity=0.8, row=2, col=2)
-        fig.add_scatter(x=rxend2txtime_df['rxend2txtime'], y=rxend2txtime_df['pdf'], name="PDF", secondary_y=True, row=2, col=2)
-        fig.add_scatter(x=rxend2txtime_df['rxend2txtime'], y=rxend2txtime_df['cdf'], name="CDF", secondary_y=True, row=2, col=2)
+        fig.add_bar(x=rxend2txtime_df['rxend2txtime'], y=rxend2txtime_df['freq'],
+                    name="Count", opacity=0.8, row=2, col=2)
+        fig.add_scatter(x=rxend2txtime_df['rxend2txtime'], y=rxend2txtime_df['pdf'],
+                        name="PDF", secondary_y=True, row=2, col=2)
+        fig.add_scatter(x=rxend2txtime_df['rxend2txtime'], y=rxend2txtime_df['cdf'],
+                        name="CDF", secondary_y=True, row=2, col=2)
 
-        fig.add_bar(x=txcall2targettime_df['txcall2targettime'], y=txcall2targettime_df['freq'], name="Count", opacity=0.8, row=3, col=1)
-        fig.add_scatter(x=txcall2targettime_df['txcall2targettime'], y=txcall2targettime_df['pdf'], name="PDF", secondary_y=True, row=3, col=1)
-        fig.add_scatter(x=txcall2targettime_df['txcall2targettime'], y=txcall2targettime_df['cdf'], name="CDF", secondary_y=True, row=3, col=1)
+        fig.add_bar(x=txcall2targettime_df['txcall2targettime'],
+                    y=txcall2targettime_df['freq'], name="Count", opacity=0.8, row=3, col=1)
+        fig.add_scatter(x=txcall2targettime_df['txcall2targettime'],
+                        y=txcall2targettime_df['pdf'], name="PDF", secondary_y=True, row=3, col=1)
+        fig.add_scatter(x=txcall2targettime_df['txcall2targettime'],
+                        y=txcall2targettime_df['cdf'], name="CDF", secondary_y=True, row=3, col=1)
 
-        fig.add_bar(x=rxend2txcall_df['rxend2txcall'], y=rxend2txcall_df['freq'], name="Count", opacity=0.8, row=3, col=2)
-        fig.add_scatter(x=rxend2txcall_df['rxend2txcall'], y=rxend2txcall_df['pdf'], name="PDF", secondary_y=True, row=3, col=2)
-        fig.add_scatter(x=rxend2txcall_df['rxend2txcall'], y=rxend2txcall_df['cdf'], name="CDF", secondary_y=True, row=3, col=2)
+        fig.add_bar(x=rxend2txcall_df['rxend2txcall'], y=rxend2txcall_df['freq'],
+                    name="Count", opacity=0.8, row=3, col=2)
+        fig.add_scatter(x=rxend2txcall_df['rxend2txcall'], y=rxend2txcall_df['pdf'],
+                        name="PDF", secondary_y=True, row=3, col=2)
+        fig.add_scatter(x=rxend2txcall_df['rxend2txcall'], y=rxend2txcall_df['cdf'],
+                        name="CDF", secondary_y=True, row=3, col=2)
 
-        fig.add_bar(x=rxcall2afterrx_df['rxcall2afterrx'], y=rxcall2afterrx_df['freq'], name="Count", opacity=0.8, row=4, col=1)
-        fig.add_scatter(x=rxcall2afterrx_df['rxcall2afterrx'], y=rxcall2afterrx_df['pdf'], name="PDF", secondary_y=True, row=4, col=1)
-        fig.add_scatter(x=rxcall2afterrx_df['rxcall2afterrx'], y=rxcall2afterrx_df['cdf'], name="CDF", secondary_y=True, row=4, col=1)
+        fig.add_bar(x=rxcall2afterrx_df['rxcall2afterrx'], y=rxcall2afterrx_df['freq'],
+                    name="Count", opacity=0.8, row=4, col=1)
+        fig.add_scatter(x=rxcall2afterrx_df['rxcall2afterrx'],
+                        y=rxcall2afterrx_df['pdf'], name="PDF", secondary_y=True, row=4, col=1)
+        fig.add_scatter(x=rxcall2afterrx_df['rxcall2afterrx'],
+                        y=rxcall2afterrx_df['cdf'], name="CDF", secondary_y=True, row=4, col=1)
 
         fig.add_bar(x=cl_dur_df['cl_dur'], y=cl_dur_df['freq'], name="Count", opacity=0.8, row=4, col=2)
         fig.add_scatter(x=cl_dur_df['cl_dur'], y=cl_dur_df['pdf'], name="PDF", secondary_y=True, row=4, col=2)
@@ -2099,6 +2170,8 @@ def graph_timeline_visualiser():
         "SA": colors_list[7],
         "LLS": colors_list[8],
         "ELG": colors_list[9],
+        "DEFAULT": 'darksalmon',
+
     }
     timeline_rx_color = {
 
@@ -2112,6 +2185,7 @@ def graph_timeline_visualiser():
         "SA": colors_list[7],
         "LLS": colors_list[8],
         "ELG": colors_list[9],
+        "DEFAULT": 'darkseagreen',
     }
 
     def hoverinfo(x, type):
@@ -2128,7 +2202,7 @@ def graph_timeline_visualiser():
             dur = str(x.tx_dur/1000).strip()
 
         ret = ""
-        ret = "~~~( " + x.owner + " )~~~<br>"
+        ret = "~~~( " + str(x.owner) + " )~~~<br>"
         if(x.owner == "CL"):
             ret = ret + "<b>CLId </b>" + str(x.cl_id) + ", " + x.cl_mac[10:] + "<br>" + \
                 x.txrx_param + "<br>" + \
@@ -2140,11 +2214,14 @@ def graph_timeline_visualiser():
 
     # rx
     timeline_rx_df = pd.DataFrame()
-    timeline_rx_df = timings_df[['byte', 'owner', 'nextcli', 'cl_id', 'cl_mac', 'rx_seq_ctrl', 'txrx_param', 'ts_rxstart', 'ts_rxend']]
+    timeline_rx_df = timings_df[['byte', 'owner', 'nextcli', 'cl_id',
+                                 'cl_mac', 'rx_seq_ctrl', 'txrx_param', 'ts_rxstart', 'ts_rxend']]
     timeline_rx_df = timeline_rx_df.assign(ts_rxend=timeline_rx_df.ts_rxend.shift(-1))
     timeline_rx_df.dropna(subset=['ts_rxstart', 'ts_rxend'], inplace=True)
     timeline_rx_df['rx_dur'] = timeline_rx_df.ts_rxend - timeline_rx_df.ts_rxstart
-    timeline_rx_df['color'] = timeline_rx_df.owner.apply(lambda x: timeline_rx_color[x])
+    timeline_rx_df['color'] = timeline_rx_df.owner.apply(lambda x: timeline_rx_color[x] if str(
+        x) != "nan" or not math.isnan(x) else timeline_rx_color['DEFAULT'])
+
     timeline_rx_df['hoverinfo'] = timeline_rx_df.apply(lambda x: hoverinfo(x, "rx"), axis=1)
     err_df = timeline_rx_df[timeline_rx_df.rx_dur <= 0]
 
@@ -2155,11 +2232,13 @@ def graph_timeline_visualiser():
         print(err_df.shape)
 
     # tx
-    timeline_tx_df = timings_df[['byte', 'owner', 'nextcli', 'cl_id', 'cl_mac', 'tx_seq_ctrl', 'txrx_param', 'ts_txstart', 'ts_txend']]
+    timeline_tx_df = timings_df[['byte', 'owner', 'nextcli', 'cl_id',
+                                 'cl_mac', 'tx_seq_ctrl', 'txrx_param', 'ts_txstart', 'ts_txend']]
     timeline_tx_df = timeline_tx_df.assign(ts_txend=timeline_tx_df.ts_txend.shift(-1))
     timeline_tx_df.dropna(subset=['ts_txstart', 'ts_txend'], inplace=True)
     timeline_tx_df['tx_dur'] = timeline_tx_df.ts_txend - timeline_tx_df.ts_txstart
-    timeline_tx_df['color'] = timeline_tx_df.owner.apply(lambda x: timeline_tx_color[x])
+    timeline_tx_df['color'] = timeline_tx_df.owner.apply(lambda x: timeline_tx_color[x]if str(
+        x) != "nan" or not math.isnan(x) else timeline_tx_color['DEFAULT'])
     timeline_tx_df['hoverinfo'] = timeline_tx_df.apply(lambda x: hoverinfo(x, "tx"), axis=1)
     timeline_tx_df = timeline_tx_df[timeline_tx_df.tx_dur <= 500000]
     err_df = timeline_tx_df[timeline_tx_df.tx_dur <= 0]
@@ -2189,8 +2268,10 @@ def graph_timeline_visualiser():
     # CL start END
     filter_list = [131, 132]
 
-    timeline_cl_start_df = cl_csv_df[cl_csv_df.tracecode_dec == 131][['byte', 'frt_dec', 'cl_id', 'cl_mac']].rename(columns={'frt_dec': 'clstart'})
-    timeline_cl_end_df = cl_csv_df[cl_csv_df.tracecode_dec == 132][['byte', 'frt_dec', 'cl_id', 'cl_mac']].rename(columns={'frt_dec': 'clend'})
+    timeline_cl_start_df = cl_csv_df[cl_csv_df.tracecode_dec == 131][[
+        'byte', 'frt_dec', 'cl_id', 'cl_mac']].rename(columns={'frt_dec': 'clstart'})
+    timeline_cl_end_df = cl_csv_df[cl_csv_df.tracecode_dec == 132][['byte', 'frt_dec', 'cl_id', 'cl_mac']].rename(columns={
+                                                                                                                  'frt_dec': 'clend'})
 
     timeline_cl_startend_df = timeline_cl_start_df.merge(timeline_cl_end_df, on='cl_id', how='left')
     timeline_cl_startend_df['cldiff'] = timeline_cl_startend_df.clend - timeline_cl_startend_df.clstart
@@ -2338,11 +2419,14 @@ def graph_timeline_visualiser():
 
     elif GRAPH_OPTION == GRAPH_HIGHCHARTS:
 
-        write_df_to_json("timeline_clStartEndJson", timeline_cl_startend_df[['cl_id', 'cldiff', 'clend', 'clstart', 'hoverinfo']])
+        write_df_to_json("timeline_clStartEndJson", timeline_cl_startend_df[[
+                         'cl_id', 'cldiff', 'clend', 'clstart', 'hoverinfo']])
 
-        write_df_to_json("timeline_txJson", timeline_tx_df[['cl_id', 'color', 'hoverinfo', 'ts_txstart', 'ts_txend', 'tx_dur']])
+        write_df_to_json("timeline_txJson", timeline_tx_df[[
+                         'cl_id', 'color', 'hoverinfo', 'ts_txstart', 'ts_txend', 'tx_dur']])
 
-        write_df_to_json("timeline_rxJson", timeline_rx_df[['cl_id', 'color', 'hoverinfo', 'ts_rxstart', 'ts_rxend', 'rx_dur']])
+        write_df_to_json("timeline_rxJson", timeline_rx_df[[
+                         'cl_id', 'color', 'hoverinfo', 'ts_rxstart', 'ts_rxend', 'rx_dur']])
 
         write_df_to_json("timeline_phyIndJson", timeline_phycallind_df[["cl_id", "frt_dec", "trace_info", "color"]])
 
@@ -2365,7 +2449,8 @@ def graph_buf_mgr():
     bufmgr_df = bufmgr_df.assign(buffer=bufmgr_df.trace_info.str[-4:])
     bufmgr_df['buffer_dec'] = bufmgr_df.buffer.apply(int, base=16)
 
-    bufmgr_get_df = bufmgr_df[bufmgr_df["tracecode_dec"] == 19][['byte', 'frt_dec', 'trace_info', 'buffer', 'buffer_dec']]
+    bufmgr_get_df = bufmgr_df[bufmgr_df["tracecode_dec"] == 19][[
+        'byte', 'frt_dec', 'trace_info', 'buffer', 'buffer_dec']]
 
     bufmgr_get_df['owner'] = bufmgr_get_df.trace_info.str.split().str[2].str.split("(").str[0]
     bufmgr_get_df['owner'] = bufmgr_get_df.owner.str[4:]
@@ -2384,7 +2469,8 @@ def graph_buf_mgr():
 
     bufmgr_get_df['rel_frt'] = bufmgr_get_df.apply(buf_filter, axis=1)
     bufmgr_get_df['frt_diff'] = (bufmgr_get_df['rel_frt'] - bufmgr_get_df['frt_dec'])
-    bufmgr_get_df['info'] = "<br><b>"+bufmgr_get_df.owner + "</b></br>" + " 0x" + bufmgr_get_df.buffer + " " + bufmgr_get_df.frt_diff.astype(str) + "us"
+    bufmgr_get_df['info'] = "<br><b>"+bufmgr_get_df.owner + "</b></br>" + " 0x" + \
+        bufmgr_get_df.buffer + " " + bufmgr_get_df.frt_diff.astype(str) + "us"
 
     # check if there are any leaks
     bufmgr_leak_df = bufmgr_get_df[bufmgr_get_df.isna().any(axis=1)]
@@ -2396,7 +2482,8 @@ def graph_buf_mgr():
 
     buf_owner_dic = dict()
     for owner in unique_owners:
-        buf_owner_dic[owner] = (bufmgr_get_unleaked_df[bufmgr_get_unleaked_df['owner'].str.match(owner)])[['frt_dec', 'owner', 'buffer_dec', 'rel_frt', 'frt_diff', 'info']]
+        buf_owner_dic[owner] = (bufmgr_get_unleaked_df[bufmgr_get_unleaked_df['owner'].str.match(owner)])[
+            ['frt_dec', 'owner', 'buffer_dec', 'rel_frt', 'frt_diff', 'info']]
 
     if not args.quiet:
         print("Done...Rendering Graph...", flush=True, end='')
@@ -2422,7 +2509,8 @@ def graph_buf_mgr():
                 y=owner_df.buffer_dec,
                 width=owner_df.frt_diff,
                 name=key,
-                text=owner_df['info'] + "<br>FRT start:" + owner_df.frt_dec.astype(str) + "<br> FRT end: " + owner_df.rel_frt.astype(str),
+                text=owner_df['info'] + "<br>FRT start:" +
+                owner_df.frt_dec.astype(str) + "<br> FRT end: " + owner_df.rel_frt.astype(str),
                 # hoverinfo='text',
                 # hovertext="FRT start:" + owner_df.frt_dec.astype(str) +"<br> FRT end: " +owner_df.rel_frt.astype(str) +"<br>" + owner_df['info'],
                 textposition="inside",
@@ -2483,7 +2571,8 @@ def graph_buf_mgr():
         write_df_to_json("buffer_summaryJson", buf_summary_df[['owner', 'buf_claim', 'buf_release', 'buf_leak']])
         # print(buf_owner_dic)
         bufmgr_get_unleaked_df
-        write_df_to_json("buffer_Json", bufmgr_get_unleaked_df[['frt_dec', 'owner', 'buffer_dec', 'rel_frt', 'frt_diff', 'info']])
+        write_df_to_json("buffer_Json", bufmgr_get_unleaked_df[[
+                         'frt_dec', 'owner', 'buffer_dec', 'rel_frt', 'frt_diff', 'info']])
 
         # for key, owner_df in buf_owner_dic.items():
         #     val = "buffer_" + key.lower() + "Json"
@@ -2511,11 +2600,15 @@ def graph_mode_chan():
     modechan_tx_df = modechan_df[modechan_df.tracecode_dec == 140]
     modechan_rx_df = modechan_df[modechan_df.tracecode_dec == 141]
 
-    modestats_tx_df = modechan_tx_df[['byte', 'mode']].groupby(['mode']).agg('count').rename(columns={'byte': 'count'}).reset_index()
-    modestats_rx_df = modechan_rx_df[['byte', 'mode']].groupby(['mode']).agg('count').rename(columns={'byte': 'count'}).reset_index()
+    modestats_tx_df = modechan_tx_df[['byte', 'mode']].groupby(['mode']).agg(
+        'count').rename(columns={'byte': 'count'}).reset_index()
+    modestats_rx_df = modechan_rx_df[['byte', 'mode']].groupby(['mode']).agg(
+        'count').rename(columns={'byte': 'count'}).reset_index()
 
-    chanstats_tx_df = modechan_tx_df[['byte', 'chan']].groupby(['chan']).agg('count').rename(columns={'byte': 'count'}).reset_index()
-    chanstats_rx_df = modechan_rx_df[['byte', 'chan']].groupby(['chan']).agg('count').rename(columns={'byte': 'count'}).reset_index()
+    chanstats_tx_df = modechan_tx_df[['byte', 'chan']].groupby(['chan']).agg(
+        'count').rename(columns={'byte': 'count'}).reset_index()
+    chanstats_rx_df = modechan_rx_df[['byte', 'chan']].groupby(['chan']).agg(
+        'count').rename(columns={'byte': 'count'}).reset_index()
 
     if not args.quiet:
         print("Done...Rendering/Preparing Graph...", flush=True, end='')
@@ -2527,11 +2620,15 @@ def graph_mode_chan():
                             x_title="Channel",
                             )
 
-        fig.add_bar(x=modestats_rx_df['mode'], y=modestats_rx_df['count'], name="MODE RX", opacity=0.7, textposition="outside", text=modestats_rx_df['count'], row=1, col=1,)
-        fig.add_bar(x=modestats_tx_df['mode'], y=modestats_tx_df['count'], name="MODE TX", opacity=0.7, textposition="outside", text=modestats_tx_df['count'], row=1, col=1,)
+        fig.add_bar(x=modestats_rx_df['mode'], y=modestats_rx_df['count'], name="MODE RX",
+                    opacity=0.7, textposition="outside", text=modestats_rx_df['count'], row=1, col=1,)
+        fig.add_bar(x=modestats_tx_df['mode'], y=modestats_tx_df['count'], name="MODE TX",
+                    opacity=0.7, textposition="outside", text=modestats_tx_df['count'], row=1, col=1,)
 
-        fig.add_bar(x=chanstats_rx_df['chan'], y=chanstats_rx_df['count'], name="CHAN RX", opacity=0.7, textposition="outside", text=chanstats_rx_df['count'], row=2, col=1,)
-        fig.add_bar(x=chanstats_tx_df['chan'], y=chanstats_tx_df['count'], name="CHAN TX", opacity=0.7, textposition="outside", text=chanstats_tx_df['count'], row=2, col=1,)
+        fig.add_bar(x=chanstats_rx_df['chan'], y=chanstats_rx_df['count'], name="CHAN RX",
+                    opacity=0.7, textposition="outside", text=chanstats_rx_df['count'], row=2, col=1,)
+        fig.add_bar(x=chanstats_tx_df['chan'], y=chanstats_tx_df['count'], name="CHAN TX",
+                    opacity=0.7, textposition="outside", text=chanstats_tx_df['count'], row=2, col=1,)
 
         fig.update_layout(
             title="Mode Channel Usage",
@@ -2607,6 +2704,10 @@ def graph_it():
 
     # plt.style.use('seaborn-deep')
     # plt.style.use('ggplot')
+    pd.set_option("display.max_columns", None)
+    pd.set_option("display.max_rows", None)
+    pd.set_option('display.width', 1000)
+
     if not args.quiet:
         if(args.range):
             print("showing graph {} CLs {} from '{}'".format(graph_ans_list, cl_id_range, graph_file))
@@ -2618,7 +2719,8 @@ def graph_it():
     global cl_csv_df
     global timings_df
 
-    csv_df = pd.read_csv(sep=',', skiprows=1, names=['byte', "frt_dec", 'frt_hex', 'trace_code', 'trace_info'], filepath_or_buffer=graph_file)
+    csv_df = pd.read_csv(sep=',', skiprows=1, names=['byte', "frt_dec",
+                                                     'frt_hex', 'trace_code', 'trace_info'], filepath_or_buffer=graph_file)
     # csv_df[['tracecode_dec','tracecode_hex']] = df.Name.str.split(expand=True)
     csv_df = csv_df.assign(tracecode_dec=pd.Series(np.nan))
     csv_df = csv_df.assign(tracecode_hex=pd.Series(np.nan))
@@ -2650,7 +2752,8 @@ def graph_it():
     # csv_df['txrx_param'] = csv_df.apply(lambda x: x.trace_info.split(')', 2)[1].strip() if x.tracecode_dec == 140 else np.nan, axis=1)
     tx_param = csv_df[csv_df.tracecode_dec == 140][['byte', 'trace_info']]
     rx_param = csv_df[csv_df.tracecode_dec == 141][['byte', 'trace_info']]
-    txrx_param_df = pd.concat([tx_param, rx_param]).sort_values(by=['byte']).rename(columns={'trace_info': 'txrx_param'})
+    txrx_param_df = pd.concat([tx_param, rx_param]).sort_values(
+        by=['byte']).rename(columns={'trace_info': 'txrx_param'})
     if txrx_param_df.empty:
         csv_df = csv_df.assign(txrx_param=pd.Series(np.nan))
     else:
@@ -2660,7 +2763,7 @@ def graph_it():
     traceCodeMap_df = pd.DataFrame(tracing_events_num_str.items(), columns=['tracecode_dec', 'trace_str'])
 
     # add owner id
-    owner_df = csv_df[csv_df.tracecode_dec == 68][['byte', 'trace_info']].rename(columns={'trace_info': 'owner'})
+    owner_df = csv_df[csv_df.tracecode_dec == tracing_events_str_num['HSM_EVENT_ENTRY']][['byte', 'trace_info']].rename(columns={'trace_info': 'owner'})
     if owner_df.empty:
         csv_df = csv_df.assign(owner=pd.Series(np.nan))
     else:
@@ -2677,16 +2780,21 @@ def graph_it():
         cl_range_start, cl_range_end = cl_id_range.split(':')
         cl_range_start = int(cl_range_start)-1 if cl_range_start else 0
         cl_range_end = min(int(cl_range_end), int(max_cl_val)) if cl_range_end else max_cl_val
-        csv_df = csv_df[(csv_df.cl_id.astype(float) >= float(cl_range_start)) & (csv_df.cl_id.astype(float) <= float(cl_range_end))]
+        csv_df = csv_df[(csv_df.cl_id.astype(float) >= float(cl_range_start))
+                        & (csv_df.cl_id.astype(float) <= float(cl_range_end))]
 
     # seq contrl
-    tx_seq_ctrl_df = csv_df[(csv_df.tracecode_dec == 144) & (csv_df.trace_info.str.contains("TX"))][['byte', 'trace_info']].rename(columns={'trace_info': 'tx_seq_ctrl'})
-    rx_seq_ctrl_df = csv_df[(csv_df.tracecode_dec == 144) & (csv_df.trace_info.str.contains("RX"))][['byte', 'trace_info']].rename(columns={'trace_info': 'rx_seq_ctrl'})
+    tx_seq_ctrl_df = csv_df[(csv_df.tracecode_dec == 144) & (csv_df.trace_info.str.contains("TX"))][[
+        'byte', 'trace_info']].rename(columns={'trace_info': 'tx_seq_ctrl'})
+    rx_seq_ctrl_df = csv_df[(csv_df.tracecode_dec == 144) & (csv_df.trace_info.str.contains("RX"))][[
+        'byte', 'trace_info']].rename(columns={'trace_info': 'rx_seq_ctrl'})
 
     if not tx_seq_ctrl_df.empty:
-        tx_seq_ctrl_df.tx_seq_ctrl = tx_seq_ctrl_df.tx_seq_ctrl.str.strip().str.split('SeqNum', 2, expand=True).drop([0], axis=1)
+        tx_seq_ctrl_df.tx_seq_ctrl = tx_seq_ctrl_df.tx_seq_ctrl.str.strip().str.split('SeqNum', 2,
+                                                                                      expand=True).drop([0], axis=1)
     if not rx_seq_ctrl_df.empty:
-        rx_seq_ctrl_df.rx_seq_ctrl = rx_seq_ctrl_df.rx_seq_ctrl.str.strip().str.split('SeqNum', 2, expand=True).drop([0], axis=1)
+        rx_seq_ctrl_df.rx_seq_ctrl = rx_seq_ctrl_df.rx_seq_ctrl.str.strip().str.split('SeqNum', 2,
+                                                                                      expand=True).drop([0], axis=1)
 
     csv_df = csv_df.merge(tx_seq_ctrl_df, on='byte', how='left')
     csv_df = csv_df.merge(rx_seq_ctrl_df, on='byte', how='left')
@@ -2728,7 +2836,8 @@ def graph_it():
     cl_csv_df = cl_csv_df.drop(columns=['tracecode_hex'])
 
     # cl_csv_df = cl_csv_df.assign(sts=pd.Series(np.nan))
-    cl_csv_df['sts'] = cl_csv_df.trace_info.apply(lambda x: "" if ("STS" not in x) and ("SDU_" not in x) else x.split()[1].split('(')[0])
+    cl_csv_df['sts'] = cl_csv_df.trace_info.apply(lambda x: "" if (
+        "STS" not in x) and ("SDU_" not in x) else x.split()[1].split('(')[0])
     cl_csv_df = cl_csv_df.merge(traceCodeMap_df, on="tracecode_dec")
     cl_csv_df.sort_values(by=['byte'], inplace=True)
 
@@ -2738,7 +2847,8 @@ def graph_it():
 
     if not args.quiet:
         print("="*30)
-        print("Total CLs    : {} [{},{}]".format(int(max_cl_val, 10)-int(min_cl_val, 10), int(min_cl_val, 10), int(max_cl_val, 10)))
+        print("Total CLs    : {} [{},{}]".format(int(max_cl_val, 10) -
+                                                 int(min_cl_val, 10), int(min_cl_val, 10), int(max_cl_val, 10)))
         if args.range:
             print("Filtered CLs : {} [{},{}]".format(cl_range_end - cl_range_start, cl_range_start, cl_range_end))
         print("")
@@ -2750,7 +2860,8 @@ def graph_it():
     cl_stats_data_df.rename(columns={'byte': 'count'}, inplace=True)
     # cl_stats_data_df.set_index('trace_str', inplace=True)
 
-    cl_filter_list = ['CL_NEW', 'CL_END', 'CL_OUT_REQ', 'CL_OUT_CNF', 'CL_IN', 'CL_START', 'CL_TX', 'CL_RX', 'CL_DATA_REQ', 'CL_DATA_RESP', 'CL_TXDONE']
+    cl_filter_list = ['CL_NEW', 'CL_END', 'CL_OUT_REQ', 'CL_OUT_CNF', 'CL_IN',
+                      'CL_START', 'CL_TX', 'CL_RX', 'CL_DATA_REQ', 'CL_DATA_RESP', 'CL_TXDONE']
 
     cl_stats_data_df = cl_stats_data_df[cl_stats_data_df.trace_str.isin(cl_filter_list)]
     dd_cl_stats = {
@@ -2774,7 +2885,8 @@ def graph_it():
             'val': cl_stats_dict['CL_END'],
             'drilldown': cl_ends
         }
-        cl_out_cnfs = cl_stats[cl_stats.trace_str == 'CL_OUT_CNF'].drop(columns='trace_str').set_index('sts').to_dict()['byte']
+        cl_out_cnfs = cl_stats[cl_stats.trace_str == 'CL_OUT_CNF'].drop(
+            columns='trace_str').set_index('sts').to_dict()['byte']
 
         dd_cl_stats['CL_NEW_END']['CL_NEW'] = {
             'val': cl_stats_dict['CL_NEW'] if 'CL_NEW' in cl_stats_dict else 0,
@@ -2800,7 +2912,8 @@ def graph_it():
         }
 
         # cl data req resp
-        cl_data_resps = cl_stats[cl_stats.trace_str == 'CL_DATA_RESP'].drop(columns='trace_str').set_index('sts').to_dict()['byte']
+        cl_data_resps = cl_stats[cl_stats.trace_str == 'CL_DATA_RESP'].drop(
+            columns='trace_str').set_index('sts').to_dict()['byte']
         dd_cl_stats['CL_DATA_REQ_RESP']['CL_DATA_REQ'] = {
             'val': cl_stats_dict['CL_DATA_REQ'] if 'CL_DATA_REQ' in cl_stats_dict else 0,
             'drilldown': {}
@@ -2811,7 +2924,8 @@ def graph_it():
         }
 
         # cl tx done
-        cl_tx_dones = cl_stats[cl_stats.trace_str == 'CL_TXDONE'].drop(columns='trace_str').set_index('sts').to_dict()['byte']
+        cl_tx_dones = cl_stats[cl_stats.trace_str == 'CL_TXDONE'].drop(
+            columns='trace_str').set_index('sts').to_dict()['byte']
         dd_cl_stats['CL_TXDONE'] = {
             'val': cl_stats_dict['CL_TXDONE'] if 'CL_TXDONE' in cl_stats_dict else 0,
             'drilldown': cl_tx_dones
@@ -2846,9 +2960,12 @@ def graph_it():
                 break
 
             # nextCLI
-            nextcli_df = timings_df[timings_df.tracecode_dec == tracing_events_str_num['CL_NEXT_CLI']][['byte', 'trace_info']].rename(columns={'trace_info': 'nextcli'})
-            nextcli_df[['rx', 'tx', 'rxPrio', 'txPrio']] = nextcli_df.nextcli.str.split(' ', expand=True,).drop(columns=[0, 1, 3, 5, 7], axis=1)
-            nextcli_df.nextcli = "CLI(" + nextcli_df.tx + "[" + nextcli_df.txPrio + "]," + nextcli_df.rx.str[:-1] + "[" + nextcli_df.rxPrio + "])"
+            nextcli_df = timings_df[timings_df.tracecode_dec == tracing_events_str_num['CL_NEXT_CLI']][[
+                'byte', 'trace_info']].rename(columns={'trace_info': 'nextcli'})
+            nextcli_df[['rx', 'tx', 'rxPrio', 'txPrio']] = nextcli_df.nextcli.str.split(
+                ' ', expand=True,).drop(columns=[0, 1, 3, 5, 7], axis=1)
+            nextcli_df.nextcli = "CLI(" + nextcli_df.tx + "[" + nextcli_df.txPrio + "]," + \
+                nextcli_df.rx.str[:-1] + "[" + nextcli_df.rxPrio + "])"
             nextcli_df.drop(columns=['rx', 'tx', 'rxPrio', 'txPrio'], inplace=True)
 
             timings_df = timings_df.merge(nextcli_df, on='byte', how='left')
@@ -2856,10 +2973,12 @@ def graph_it():
             timings_df = timings_df[timings_df.tracecode_dec != tracing_events_str_num['CL_NEXT_CLI']]
 
             # # aftertxcol
-            timings_df['aftertx_col'] = np.where((timings_df.tracecode_dec == tracing_events_str_num['CL_TX']), "afterTx", np.nan)
+            timings_df['aftertx_col'] = np.where(
+                (timings_df.tracecode_dec == tracing_events_str_num['CL_TX']), "afterTx", np.nan)
 
             # beforetxcol
-            timings_df['beforetx_col'] = np.where((timings_df.tracecode_dec == tracing_events_str_num['CL_FRT32_TX_CALL']), "beforeTx", np.nan)
+            timings_df['beforetx_col'] = np.where(
+                (timings_df.tracecode_dec == tracing_events_str_num['CL_FRT32_TX_CALL']), "beforeTx", np.nan)
 
             # dc
             timings_df['dummyAftertx'] = timings_df.aftertx_col.shift(1)
@@ -2869,13 +2988,16 @@ def graph_it():
             timings_df.drop(columns=['dummyclid', 'dummyAftertx'], inplace=True)
 
             # txend
-            timings_df['txend_col'] = np.where((timings_df.tracecode_dec == tracing_events_str_num['FRT32_TX_END']), "txEnd", np.nan)
+            timings_df['txend_col'] = np.where(
+                (timings_df.tracecode_dec == tracing_events_str_num['FRT32_TX_END']), "txEnd", np.nan)
 
             # afterRx
-            timings_df['afterrx_col'] = np.where((timings_df.tracecode_dec == tracing_events_str_num['CL_RX']), "afterRx", np.nan)
+            timings_df['afterrx_col'] = np.where(
+                (timings_df.tracecode_dec == tracing_events_str_num['CL_RX']), "afterRx", np.nan)
 
             # beforeRx
-            timings_df['beforerx_col'] = np.where((timings_df.tracecode_dec == tracing_events_str_num['CL_FRT32_RX_CALL']), "beforeRx", np.nan)
+            timings_df['beforerx_col'] = np.where(
+                (timings_df.tracecode_dec == tracing_events_str_num['CL_FRT32_RX_CALL']), "beforeRx", np.nan)
 
             # rxstart
             timings_df['dummyAfterrx'] = timings_df.afterrx_col.shift(1)
@@ -2898,11 +3020,20 @@ def graph_it():
 
             timings_df.drop(columns=['frt_hex'], inplace=True)
 
+            timings_df['mode'] = timings_df['txrx_param'].str.split().str[1]
+            timings_df['shr_dur_us'] = timings_df['mode'].apply(lambda x: shr_dur_usec[int(x)] if x else np.nan)
+
             # timestamps for tx rx start and end
-            timings_df['ts_rxstart'] = np.where((timings_df.tracecode_dec == tracing_events_str_num['FRT32_RX_START']), timings_df.frt_val, np.nan)
-            timings_df['ts_rxend'] = np.where((timings_df.tracecode_dec == tracing_events_str_num['FRT32_RX_END']), timings_df.frt_val, np.nan)
-            timings_df['ts_txstart'] = np.where((timings_df.dc_col == "dc"), timings_df.frt_val, np.nan)
-            timings_df['ts_txend'] = np.where((timings_df.tracecode_dec == tracing_events_str_num['FRT32_TX_END']), timings_df.frt_val, np.nan)
+            timings_df['ts_rxstart'] = np.where(
+                (timings_df.tracecode_dec == tracing_events_str_num['FRT32_RX_START']), timings_df.frt_val - timings_df.shr_dur_us, np.nan)
+            timings_df['ts_rxend'] = np.where(
+                (timings_df.tracecode_dec == tracing_events_str_num['FRT32_RX_END']), timings_df.frt_val, np.nan)
+            timings_df['ts_txstart'] = np.where((timings_df.dc_col == "dc"),
+                                                timings_df.frt_val - timings_df.shr_dur_us, np.nan)
+            timings_df['ts_txend'] = np.where(
+                (timings_df.tracecode_dec == tracing_events_str_num['FRT32_TX_END']), timings_df.frt_val, np.nan)
+
+            timings_df.drop(columns=['mode', 'shr_dur_us'], inplace=True)
 
         # exit(0)
             if '0' in graph_ans_list or '2' in graph_ans_list:
@@ -2985,7 +3116,8 @@ if __name__ == "__main__":
     lastseqinfo = ""
 
     # verify we have python atleast 3.x+
-    assert sys.version_info >= (3, 6), "Requires Python 3.6+. Current Version is {}".format(sys.version.split(" ", 2)[0])
+    assert sys.version_info >= (
+        3, 6), "Requires Python 3.6+. Current Version is {}".format(sys.version.split(" ", 2)[0])
 
     check_and_install_package(['numpy'])
 
@@ -3272,8 +3404,8 @@ if __name__ == "__main__":
         print("FAILED")
         exit(1)
     output = str_decode(output).strip()
-    
-    if (a7_ver <= (10,4,140)) :
+
+    if (a7_ver <= (10, 4, 140)):
         output = convert_pib_val(output)
     if (args.mask and output != args.mask):
         print("{} ... MISMATCH".format(output))
@@ -3343,7 +3475,7 @@ if __name__ == "__main__":
 
             last_count = new_count
             cur_line = process_hexdump(hexdump, cur_line, showFirstLine)
-            
+
             showFirstLine = False
 
             if (args.graph and (not graph_shown or GRAPH_OPTION == GRAPH_HIGHCHARTS)):
