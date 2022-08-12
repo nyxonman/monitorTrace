@@ -893,7 +893,7 @@ def test_ssh(host, command, acceptKey=False):
         # p1 = subprocess.Popen(['sshpass','-p', PWD, 'ssh', "-o StrictHostKeyChecking=no" ,"-o LogLevel=ERROR", "-o UserKnownHostsFile=/dev/null", HOST,COMMAND], stdout=subprocess.PIPE, stdin=subprocess.PIPE, stderr=subprocess.PIPE)
     else:
         # plink -v youruser@yourhost.com -pw yourpw "some linux command"
-        if(acceptKey == True):
+        if (acceptKey == True):
             p1 = subprocess.Popen(['echo', 'Y', '|', 'plink', "-pw", PWD, HOST, COMMAND],
                                   stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
         else:
@@ -1525,7 +1525,7 @@ def graph_fastlink():
             print("Done...Rendering/Preparing graph...", flush=True, end='')
 
         # Create figure with secondary y-axisspecs
-        if(graphs['rtt'] == {}):
+        if (graphs['rtt'] == {}):
             if GRAPH_OPTION == GRAPH_PLOTLY:
                 graphs['rtt'] = make_subplots(specs=[[{"secondary_y": True}]])
 
@@ -1655,7 +1655,7 @@ def graph_cl_timings():
 
     # txcall2targettime
     timings_df['txcall2targettime'] = np.where(
-        ((timings_df.beforetx_col == 'beforeTx')), timings_df.frt_val-timings_df.frt_dec, np.nan)
+        ((timings_df.beforetx_col == 'beforeTx')), timings_df.frt_val - timings_df.frt_dec, np.nan)
     # freq
     txcall2targettime_df = timings_df[['byte', 'txcall2targettime']].groupby(
         'txcall2targettime').agg('count').rename(columns={'byte': 'freq'}).reset_index()
@@ -1670,7 +1670,7 @@ def graph_cl_timings():
     timings_df['dummy'] = timings_df.aftertx_col.shift(-1)
     timings_df['dummy_frt'] = timings_df.frt_dec.shift(-1)
     timings_df['txcall2aftertx'] = np.where(((timings_df.beforetx_col == 'beforeTx') & (
-        timings_df.dummy == 'afterTx')), timings_df.dummy_frt-timings_df.frt_dec, np.nan)
+        timings_df.dummy == 'afterTx')), timings_df.dummy_frt - timings_df.frt_dec, np.nan)
     timings_df.drop(columns=['dummy', 'dummy_frt'], inplace=True)
     # freq
     txcall2aftertx_df = timings_df[['byte', 'txcall2aftertx']].groupby(
@@ -1687,7 +1687,7 @@ def graph_cl_timings():
     timings_df['dummy_frt'] = timings_df.frt_dec.shift(-1)
     timings_df['dummy_cl_id'] = timings_df.cl_id.shift(-1)
     timings_df['rxend2txcall'] = np.where(((timings_df.rxend_col == 'rxEnd') & (timings_df.dummy == 'beforeTx') & (
-        timings_df.cl_id == timings_df.dummy_cl_id)), timings_df.dummy_frt-timings_df.frt_val, np.nan)
+        timings_df.cl_id == timings_df.dummy_cl_id)), timings_df.dummy_frt - timings_df.frt_val, np.nan)
     timings_df.drop(columns=['dummy', 'dummy_frt', 'dummy_cl_id'], inplace=True)
     # freq
     rxend2txcall_df = timings_df[['byte', 'rxend2txcall']].groupby(
@@ -2213,11 +2213,11 @@ def graph_timeline_visualiser():
 
         ret = ""
         ret = "~~~( " + str(x.owner) + " )~~~<br>"
-        if(x.owner == "CL"):
+        if (x.owner == "CL"):
             ret = ret + "<b>CLId </b>" + str(x.cl_id) + ", " + x.cl_mac[10:] + "<br>" + \
                 x.txrx_param + "<br>" + \
                 "<b>seqctrl:</b> " + seqinfo + "<br>"
-        if(x.owner == 'CL' or x.owner == 'FH'):
+        if (x.owner == 'CL' or x.owner == 'FH'):
             ret = ret + str(x.nextcli) + "<br>"
         ret = ret + "<br><b>Start:</b>" + ts_start + "<br><b>End:</b>" + ts_end + "<br><b>dur: </b>" + dur + " msec"
         return ret
@@ -2235,7 +2235,7 @@ def graph_timeline_visualiser():
     timeline_rx_df['hoverinfo'] = timeline_rx_df.apply(lambda x: hoverinfo(x, "rx"), axis=1)
     err_df = timeline_rx_df[timeline_rx_df.rx_dur <= 0]
 
-    if(not (err_df.empty)):
+    if (not (err_df.empty)):
         timeline_rx_df = timeline_rx_df[timeline_rx_df.rx_dur > 0]
         print("\n\n\t\t **** ERROR timeline_rx_df")
         print(err_df.head())
@@ -2253,7 +2253,7 @@ def graph_timeline_visualiser():
     timeline_tx_df = timeline_tx_df[timeline_tx_df.tx_dur <= 500000]
     err_df = timeline_tx_df[timeline_tx_df.tx_dur <= 0]
 
-    if(not (err_df.empty)):
+    if (not (err_df.empty)):
         timeline_tx_df = timeline_tx_df[timeline_tx_df.tx_dur > 0]
         print("\n\n\t\t **** ERROR timeline_tx_df")
         print(err_df.head())
@@ -2290,7 +2290,7 @@ def graph_timeline_visualiser():
         timeline_cl_startend_df.cldiff/1000).astype(int).astype(str) + "msec<br>" + timeline_cl_startend_df.cl_mac_x.str[10:]
     err_df = timeline_cl_startend_df[timeline_cl_startend_df.cldiff <= 0]
 
-    if(not (err_df.empty)):
+    if (not (err_df.empty)):
         timeline_cl_startend_df = timeline_cl_startend_df[timeline_cl_startend_df.cldiff > 0]
         print("\n\n\t\t **** ERROR timeline_cl_startend_df")
         print(err_df.head())
@@ -2717,9 +2717,12 @@ def graph_it():
     pd.set_option("display.max_columns", None)
     pd.set_option("display.max_rows", None)
     pd.set_option('display.width', 1000)
+    # pd.set_option('display.float_format', lambda x: '%.3f' % x)
+    pd.set_option('display.float_format', '{:.0f}'.format)
+    # pd.set_option('max_colwidth', 100)
 
     if not args.quiet:
-        if(args.range):
+        if (args.range):
             print("showing graph {} CLs {} from '{}'".format(graph_ans_list, cl_id_range, graph_file))
         else:
             print("showing graph {} from '{}'".format(graph_ans_list, graph_file))
@@ -2773,7 +2776,8 @@ def graph_it():
     traceCodeMap_df = pd.DataFrame(tracing_events_num_str.items(), columns=['tracecode_dec', 'trace_str'])
 
     # add owner id
-    owner_df = csv_df[csv_df.tracecode_dec == tracing_events_str_num['HSM_EVENT_ENTRY']][['byte', 'trace_info']].rename(columns={'trace_info': 'owner'})
+    owner_df = csv_df[csv_df.tracecode_dec == tracing_events_str_num['HSM_EVENT_ENTRY']
+                      ][['byte', 'trace_info']].rename(columns={'trace_info': 'owner'})
     if owner_df.empty:
         csv_df = csv_df.assign(owner=pd.Series(np.nan))
     else:
@@ -3256,7 +3260,7 @@ if __name__ == "__main__":
     if args.ip:
         csvfile = "decoded_{}.csv".format(args.ip)
     elif args.file:
-        fullfilepath = os.path.basename(args.file).rsplit('.',1)[0]
+        fullfilepath = os.path.basename(args.file).rsplit('.', 1)[0]
         csvfile = "decoded_{}.csv".format(fullfilepath)
     graph_file = csvfile
 
@@ -3286,25 +3290,25 @@ if __name__ == "__main__":
 
             for key, val in tracing_events_num_str.items():
                 print("{:>28s} => {:10s} [{:3d}, 0x{:03X}] ".format(val, "ENABLED" if TRACING_DEBUG_VALUES_LIST[key] == '0' else "DISABLED", key, key),
-                      end='\n' if even == True else'\t')
+                      end='\n' if even == True else '\t')
                 even = not even
         if args.listid == ID_ALL or args.listid == ID_STS:
             print("\n~~~ STS IDs MAP ~~~")
             for key, val in sts_code_str.items():
                 print("{:3d} 0x{:03X} {:50s} ".format(key, key, val),
-                      end='\n' if even == True else'\t')
+                      end='\n' if even == True else '\t')
                 even = not even
         if args.listid == ID_ALL or args.listid == ID_PRIM:
             print("\n~~~ PRIM IDs MAP ~~~")
             for key, val in prim_code_str.items():
                 print("{:3d} 0x{:03X} {:50s} ".format(key, key, val),
-                      end='\n' if even == True else'\t')
+                      end='\n' if even == True else '\t')
                 even = not even
         if args.listid == ID_ALL or args.listid == ID_OWNERS:
             print("\n~~~ OWNERS IDs MAP ~~~")
             for key in range(len(owner_ids_arr)):
                 print("{:2d} 0x{:02X} {:50s}".format(
-                    key, key, owner_ids_arr[key]), end='\n' if even == True else'\t')
+                    key, key, owner_ids_arr[key]), end='\n' if even == True else '\t')
                 even = not even
         if args.listid == ID_ALL or args.listid == ID_FLAG:
             print("\n~~~ FLAG IDs MAP ~~~")
@@ -3367,7 +3371,7 @@ if __name__ == "__main__":
                 " - Decoded Traces are saved to {}\{}".format(get_current_path(), args.output))
             if args.csv:
                 LOG_INFO(
-                " - Decoded CSV saved to {}\{}".format(get_current_path(), csvfile))
+                    " - Decoded CSV saved to {}\{}".format(get_current_path(), csvfile))
 
         if args.graph:
             LOG_INFO("Creating Graph", False)
@@ -3398,7 +3402,7 @@ if __name__ == "__main__":
     a7_minor = int(a7_ver_list[1].split(':', 2)[1], 10)
     a7_build = int(a7_ver_list[2].split(':', 2)[1], 10)
     a7_ver = (a7_major, a7_minor, a7_build)
-    if(a7_ver < MIN_A7_VER):
+    if (a7_ver < MIN_A7_VER):
         LOG_ERR("\n\n*** The node Version A7 {} is not compatible. Minimum Required {}".format(a7_ver, MIN_A7_VER))
         choice = input("The APP may not function properly. Continue? (y/n)? ")
         if choice.lower() != 'y':
