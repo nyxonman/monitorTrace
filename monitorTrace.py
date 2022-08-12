@@ -1568,11 +1568,11 @@ def graph_fastlink():
 def graph_cl_timings():
     global timings_df
 
-    # target2txphr
+    # target2txphr: the name is kept txphr but it is the start of preamble tx
     timings_df['dummy'] = timings_df.dc_col.shift(-2)
     timings_df['dummy_frt'] = timings_df.frt_val.shift(-2)
     timings_df['target2txphr'] = np.where(((timings_df.beforetx_col == 'beforeTx') & (
-        timings_df.dummy == 'dc')), timings_df.dummy_frt-timings_df.frt_val, np.nan)
+        timings_df.dummy == 'dc')), timings_df.dummy_frt-timings_df.frt_val - timings_df.shr_dur_us, np.nan)
     timings_df.drop(columns=['dummy', 'dummy_frt'], inplace=True)
 
     # freq
@@ -1590,7 +1590,7 @@ def graph_cl_timings():
     timings_df['dummy'] = timings_df.dc_col.shift(-2)
     timings_df['dummy_frt'] = timings_df.frt_val.shift(-2)
     timings_df['txcall2txphr'] = np.where(((timings_df.beforetx_col == 'beforeTx') & (
-        timings_df.dummy == 'dc')), timings_df.dummy_frt-timings_df.frt_dec, np.nan)
+        timings_df.dummy == 'dc')), timings_df.dummy_frt-timings_df.frt_dec - timings_df.shr_dur_us, np.nan)
     timings_df.drop(columns=['dummy', 'dummy_frt'], inplace=True)
 
     # freq
@@ -1641,7 +1641,7 @@ def graph_cl_timings():
     timings_df['dummy_frt'] = timings_df.frt_val.shift(-3)
     timings_df['dummy_cl_id'] = timings_df.cl_id.shift(-3)
     timings_df['rxend2txtime'] = np.where(((timings_df.rxend_col == 'rxEnd') & (timings_df.dummy == 'dc') & (
-        timings_df.cl_id == timings_df.dummy_cl_id)), timings_df.dummy_frt-timings_df.frt_val, np.nan)
+        timings_df.cl_id == timings_df.dummy_cl_id)), timings_df.dummy_frt - timings_df.frt_val - timings_df.shr_dur_us, np.nan)
     timings_df.drop(columns=['dummy', 'dummy_frt', 'dummy_cl_id'], inplace=True)
     # freq
     rxend2txtime_df = timings_df[['byte', 'rxend2txtime']].groupby(
@@ -1731,12 +1731,22 @@ def graph_cl_timings():
         cl_dur_df['cdf'] = cl_dur_df['pdf'].cumsum()
         cl_dur_df = cl_dur_df.reset_index()
 
-    # rxcall2rxPHR
+    # afterRx2rxPHR
     timings_df['dummy_frt'] = timings_df.ts_rxstart.shift(-1)
     timings_df = timings_df.assign(afterRx2rxPHR=pd.Series(np.nan))
     timings_df.afterRx2rxPHR = timings_df.apply(
         lambda x: x.dummy_frt - x.frt_dec if x.afterrx_col == 'afterRx' and x.dummy_frt != np.nan else np.nan, axis=1)
     timings_df.drop(columns=['dummy_frt'], inplace=True)
+
+    # freq
+    afterRx2rx_df = timings_df[['byte', 'afterRx2rxPHR']].groupby(
+        'afterRx2rxPHR').agg('count').rename(columns={'byte': 'freq'}).reset_index()
+    afterRx2rx_df = afterRx2rx_df.astype({'afterRx2rxPHR': int})
+    # PDF
+    afterRx2rx_df['pdf'] = afterRx2rx_df['freq'] / sum(afterRx2rx_df['freq'])
+    # CDF
+    afterRx2rx_df['cdf'] = afterRx2rx_df['pdf'].cumsum()
+    afterRx2rx_df = afterRx2rx_df.reset_index()
 
     # drop values higher than 3sec
     timings_df.afterRx2rxPHR = timings_df.apply(lambda x: np.nan if np.isnan(
@@ -3002,15 +3012,16 @@ def graph_it():
             # rxstart
             timings_df['dummyAfterrx'] = timings_df.afterrx_col.shift(1)
             timings_df['dummyclid'] = timings_df.cl_id.shift(1)
-            timings_df['rxstart_col'] = np.where(((timings_df.tracecode_dec == tracing_events_str_num['FRT32_RX_START']) & (
-                timings_df.dummyAfterrx == "afterRx") & (timings_df.cl_id == timings_df.dummyclid)), "rxStart", np.nan)
+            timings_df['rxstart_col'] = np.where(
+                ((timings_df.tracecode_dec == tracing_events_str_num['FRT32_RX_START'])), "rxStart", np.nan)
             timings_df.drop(columns=['dummyclid', 'dummyAfterrx'], inplace=True)
 
             # rxend
             timings_df['dummyRxstart'] = timings_df.rxstart_col.shift(1)
             timings_df['dummyclid'] = timings_df.cl_id.shift(1)
             timings_df['rxend_col'] = np.where(((timings_df.tracecode_dec == tracing_events_str_num['FRT32_RX_END']) & (
-                timings_df.dummyRxstart == "rxStart") & (timings_df.cl_id == timings_df.dummyclid)), "rxEnd", np.nan)
+                timings_df.dummyRxstart == "rxStart")), "rxEnd", np.nan)
+
             timings_df.drop(columns=['dummyclid', 'dummyRxstart'], inplace=True)
 
             # timings_df['rxend_col'] = np.where((timings_df.tracecode_dec == tracing_events_str_num['FRT32_RX_END']), "rxEnd", np.nan)
@@ -3033,7 +3044,7 @@ def graph_it():
             timings_df['ts_txend'] = np.where(
                 (timings_df.tracecode_dec == tracing_events_str_num['FRT32_TX_END']), timings_df.frt_val, np.nan)
 
-            timings_df.drop(columns=['mode', 'shr_dur_us'], inplace=True)
+            # timings_df.drop(columns=['mode', 'shr_dur_us'], inplace=True)
 
         # exit(0)
             if '0' in graph_ans_list or '2' in graph_ans_list:
