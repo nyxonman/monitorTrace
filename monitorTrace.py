@@ -3242,6 +3242,12 @@ if __name__ == "__main__":
     tmp = args.output.split('.')
     hexfile = tmp[0]+"_hex."+tmp[1]
     csvfile = "decoded.csv"
+    if args.ip:
+        csvfile = "decoded_{}.csv".format(args.ip)
+    elif args.file:
+        fullfilepath = os.path.basename(args.file).rsplit('.',1)[0]
+        csvfile = "decoded_{}.csv".format(fullfilepath)
+    graph_file = csvfile
 
     # register a handler when exiting
     signal.signal(signal.SIGINT, signal_handler)
@@ -3348,6 +3354,9 @@ if __name__ == "__main__":
             print("")
             LOG_INFO(
                 " - Decoded Traces are saved to {}\{}".format(get_current_path(), args.output))
+            if args.csv:
+                LOG_INFO(
+                " - Decoded CSV saved to {}\{}".format(get_current_path(), csvfile))
 
         if args.graph:
             LOG_INFO("Creating Graph", False)
