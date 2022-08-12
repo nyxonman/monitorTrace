@@ -8,13 +8,13 @@ TIMELINE_CHART_ID = 'timeline';
 BUFFER_CHART_ID = "buffer";
 CLTIMING_CHART_ID = "cltiming";
 CLTIMINGS_CHART_ID = "cltimings";
-TARGET2TXPHR_CHART_ID = "target2txphr";
+TARGET2TX_CHART_ID = "target2tx";
 TXEND2RXSTART_CHART_ID = "txend2rxstart";
 RXEND2TARGETTIME_CHART_ID = "rxend2targettime";
 RXEND2TXTIME_CHART_ID = "rxend2txtime";
 TXCALL2TARGETTIME_CHART_ID = "txcall2targettime";
 TXCALL2AFTERTX_CHART_ID = "txcall2aftertx";
-TXCALL2TXPHR_CHART_ID = "txcall2txphr";
+TXCALL2TX_CHART_ID = "txcall2tx";
 RXEND2TXCALL_CHART_ID = "rxend2txcall";
 RXCALL2AFTERRX_CHART_ID = "rxcall2afterrx";
 CL_DUR_CHART_ID = "cl_dur";
@@ -124,10 +124,10 @@ chartOptions = {
 
 	},
 
-	"target2txphr": {
-		"chartTitle": "Target Time to  TX PHR",
+	"target2tx": {
+		"chartTitle": "Target Time to TX preamble",
 		"xAxisType": 'linear',
-		"xAxisTitle": "target2txphr in usecs",
+		"xAxisTitle": "target2tx in usecs",
 		"yAxisTitle": "Count",
 		"yAxisTitle2": "PDF/CDF",
 		"yAxis2Max": 1,
@@ -177,10 +177,10 @@ chartOptions = {
 		"yAxisTitle2": "PDF/CDF",
 		"yAxis2Max": 1,
 	},
-	"txcall2txphr": {
-		"chartTitle": "TX Wrapper call to Tx PHR",
+	"txcall2tx": {
+		"chartTitle": "TX Wrapper call to Tx Preamble",
 		"xAxisType": 'linear',
-		"xAxisTitle": "txcall2txphr in usecs",
+		"xAxisTitle": "txcall2tx in usecs",
 		"yAxisTitle": "Count",
 		"yAxisTitle2": "PDF/CDF",
 		"yAxis2Max": 1,
@@ -1202,17 +1202,17 @@ function create_cltiming_chart(tabName, renderFlag) {
 	tx_dur = 2000;
 
 	points_dic = jsonData.cltimingJson.points_dic;
-	rx_dur = points_dic['rxEnd'] - (points_dic['rxPHR']);
-	txdiff = points_dic['TxPHR1'] - points_dic['TargetTx1'];
+	rx_dur = points_dic['rxEnd'] - (points_dic['rx']);
+	txdiff = points_dic['Tx1'] - points_dic['TargetTx1'];
 	/* POLL ACK DATA */
 	chartData.push({
 		type: 'area',
 		findNearestPointBy: 'xy',
 		data: [
-			[points_dic.TxPHR1, 0],
-			[points_dic.TxPHR1, 0.5],
+			[points_dic.Tx1, 0],
+			[points_dic.Tx1, 0.5],
 			{
-				x: points_dic.TxPHR1 + tx_dur / 2,
+				x: points_dic.Tx1 + tx_dur / 2,
 				y: 0.5,
 				dataLabels: {
 					enabled: true,
@@ -1220,8 +1220,8 @@ function create_cltiming_chart(tabName, renderFlag) {
 
 				}
 			},
-			[points_dic.TxPHR1 + tx_dur, 0.5],
-			[points_dic.TxPHR1 + tx_dur, 0],
+			[points_dic.Tx1 + tx_dur, 0.5],
+			[points_dic.Tx1 + tx_dur, 0],
 		],
 		enableMouseTracking: false,
 		zIndex: 5,
@@ -1242,10 +1242,10 @@ function create_cltiming_chart(tabName, renderFlag) {
 		type: 'area',
 		findNearestPointBy: 'xy',
 		data: [
-			[points_dic.rxPHR, 0],
-			[points_dic.rxPHR, -0.5],
+			[points_dic.rx, 0],
+			[points_dic.rx, -0.5],
 			{
-				x: points_dic.rxPHR + rx_dur / 2,
+				x: points_dic.rx + rx_dur / 2,
 				y: -0.5,
 				dataLabels: {
 					enabled: true,
@@ -1253,9 +1253,9 @@ function create_cltiming_chart(tabName, renderFlag) {
 					verticalAlign: 'top'
 				}
 			},
-			[points_dic.rxPHR + rx_dur, -0.5],
+			[points_dic.rx + rx_dur, -0.5],
 
-			[points_dic.rxPHR + rx_dur, 0],
+			[points_dic.rx + rx_dur, 0],
 		],
 		name: "ACK",
 		enableMouseTracking: false,
@@ -1279,10 +1279,10 @@ function create_cltiming_chart(tabName, renderFlag) {
 		type: 'area',
 		findNearestPointBy: 'xy',
 		data: [
-			[points_dic.TxPHR2, 0],
-			[points_dic.TxPHR2, 0.5],
+			[points_dic.Tx2, 0],
+			[points_dic.Tx2, 0.5],
 			{
-				x: points_dic.TxPHR2 + (tx_dur + 500) / 2,
+				x: points_dic.Tx2 + (tx_dur + 500) / 2,
 				y: 0.5,
 				dataLabels: {
 					enabled: true,
@@ -1290,8 +1290,8 @@ function create_cltiming_chart(tabName, renderFlag) {
 
 				}
 			},
-			[points_dic.TxPHR2 + tx_dur + 500, 0.5],
-			[points_dic.TxPHR2 + tx_dur + 500, 0],
+			[points_dic.Tx2 + tx_dur + 500, 0.5],
+			[points_dic.Tx2 + tx_dur + 500, 0],
 		],
 		enableMouseTracking: false,
 
@@ -1319,15 +1319,15 @@ function create_cltiming_chart(tabName, renderFlag) {
 		"WrapperCall1": -2,
 		"WrapperReturn": 2,
 		"TargetTx1": -2,
-		"TxPHR1": -2,
+		"Tx1": -2,
 		"EndTxTime": -2,
 		"rxStart_beforeCall": 2,
 		"rxStart_afterCall": 2,
-		"rxPHR": 2,
+		"rx": 2,
 		"rxEnd": -2,
 		"WrapperCall2": 2,
 		"TargetTx2": -2,
-		"TxPHR2": -2,
+		"Tx2": -2,
 	};
 
 	cnt = 0;
