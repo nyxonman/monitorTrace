@@ -1750,26 +1750,26 @@ def graph_cl_timings():
         cl_dur_df['cdf'] = cl_dur_df['pdf'].cumsum()
         cl_dur_df = cl_dur_df.reset_index()
 
-    # afterRx2rx
+    # afterrx2rx
     timings_df['dummy_frt'] = timings_df.ts_rxstart.shift(-1)
-    timings_df = timings_df.assign(afterRx2rx=pd.Series(np.nan))
-    timings_df.afterRx2rx = timings_df.apply(
+    timings_df = timings_df.assign(afterrx2rx=pd.Series(np.nan))
+    timings_df.afterrx2rx = timings_df.apply(
         lambda x: x.dummy_frt - x.frt_dec if x.afterrx_col == 'afterRx' and x.dummy_frt != np.nan else np.nan, axis=1)
     timings_df.drop(columns=['dummy_frt'], inplace=True)
 
     # freq
-    afterRx2rx_df = timings_df[['byte', 'afterRx2rx']].groupby(
-        'afterRx2rx').agg('count').rename(columns={'byte': 'freq'}).reset_index()
-    afterRx2rx_df = afterRx2rx_df.astype({'afterRx2rx': int})
+    afterrx2rx_df = timings_df[['byte', 'afterrx2rx']].groupby(
+        'afterrx2rx').agg('count').rename(columns={'byte': 'freq'}).reset_index()
+    afterrx2rx_df = afterrx2rx_df.astype({'afterrx2rx': int})
     # PDF
-    afterRx2rx_df['pdf'] = afterRx2rx_df['freq'] / sum(afterRx2rx_df['freq'])
+    afterrx2rx_df['pdf'] = afterrx2rx_df['freq'] / sum(afterrx2rx_df['freq'])
     # CDF
-    afterRx2rx_df['cdf'] = afterRx2rx_df['pdf'].cumsum()
-    afterRx2rx_df = afterRx2rx_df.reset_index()
+    afterrx2rx_df['cdf'] = afterrx2rx_df['pdf'].cumsum()
+    afterrx2rx_df = afterrx2rx_df.reset_index()
 
     # drop values higher than 3sec
-    timings_df.afterRx2rx = timings_df.apply(lambda x: np.nan if np.isnan(
-        [x.afterRx2rx]) or x.afterRx2rx > 3000.0 else x.afterRx2rx, axis=1)
+    timings_df.afterrx2rx = timings_df.apply(lambda x: np.nan if np.isnan(
+        [x.afterrx2rx]) or x.afterrx2rx > 3000.0 else x.afterrx2rx, axis=1)
 
     if not args.quiet:
         print("Done...Rendering/Preparing Graph...Report...", flush=True, end='')
@@ -1836,7 +1836,7 @@ def graph_cl_timings():
     txend2rxstart_mean = int(timings_df.txend2rxstart.mean()) if not np.isnan(timings_df.txend2rxstart.mean()) else 0
     rxcall2afterrx_mean = int(timings_df.rxcall2afterrx.mean()) if not np.isnan(timings_df.rxcall2afterrx.mean()) else 0
     rxend2txcall_mean = int(timings_df.rxend2txcall.mean()) if not np.isnan(timings_df.rxend2txcall.mean()) else 0
-    afterRx2rx_mean = int(timings_df.afterRx2rx.mean()) if not np.isnan(timings_df.afterRx2rx.mean()) else 0
+    afterrx2rx_mean = int(timings_df.afterrx2rx.mean()) if not np.isnan(timings_df.afterrx2rx.mean()) else 0
     txcall2targettime_mean = int(timings_df.txcall2targettime.mean()) if not np.isnan(
         timings_df.txcall2targettime.mean()) else 0
     rxend2targettime_mean = int(timings_df.rxend2targettime.mean()) if not np.isnan(
@@ -1851,7 +1851,7 @@ def graph_cl_timings():
     txend2rxstart_max = int(timings_df.txend2rxstart.max()) if not np.isnan(timings_df.txend2rxstart.max()) else 0
     rxcall2afterrx_max = int(timings_df.rxcall2afterrx.max()) if not np.isnan(timings_df.rxcall2afterrx.max()) else 0
     rxend2txcall_max = int(timings_df.rxend2txcall.max()) if not np.isnan(timings_df.rxend2txcall.max()) else 0
-    afterRx2rx_max = int(timings_df.afterRx2rx.max()) if not np.isnan(timings_df.afterRx2rx.max()) else 0
+    afterrx2rx_max = int(timings_df.afterrx2rx.max()) if not np.isnan(timings_df.afterrx2rx.max()) else 0
     txcall2targettime_max = int(timings_df.txcall2targettime.max()) if not np.isnan(
         timings_df.txcall2targettime.max()) else 0
     rxend2targettime_max = int(timings_df.rxend2targettime.max()) if not np.isnan(
@@ -1866,7 +1866,7 @@ def graph_cl_timings():
     txend2rxstart_min = int(timings_df.txend2rxstart.min()) if not np.isnan(timings_df.txend2rxstart.min()) else 0
     rxcall2afterrx_min = int(timings_df.rxcall2afterrx.min()) if not np.isnan(timings_df.rxcall2afterrx.min()) else 0
     rxend2txcall_min = int(timings_df.rxend2txcall.min()) if not np.isnan(timings_df.rxend2txcall.min()) else 0
-    afterRx2rx_min = int(timings_df.afterRx2rx.min()) if not np.isnan(timings_df.afterRx2rx.min()) else 0
+    afterrx2rx_min = int(timings_df.afterrx2rx.min()) if not np.isnan(timings_df.afterrx2rx.min()) else 0
     txcall2targettime_min = int(timings_df.txcall2targettime.min()) if not np.isnan(
         timings_df.txcall2targettime.min()) else 0
     rxend2targettime_min = int(timings_df.rxend2targettime.min()) if not np.isnan(
@@ -1881,7 +1881,7 @@ def graph_cl_timings():
         'endTxTime2rxStartbefore': txend2rxstart_mean,
         'rxstartBefore2After': rxcall2afterrx_mean,
         'rxEnd2wrapperCall': rxend2txcall_mean,
-        'rxstartAfter2rx': afterRx2rx_mean,
+        'rxstartAfter2rx': afterrx2rx_mean,
         'wrapperCall2TargetTx2': txcall2targettime_mean,
         'rxEnd2targetTx': rxend2targettime_mean,
         'rxEnd2Tx': rxend2txtime_mean,
@@ -1929,7 +1929,7 @@ def graph_cl_timings():
         str(txend2rxstart_min)+'/'+str(txend2rxstart_max)+'/'+str(txend2rxstart_mean),
         '1000(default)',
         str(rxcall2afterrx_min)+'/'+str(rxcall2afterrx_max)+'/'+str(rxcall2afterrx_mean),
-        str(afterRx2rx_min)+'/'+str(afterRx2rx_max)+'/'+str(afterRx2rx_mean),
+        str(afterrx2rx_min)+'/'+str(afterrx2rx_max)+'/'+str(afterrx2rx_mean),
         str(rxend2txcall_min)+'/'+str(rxend2txcall_max)+'/'+str(rxend2txcall_mean),
         str(rxend2targettime_min)+'/'+str(rxend2targettime_max)+'/'+str(rxend2targettime_mean),
         str(rxend2txtime_min)+'/'+str(rxend2txtime_max)+'/'+str(rxend2txtime_mean),
@@ -2180,6 +2180,7 @@ def graph_cl_timings():
         write_df_to_json("cltimings_txcall2aftertxJson", txcall2aftertx_df)
         write_df_to_json("cltimings_rxend2txcallJson", rxend2txcall_df)
         write_df_to_json("cltimings_rxcall2afterrxJson", rxcall2afterrx_df)
+        write_df_to_json("cltimings_afterrx2rxJson", afterrx2rx_df)
         write_df_to_json("cltimings_cl_durJson", cl_dur_df)
 
     if not args.quiet:

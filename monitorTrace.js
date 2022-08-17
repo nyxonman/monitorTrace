@@ -17,6 +17,7 @@ TXCALL2AFTERTX_CHART_ID = "txcall2aftertx";
 TXCALL2TX_CHART_ID = "txcall2tx";
 RXEND2TXCALL_CHART_ID = "rxend2txcall";
 RXCALL2AFTERRX_CHART_ID = "rxcall2afterrx";
+AFTERRX2RX_CHART_ID = "afterrx2rx"
 CL_DUR_CHART_ID = "cl_dur";
 THRESHOLD_STEP = 4;
 THRESHOLD_GAP = 2;
@@ -205,6 +206,14 @@ chartOptions = {
 		"yAxisTitle2": "PDF/CDF",
 		"yAxis2Max": 1,
 
+	},
+	"afterrx2rx": {
+		"chartTitle": "After Rx to Rx Preamble",
+		"xAxisType": 'linear',
+		"xAxisTitle": "afterrx2rx in usecs",
+		"yAxisTitle": "Count",
+		"yAxisTitle2": "PDF/CDF",
+		"yAxis2Max": 1,
 	},
 	"cl_dur": {
 		"chartTitle": "CL Duration",
