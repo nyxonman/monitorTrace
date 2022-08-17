@@ -1351,6 +1351,25 @@ def cleanup_proc():
     print("REMOVED")
     LOG_INFO("Old Trace {} Removed".format(HEX_TRACE_DIR + "hexTrace.log"), False)
 
+    # reset the tracing mask
+    if args.mask:
+        print(" - Resetting the mask... {} ...".format(DEFAULT_DEBUG_MASK), end='')
+        ret, output = test_ssh(
+            args.ip, "pib -sai E0000000 -v {} >/dev/null".format(DEFAULT_DEBUG_MASK))
+        if (ret != RET_SUCC):
+            print("FAILED")
+            LOG_ERR("Cannot write the pib. Check if DSP is running or NOT")
+            exit(1)
+        print(" SUCCESS")
+
+    print(" - Reading the mask... ", end='')
+    ret, output = test_ssh(args.ip, "pib -gi E0000000")
+    if (ret != RET_SUCC or str_decode(output)).strip() == "":
+        print("FAILED")
+        exit(1)
+    output = str_decode(output).strip()
+    print(output)
+
 
 def clear_local_logs():
     with open(args.output, 'w'):
@@ -2215,9 +2234,10 @@ def graph_timeline_visualiser():
         ret = "~~~( " + str(x.owner) + " )~~~<br>"
         if (x.owner == "CL"):
             ret = ret + "<b>CLId </b>" + str(x.cl_id) + ", " + x.cl_mac[10:] + "<br>" + \
-                x.txrx_param + "<br>" + \
-                "<b>seqctrl:</b> " + seqinfo + "<br>"
+                x.txrx_param + "<br>"
+
         if (x.owner == 'CL' or x.owner == 'FH'):
+            ret = ret + "<b>seqctrl:</b> " + seqinfo + "<br>"
             ret = ret + str(x.nextcli) + "<br>"
         ret = ret + "<br><b>Start:</b>" + ts_start + "<br><b>End:</b>" + ts_end + "<br><b>dur: </b>" + dur + " msec"
         return ret
@@ -2684,7 +2704,9 @@ def graph_it():
     for file in graph_file:
         if not os.path.isfile(file):
             print("{} not found. Use -c option to create the required csv.".format(graph_file))
-            return
+            print("")
+            cleanup_proc()
+            exit(1)
 
     packages = []
     packages.append("pandas")
@@ -2738,7 +2760,6 @@ def graph_it():
 
     # loop over each file and concat the final df
     for key, file in enumerate(graph_file):
-        print("READING file {} {}".format(file, key))
         tmp_df = pd.read_csv(sep=',', skiprows=1,
                              names=['byte', "frt_dec", 'frt_hex', 'trace_code', 'trace_info'],
                              dtype={'byte': str, "frt_dec": 'Int64', 'frt_hex': str,
@@ -2833,8 +2854,11 @@ def graph_it():
     csv_df = csv_df.merge(tx_seq_ctrl_df, on=['NODE', 'byte'], how='left')
     csv_df = csv_df.merge(rx_seq_ctrl_df, on=['NODE', 'byte'], how='left')
 
+    # maintain same seq ctrl info upto certain point
     csv_df.tx_seq_ctrl = np.where((csv_df.tracecode_dec == tracing_events_str_num['CL_TX']), 'X', csv_df.tx_seq_ctrl)
     csv_df.rx_seq_ctrl = np.where((csv_df.tracecode_dec == tracing_events_str_num['CL_RX']), 'X', csv_df.rx_seq_ctrl)
+    csv_df.rx_seq_ctrl = np.where(
+        (csv_df.tracecode_dec == tracing_events_str_num['LMMGR_PHR_IND']), 'X', csv_df.rx_seq_ctrl)
 
     csv_df = csv_df.bfill()
 
@@ -2972,7 +2996,7 @@ def graph_it():
             f.write('// data logged at {}.\n\n'.format(get_datetime()))
             f.write('const nodeip="{}";\n'.format(args.ip))
             f.write('const nodefile="{}";\n'.format(args.file))
-            f.write('const TOTAL_NODES={};\n'.format(len(args.file)))
+            f.write('const TOTAL_NODES={};\n'.format(len(args.file) if args.file else 1))
             f.write('const jsonData={\n')
         write_df_to_json('clstatsJson', dd_cl_stats, isdict=True)
 
@@ -3283,12 +3307,13 @@ if __name__ == "__main__":
     csvfile = ["decoded.csv"]
     csvfileArr = []
     if args.ip:
-        csvfile = "decoded_{}.csv".format(args.ip)
+        csvfile = ["decoded_{}.csv".format(args.ip)]
     elif args.file:
         for key, file in enumerate(args.file):
             fullfilepath = os.path.basename(file).rsplit('.', 1)[0]
             csvfileArr.insert(key, "decoded_{}.csv".format(fullfilepath))
         csvfile = csvfileArr
+
     graph_file = csvfile
 
     # register a handler when exiting
@@ -3441,6 +3466,9 @@ if __name__ == "__main__":
     LOG_INFO("macAddr {}".format(macAddr), False)
     LOG_INFO("Version {}".format(a7_ver), False)
 
+    # clean up once to remove residues.
+    cleanup_proc()
+
     # if mask is provided, set and read back
     if args.mask:
         print(" - Setting the mask... {} ...".format(args.mask), end='')
@@ -3466,10 +3494,6 @@ if __name__ == "__main__":
         exit(1)
 
     print("{} ... SUCCESS".format((output)))
-
-    # clean up once to remove residues.
-
-    cleanup_proc()
 
     # handle exit to cleanup pipe
     # atexit.register(exit_handler)
