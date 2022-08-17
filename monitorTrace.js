@@ -100,7 +100,7 @@ chartOptions = {
 
 	},
 	'timeline': {
-		"chartTitle": "Timeline Visualiser",
+		"chartTitle": "Timeline Visualiser (TimeOffset=" + jsonData['timing_offset'] + ")",
 		"xAxisType": 'linear',
 		"xAxisTitle": "Timestamp in usecs",
 		"yAxisMax": (THRESHOLD_GAP + THRESHOLD_STEP) * TOTAL_NODES,
@@ -534,7 +534,7 @@ function create_highchart(id, tabName, chartData, containerDiv = 'container', an
 							text: `M${markerCnt}`,
 							className: "markerLabel markerLabel" + markerCnt
 						},
-						zIndex: 99,
+						zIndex: 999,
 						className: `marker marker${markerCnt}Line`,
 						dashStyle: 'ShortDash',
 						events: {
@@ -585,6 +585,7 @@ function create_highchart(id, tabName, chartData, containerDiv = 'container', an
 			},
 			type: chartOptions[id].xAxisType,
 			crosshair: {
+				zIndex: 999,
 				enabled: true,
 				snap: chartOptions[id].xAxisType == 'category' ? true : false,
 			},
@@ -1564,6 +1565,7 @@ function create_timeline_chart(tabName, renderFlag) {
 			color: item.color,
 			tooltip: {
 				/*  followPointer: true, */
+				split: true,
 				useHTML: true,
 				headerFormat: '<span style="color: {series.color}">{series.name}</span>: ',
 				pointFormat: '<span>FRT: {point.x}</span><br>' + item.hoverinfo
@@ -1608,6 +1610,7 @@ function create_timeline_chart(tabName, renderFlag) {
 			/*  tooltip:null */
 			tooltip: {
 				/*  followPointer: true, */
+				split: true,
 				useHTML: true,
 				headerFormat: '<span style="color: rgba(170, 135, 54,1)">{series.name}</span>: ',
 				pointFormat: '<span>FRT: {point.x}</span> ' + item.hoverinfo

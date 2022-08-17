@@ -2241,6 +2241,38 @@ def graph_timeline_visualiser():
             ret = ret + str(x.nextcli) + "<br>"
         ret = ret + "<br><b>Start:</b>" + ts_start + "<br><b>End:</b>" + ts_end + "<br><b>dur: </b>" + dur + " msec"
         return ret
+    
+    # find the base frt for comparison. Here, txseqctrl is used to map between multiple nodes.
+    base_row_idx = timings_df[(timings_df.tx_seq_ctrl.ne('X')) & (
+        timings_df['NODE'] == 0) & (timings_df.ts_txstart != np.nan)].index[0]
+    base_row_seqctrl = timings_df.iloc[base_row_idx]['tx_seq_ctrl'].split('|', 2)[0]
+    base_row_tx_start_frt = timings_df.iloc[base_row_idx]['ts_txstart']
+
+    timing_offset = [0]
+    for i in range(1, len(args.file)):
+        matched_row = timings_df[(timings_df.rx_seq_ctrl == base_row_seqctrl) & (
+            timings_df['NODE'] == i) & (timings_df.ts_rxstart != np.nan)].iloc[0]
+
+        matched_row_rx_start_frt = matched_row['ts_rxstart']
+        matched_row_seqctrl = matched_row['rx_seq_ctrl']
+        timing_offset.append(matched_row_rx_start_frt - base_row_tx_start_frt)
+
+    with open('myJson.js', 'a') as f:
+        f.write('timing_offset:{},\n'.format(timing_offset))
+
+    # shift the timings by the offset
+    timings_df['frt_dec'] = timings_df[['frt_dec', 'NODE']].apply(
+        lambda row: row['frt_dec'] - timing_offset[row.NODE], axis=1)
+    timings_df['frt_val'] = timings_df[['frt_val', 'NODE']].apply(
+        lambda row: row['frt_val'] - timing_offset[row.NODE], axis=1)
+    timings_df['ts_rxstart'] = timings_df[['ts_rxstart', 'NODE']].apply(
+        lambda row: row['ts_rxstart'] - timing_offset[row.NODE], axis=1)
+    timings_df['ts_rxend'] = timings_df[['ts_rxend', 'NODE']].apply(
+        lambda row: row['ts_rxend'] - timing_offset[row.NODE], axis=1)
+    timings_df['ts_txstart'] = timings_df[['ts_txstart', 'NODE']].apply(
+        lambda row: row['ts_txstart'] - timing_offset[row.NODE], axis=1)
+    timings_df['ts_txend'] = timings_df[['ts_txend', 'NODE']].apply(
+        lambda row: row['ts_txend'] - timing_offset[row.NODE], axis=1)
 
     # rx
     timeline_rx_df = pd.DataFrame()
@@ -2288,12 +2320,24 @@ def graph_timeline_visualiser():
     timeline_phycallind_df['color'] = timeline_phycallind_df.tracecode_dec.apply(lambda x: colors_list[x])
     timeline_phycallind_df.drop(columns=['frt_hex'], inplace=True)
 
+    # shift the time by offset
+    timeline_phycallind_df['frt_dec'] = timeline_phycallind_df[['frt_dec', 'NODE']].apply(
+        lambda row: row['frt_dec'] - timing_offset[row.NODE], axis=1)
+    timeline_phycallind_df['frt_val'] = timeline_phycallind_df[['frt_val', 'NODE']].apply(
+        lambda row: row['frt_val'] - timing_offset[row.NODE], axis=1)
+
     # CL Traces
     filter_list = [129, 130, 131, 132, 133, 134, 135, 136, 137, 138, 139, 142, 143, 144, 145, 146, 147, 150]
     timeline_cl_df = pd.DataFrame()
     timeline_cl_df = cl_csv_df[cl_csv_df.tracecode_dec.isin(filter_list)]
     timeline_cl_df = timeline_cl_df.assign(color=pd.Series(np.nan))
     timeline_cl_df['color'] = timeline_cl_df.tracecode_dec.apply(lambda x: colors_list[x+64])
+
+    # shift the time by offset
+    timeline_cl_df['frt_dec'] = timeline_cl_df[['frt_dec', 'NODE']].apply(
+        lambda row: row['frt_dec'] - timing_offset[row.NODE], axis=1)
+    timeline_cl_df['frt_val'] = timeline_cl_df[['frt_val', 'NODE']].apply(
+        lambda row: row['frt_val'] - timing_offset[row.NODE], axis=1)
 
     # CL start END
     filter_list = [131, 132]
@@ -2302,6 +2346,12 @@ def graph_timeline_visualiser():
         'NODE', 'byte', 'frt_dec', 'cl_id', 'cl_mac']].rename(columns={'frt_dec': 'clstart'})
     timeline_cl_end_df = cl_csv_df[cl_csv_df.tracecode_dec == 132][['NODE', 'byte', 'frt_dec', 'cl_id', 'cl_mac']].rename(columns={
         'frt_dec': 'clend'})
+
+    # shift the time by offset
+    timeline_cl_start_df['clstart'] = timeline_cl_start_df[['clstart', 'NODE']].apply(
+        lambda row: row['clstart'] - timing_offset[row.NODE], axis=1)
+    timeline_cl_end_df['clend'] = timeline_cl_end_df[['clend', 'NODE']].apply(
+        lambda row: row['clend'] - timing_offset[row.NODE], axis=1)
 
     timeline_cl_startend_df = timeline_cl_start_df.merge(timeline_cl_end_df, on=['NODE', 'cl_id'], how='left')
     timeline_cl_startend_df['cldiff'] = timeline_cl_startend_df.clend - timeline_cl_startend_df.clstart
