@@ -1249,7 +1249,7 @@ outputList = []
 csvList = []
 
 
-def process_hexdump(hexdump, startLine=-1, showFirstLine=False):
+def process_hexdump(hexdump,  startLine=-1, showFirstLine=False, fileKey=0):
     # print(hexdump)
     global cl_id
     output = ''
@@ -1309,7 +1309,7 @@ def process_hexdump(hexdump, startLine=-1, showFirstLine=False):
         fout.writelines(outputList)
 
     if args.csv:
-        with open(csvfile, mode, newline='') as csvfileio:
+        with open(csvfile[fileKey], mode, newline='') as csvfileio:
             writer = csv.writer(csvfileio)
             writer.writerows(csvList)
 
@@ -1495,7 +1495,7 @@ def graph_fastlink():
     filter_list = [149, 148]
 
     fast_link_df = cl_csv_df[(cl_csv_df.tracecode_dec.isin(filter_list))][[
-        'byte', 'frt_dec', 'tracecode_dec', 'sts', 'cl_id']]
+        'NODE', 'byte', 'frt_dec', 'tracecode_dec', 'sts', 'cl_id']]
     trace_list = list(set(list(fast_link_df.tracecode_dec)))
     if sorted(trace_list) != sorted(filter_list):
         print("\n**** All required traces {} are not present {}. Cannot draw the graph".format(filter_list, trace_list))
@@ -2224,7 +2224,7 @@ def graph_timeline_visualiser():
 
     # rx
     timeline_rx_df = pd.DataFrame()
-    timeline_rx_df = timings_df[['byte', 'owner', 'nextcli', 'cl_id',
+    timeline_rx_df = timings_df[['NODE', 'byte', 'owner', 'nextcli', 'cl_id',
                                  'cl_mac', 'rx_seq_ctrl', 'txrx_param', 'ts_rxstart', 'ts_rxend']]
     timeline_rx_df = timeline_rx_df.assign(ts_rxend=timeline_rx_df.ts_rxend.shift(-1))
     timeline_rx_df.dropna(subset=['ts_rxstart', 'ts_rxend'], inplace=True)
@@ -2242,7 +2242,7 @@ def graph_timeline_visualiser():
         print(err_df.shape)
 
     # tx
-    timeline_tx_df = timings_df[['byte', 'owner', 'nextcli', 'cl_id',
+    timeline_tx_df = timings_df[['NODE', 'byte', 'owner', 'nextcli', 'cl_id',
                                  'cl_mac', 'tx_seq_ctrl', 'txrx_param', 'ts_txstart', 'ts_txend']]
     timeline_tx_df = timeline_tx_df.assign(ts_txend=timeline_tx_df.ts_txend.shift(-1))
     timeline_tx_df.dropna(subset=['ts_txstart', 'ts_txend'], inplace=True)
@@ -2279,11 +2279,11 @@ def graph_timeline_visualiser():
     filter_list = [131, 132]
 
     timeline_cl_start_df = cl_csv_df[cl_csv_df.tracecode_dec == 131][[
-        'byte', 'frt_dec', 'cl_id', 'cl_mac']].rename(columns={'frt_dec': 'clstart'})
-    timeline_cl_end_df = cl_csv_df[cl_csv_df.tracecode_dec == 132][['byte', 'frt_dec', 'cl_id', 'cl_mac']].rename(columns={
-                                                                                                                  'frt_dec': 'clend'})
+        'NODE', 'byte', 'frt_dec', 'cl_id', 'cl_mac']].rename(columns={'frt_dec': 'clstart'})
+    timeline_cl_end_df = cl_csv_df[cl_csv_df.tracecode_dec == 132][['NODE', 'byte', 'frt_dec', 'cl_id', 'cl_mac']].rename(columns={
+        'frt_dec': 'clend'})
 
-    timeline_cl_startend_df = timeline_cl_start_df.merge(timeline_cl_end_df, on='cl_id', how='left')
+    timeline_cl_startend_df = timeline_cl_start_df.merge(timeline_cl_end_df, on=['NODE', 'cl_id'], how='left')
     timeline_cl_startend_df['cldiff'] = timeline_cl_startend_df.clend - timeline_cl_startend_df.clstart
     timeline_cl_startend_df = timeline_cl_startend_df.dropna()
     timeline_cl_startend_df['hoverinfo'] = "CL " + timeline_cl_startend_df.cl_id.astype(str) + ", " + (
@@ -2430,17 +2430,18 @@ def graph_timeline_visualiser():
     elif GRAPH_OPTION == GRAPH_HIGHCHARTS:
 
         write_df_to_json("timeline_clStartEndJson", timeline_cl_startend_df[[
-                         'cl_id', 'cldiff', 'clend', 'clstart', 'hoverinfo']])
+                         'NODE', 'cl_id', 'cldiff', 'clend', 'clstart', 'hoverinfo']])
 
         write_df_to_json("timeline_txJson", timeline_tx_df[[
-                         'cl_id', 'color', 'hoverinfo', 'ts_txstart', 'ts_txend', 'tx_dur']])
+                         'NODE', 'cl_id', 'color', 'hoverinfo', 'ts_txstart', 'ts_txend', 'tx_dur']])
 
         write_df_to_json("timeline_rxJson", timeline_rx_df[[
-                         'cl_id', 'color', 'hoverinfo', 'ts_rxstart', 'ts_rxend', 'rx_dur']])
+                         'NODE', 'cl_id', 'color', 'hoverinfo', 'ts_rxstart', 'ts_rxend', 'rx_dur']])
 
-        write_df_to_json("timeline_phyIndJson", timeline_phycallind_df[["cl_id", "frt_dec", "trace_info", "color"]])
+        write_df_to_json("timeline_phyIndJson", timeline_phycallind_df[[
+                         "NODE", "cl_id", "frt_dec", "trace_info", "color"]])
 
-        write_df_to_json("timeline_clTracesJson", timeline_cl_df[["cl_id", "frt_dec", "trace_info", "color"]])
+        write_df_to_json("timeline_clTracesJson", timeline_cl_df[["NODE", "cl_id", "frt_dec", "trace_info", "color"]])
 
     if not args.quiet:
         print("Done", flush=True, end='\n')
@@ -2680,9 +2681,10 @@ def create_html_file():
 
 def graph_it():
 
-    if not os.path.isfile(graph_file):
-        print("{} not found. Use -c option to create the required csv.".format(graph_file))
-        return
+    for file in graph_file:
+        if not os.path.isfile(file):
+            print("{} not found. Use -c option to create the required csv.".format(graph_file))
+            return
 
     packages = []
     packages.append("pandas")
@@ -2732,8 +2734,20 @@ def graph_it():
     global cl_csv_df
     global timings_df
 
-    csv_df = pd.read_csv(sep=',', skiprows=1, names=['byte', "frt_dec",
-                                                     'frt_hex', 'trace_code', 'trace_info'], filepath_or_buffer=graph_file)
+    dfs = []
+
+    # loop over each file and concat the final df
+    for key, file in enumerate(graph_file):
+        print("READING file {} {}".format(file, key))
+        tmp_df = pd.read_csv(sep=',', skiprows=1,
+                             names=['byte', "frt_dec", 'frt_hex', 'trace_code', 'trace_info'],
+                             dtype={'byte': str, "frt_dec": 'Int64', 'frt_hex': str,
+                                    'trace_code': str, 'trace_info': str},
+                             filepath_or_buffer=file)
+        tmp_df['NODE'] = key
+        dfs.append(tmp_df)
+    csv_df = pd.concat(dfs, ignore_index=True).reset_index()
+
     # csv_df[['tracecode_dec','tracecode_hex']] = df.Name.str.split(expand=True)
     csv_df = csv_df.assign(tracecode_dec=pd.Series(np.nan))
     csv_df = csv_df.assign(tracecode_hex=pd.Series(np.nan))
@@ -2741,50 +2755,56 @@ def graph_it():
     csv_df[['tracecode_dec', 'tracecode_hex']
            ] = csv_df['trace_code'].str.split(expand=True)
     csv_df.drop(columns=['trace_code'], inplace=True)
+
+    # automatic dtype conversion
+    csv_df = csv_df.convert_dtypes()
     csv_df = csv_df.astype({'tracecode_dec': int})
+
     # csv_df = csv_df.assign(cl_id=pd.Series(np.nan))
 
     # csv_df['cl_id'] = csv_df["trace_info"].apply(lambda x: x.split(' ', 5)[4] if "CL_OUT_CNF" in x or "CL_START" in x else np.nan)
-    cl_id_df = csv_df[(csv_df.tracecode_dec == 134) | (csv_df.tracecode_dec == 136)][['byte', 'trace_info']]
+    cl_id_df = csv_df[(csv_df.tracecode_dec == 134) | (csv_df.tracecode_dec == 136)][['NODE', 'byte', 'trace_info']]
     if cl_id_df.empty:
         csv_df = csv_df.assign(cl_id=pd.Series(np.nan))
     else:
         cl_id_df.rename(columns={'trace_info': 'cl_id'}, inplace=True)
         cl_id_df.cl_id = cl_id_df.cl_id.str.rsplit(' ', 1, expand=True).drop([0], axis=1)
-        csv_df = csv_df.merge(cl_id_df, on='byte', how='left')
+        csv_df = csv_df.merge(cl_id_df, on=['NODE', 'byte'], how='left')
 
     # csv_df['cl_mac'] = csv_df.apply(lambda x: x.trace_info.split('>', 2)[1].strip() if x.tracecode_dec == 147 else np.nan, axis=1)
-    cl_mac_df = csv_df[csv_df.tracecode_dec == 147][['byte', 'trace_info']]
+    cl_mac_df = csv_df[csv_df.tracecode_dec == 147][['NODE', 'byte', 'trace_info']]
     if cl_mac_df.empty:
         csv_df = csv_df.assign(cl_mac=pd.Series(np.nan))
     else:
         cl_mac_df.rename(columns={'trace_info': 'cl_mac'}, inplace=True)
         cl_mac_df.cl_mac = cl_mac_df.cl_mac.str.split('>', 2, expand=True).drop([0], axis=1)
-        csv_df = csv_df.merge(cl_mac_df, on='byte', how='left')
+        csv_df = csv_df.merge(cl_mac_df, on=['NODE', 'byte'], how='left')
 
     # csv_df['txrx_param'] = csv_df.apply(lambda x: x.trace_info.split(')', 2)[1].strip() if x.tracecode_dec == 140 else np.nan, axis=1)
-    tx_param = csv_df[csv_df.tracecode_dec == 140][['byte', 'trace_info']]
-    rx_param = csv_df[csv_df.tracecode_dec == 141][['byte', 'trace_info']]
+    tx_param = csv_df[csv_df.tracecode_dec == 140][['NODE', 'byte', 'trace_info']]
+    rx_param = csv_df[csv_df.tracecode_dec == 141][['NODE', 'byte', 'trace_info']]
     txrx_param_df = pd.concat([tx_param, rx_param]).sort_values(
-        by=['byte']).rename(columns={'trace_info': 'txrx_param'})
+        by=['NODE', 'byte']).rename(columns={'trace_info': 'txrx_param'})
     if txrx_param_df.empty:
         csv_df = csv_df.assign(txrx_param=pd.Series(np.nan))
     else:
         txrx_param_df.txrx_param = txrx_param_df.txrx_param.str.split(')', 2, expand=True).drop([0], axis=1)
-        csv_df = csv_df.merge(txrx_param_df, on='byte', how='left')
+        csv_df = csv_df.merge(txrx_param_df, on=['NODE', 'byte'], how='left')
 
     traceCodeMap_df = pd.DataFrame(tracing_events_num_str.items(), columns=['tracecode_dec', 'trace_str'])
 
     # add owner id
     owner_df = csv_df[csv_df.tracecode_dec == tracing_events_str_num['HSM_EVENT_ENTRY']
-                      ][['byte', 'trace_info']].rename(columns={'trace_info': 'owner'})
+                      ][['NODE', 'byte', 'trace_info']].rename(columns={'trace_info': 'owner'})
     if owner_df.empty:
         csv_df = csv_df.assign(owner=pd.Series(np.nan))
     else:
         owner_df.owner = owner_df.owner.str.split('LMSM_', 2, expand=True).drop([0], axis=1)
         owner_df.owner = owner_df.owner.str.split('(', 2, expand=True).drop([1], axis=1)
-        csv_df = csv_df.merge(owner_df, on='byte', how='left')
-        csv_df = csv_df.ffill()
+        csv_df = csv_df.merge(owner_df, on=['NODE', 'byte'], how='left')
+
+    # forward fill the data
+    csv_df = csv_df.ffill()
 
     # filter for clId Ranges
     max_cl_val = str(int(csv_df.cl_id.astype(float).max())) if not math.isnan(csv_df.cl_id.astype(float).max()) else "0"
@@ -2799,9 +2819,9 @@ def graph_it():
 
     # seq contrl
     tx_seq_ctrl_df = csv_df[(csv_df.tracecode_dec == 144) & (csv_df.trace_info.str.contains("TX"))][[
-        'byte', 'trace_info']].rename(columns={'trace_info': 'tx_seq_ctrl'})
+        'NODE', 'byte', 'trace_info']].rename(columns={'trace_info': 'tx_seq_ctrl'})
     rx_seq_ctrl_df = csv_df[(csv_df.tracecode_dec == 144) & (csv_df.trace_info.str.contains("RX"))][[
-        'byte', 'trace_info']].rename(columns={'trace_info': 'rx_seq_ctrl'})
+        'NODE', 'byte', 'trace_info']].rename(columns={'trace_info': 'rx_seq_ctrl'})
 
     if not tx_seq_ctrl_df.empty:
         tx_seq_ctrl_df.tx_seq_ctrl = tx_seq_ctrl_df.tx_seq_ctrl.str.strip().str.split('SeqNum', 2,
@@ -2810,8 +2830,8 @@ def graph_it():
         rx_seq_ctrl_df.rx_seq_ctrl = rx_seq_ctrl_df.rx_seq_ctrl.str.strip().str.split('SeqNum', 2,
                                                                                       expand=True).drop([0], axis=1)
 
-    csv_df = csv_df.merge(tx_seq_ctrl_df, on='byte', how='left')
-    csv_df = csv_df.merge(rx_seq_ctrl_df, on='byte', how='left')
+    csv_df = csv_df.merge(tx_seq_ctrl_df, on=['NODE', 'byte'], how='left')
+    csv_df = csv_df.merge(rx_seq_ctrl_df, on=['NODE', 'byte'], how='left')
 
     csv_df.tx_seq_ctrl = np.where((csv_df.tracecode_dec == tracing_events_str_num['CL_TX']), 'X', csv_df.tx_seq_ctrl)
     csv_df.rx_seq_ctrl = np.where((csv_df.tracecode_dec == tracing_events_str_num['CL_RX']), 'X', csv_df.rx_seq_ctrl)
@@ -2820,10 +2840,10 @@ def graph_it():
 
     # FRT_trace_val
     # csv_df['frt32_val'] = csv_df.apply(lambda x: (x.trace_info[-8:]) if x.tracecode_dec in [6, 121, 122, 123, 124, 129, 130] else np.nan, axis=1)
-    frt32_val_df = csv_df[csv_df.tracecode_dec.isin([6, 121, 122, 123, 124, 129, 130])][['byte', 'trace_info']]
+    frt32_val_df = csv_df[csv_df.tracecode_dec.isin([6, 121, 122, 123, 124, 129, 130])][['NODE', 'byte', 'trace_info']]
     frt32_val_df.trace_info = frt32_val_df.trace_info.str[-8:]
     frt32_val_df.rename(columns={'trace_info': 'frt32_val'}, inplace=True)
-    csv_df = csv_df.merge(frt32_val_df, on='byte', how='left')
+    csv_df = csv_df.merge(frt32_val_df, on=['NODE', 'byte'], how='left')
 
     csv_df['dummy'] = csv_df.tracecode_dec.shift(1)
     csv_df['dummy_frt'] = csv_df.frt32_val.shift(-1)
@@ -2853,7 +2873,9 @@ def graph_it():
     cl_csv_df['sts'] = cl_csv_df.trace_info.apply(lambda x: "" if (
         "STS" not in x) and ("SDU_" not in x) else x.split()[1].split('(')[0])
     cl_csv_df = cl_csv_df.merge(traceCodeMap_df, on="tracecode_dec")
-    cl_csv_df.sort_values(by=['byte'], inplace=True)
+
+    # sort the dataframe by NODE and then byte
+    cl_csv_df.sort_values(by=['NODE', 'byte'], inplace=True)
 
     cl_stats = cl_csv_df.groupby(
         ['trace_str', 'sts', ]).count()
@@ -2950,6 +2972,7 @@ def graph_it():
             f.write('// data logged at {}.\n\n'.format(get_datetime()))
             f.write('const nodeip="{}";\n'.format(args.ip))
             f.write('const nodefile="{}";\n'.format(args.file))
+            f.write('const TOTAL_NODES={};\n'.format(len(args.file)))
             f.write('const jsonData={\n')
         write_df_to_json('clstatsJson', dd_cl_stats, isdict=True)
 
@@ -2975,14 +2998,14 @@ def graph_it():
 
             # nextCLI
             nextcli_df = timings_df[timings_df.tracecode_dec == tracing_events_str_num['CL_NEXT_CLI']][[
-                'byte', 'trace_info']].rename(columns={'trace_info': 'nextcli'})
+                'NODE', 'byte', 'trace_info']].rename(columns={'trace_info': 'nextcli'})
             nextcli_df[['rx', 'tx', 'rxPrio', 'txPrio']] = nextcli_df.nextcli.str.split(
                 ' ', expand=True,).drop(columns=[0, 1, 3, 5, 7], axis=1)
             nextcli_df.nextcli = "CLI(" + nextcli_df.tx + "[" + nextcli_df.txPrio + "]," + \
                 nextcli_df.rx.str[:-1] + "[" + nextcli_df.rxPrio + "])"
             nextcli_df.drop(columns=['rx', 'tx', 'rxPrio', 'txPrio'], inplace=True)
 
-            timings_df = timings_df.merge(nextcli_df, on='byte', how='left')
+            timings_df = timings_df.merge(nextcli_df, on=['NODE', 'byte'], how='left')
             timings_df.nextcli = timings_df.nextcli.fillna(method='bfill')
             timings_df = timings_df[timings_df.tracecode_dec != tracing_events_str_num['CL_NEXT_CLI']]
 
@@ -3047,7 +3070,6 @@ def graph_it():
                                                 timings_df.frt_val - timings_df.shr_dur_us, np.nan)
             timings_df['ts_txend'] = np.where(
                 (timings_df.tracecode_dec == tracing_events_str_num['FRT32_TX_END']), timings_df.frt_val, np.nan)
-
             # timings_df.drop(columns=['mode', 'shr_dur_us'], inplace=True)
 
         # exit(0)
@@ -3191,6 +3213,7 @@ if __name__ == "__main__":
 
     my_group.add_argument('-f', '--file',
                           type=str,
+                          nargs='+',
                           help='Path to the local file to decode. The local file should be obtained from hexdump -C option')
     my_parser.add_argument('-g', '--graph',
                            type=str,
@@ -3229,6 +3252,7 @@ if __name__ == "__main__":
                            version="%(prog)s v" + __VERSION__)
 
     # Execute the parse_args() method
+    args = []
     try:
         args = my_parser.parse_args()
     except:
@@ -3256,12 +3280,15 @@ if __name__ == "__main__":
 
     tmp = args.output.split('.')
     hexfile = tmp[0]+"_hex."+tmp[1]
-    csvfile = "decoded.csv"
+    csvfile = ["decoded.csv"]
+    csvfileArr = []
     if args.ip:
         csvfile = "decoded_{}.csv".format(args.ip)
     elif args.file:
-        fullfilepath = os.path.basename(args.file).rsplit('.', 1)[0]
-        csvfile = "decoded_{}.csv".format(fullfilepath)
+        for key, file in enumerate(args.file):
+            fullfilepath = os.path.basename(file).rsplit('.', 1)[0]
+            csvfileArr.insert(key, "decoded_{}.csv".format(fullfilepath))
+        csvfile = csvfileArr
     graph_file = csvfile
 
     # register a handler when exiting
@@ -3352,26 +3379,29 @@ if __name__ == "__main__":
 
     # if file mode process and exit
     if args.file:
-        extension = args.file.split('.')[-1].strip().lower()
-        if not os.path.isfile(args.file):
-            LOG_ERR("*** Cannot find the file '{}'".format(args.file))
-            exit()
-        if (extension == 'csv'):
-            LOG_INFO("{} is CSV, using it directly".format(args.file), False)
-            graph_file = args.file
+        for key, file in enumerate(args.file):
+            extension = file.split('.')[-1].strip().lower()
+            outputList = []
+            csvList = []
+            if not os.path.isfile(file):
+                LOG_ERR("*** Cannot find the file '{}'".format(file))
+                exit()
+            if (extension == 'csv'):
+                LOG_INFO("{} is CSV, using it directly".format(file), False)
+                graph_file[key] = file
 
-        else:
-            LOG_INFO("{} is NOT CSV, processing hexdump".format(args.file), False)
-            with open(args.file, 'r') as file:
-                hexdump = file.read()
-                # print(hexdump)
-                process_hexdump(hexdump, 0, True)
-            print("")
-            LOG_INFO(
-                " - Decoded Traces are saved to {}\{}".format(get_current_path(), args.output))
-            if args.csv:
+            else:
+                LOG_INFO("{} is NOT CSV, processing hexdump".format(file), False)
+                with open(file, 'r') as f:
+                    hexdump = f.read()
+                    # print(hexdump)
+                    process_hexdump(hexdump, 0, True, key)
+                print("")
                 LOG_INFO(
-                    " - Decoded CSV saved to {}\{}".format(get_current_path(), csvfile))
+                    " - Decoded Traces are saved to {}\{}".format(get_current_path(), args.output))
+                if args.csv:
+                    LOG_INFO(
+                        " - Decoded CSV saved to {}\{}".format(get_current_path(), csvfile[key]))
 
         if args.graph:
             LOG_INFO("Creating Graph", False)

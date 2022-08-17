@@ -18,6 +18,8 @@ TXCALL2TX_CHART_ID = "txcall2tx";
 RXEND2TXCALL_CHART_ID = "rxend2txcall";
 RXCALL2AFTERRX_CHART_ID = "rxcall2afterrx";
 CL_DUR_CHART_ID = "cl_dur";
+THRESHOLD_STEP = 4;
+THRESHOLD_GAP = 2;
 
 /*  types of charts */
 charts = {
@@ -101,8 +103,8 @@ chartOptions = {
 		"chartTitle": "Timeline Visualiser",
 		"xAxisType": 'linear',
 		"xAxisTitle": "Timestamp in usecs",
-		"yAxisMax": 7,
-		"yAxisMin": -7,
+		"yAxisMax": (THRESHOLD_GAP + THRESHOLD_STEP) * TOTAL_NODES,
+		"yAxisMin": 0,
 		/*  "yAxisTitle": "", */
 		/*  "yAxisTitle2": "", */
 		/*  "yAxis2Max": , */
@@ -215,6 +217,11 @@ chartOptions = {
 	},
 
 };
+
+THRESHOLDS = [];
+for (i = 0; i < (TOTAL_NODES); i++) {
+	THRESHOLDS.push(THRESHOLD_GAP + i * THRESHOLD_STEP + THRESHOLD_GAP * i);
+}
 
 
 function drawChart(chartId, tabName, renderFlag) {
@@ -395,6 +402,20 @@ function create_pie_highchart(id, chartData, dd_data = [], containerDiv = 'conta
 function create_highchart(id, tabName, chartData, containerDiv = 'container', annotations_arr = []) {
 	console.log(id, tabName, chartData);
 	var zoomRatio = 1;
+
+	zero_x_arr = [];
+
+	/* define multiple offsets for timeline graph and 0s for others */
+	for (i = 0; i < TOTAL_NODES; i++) {
+		zero_x_arr.push(
+			{
+
+				value: id == "timeline" ? THRESHOLDS[i] : 0,
+				width: 1,
+				color: '#999',
+				zIndex: 10
+			});
+	}
 
 	chart = Highcharts.chart(containerDiv, {
 		credits: {
@@ -578,12 +599,8 @@ function create_highchart(id, tabName, chartData, containerDiv = 'container', an
 				/*  	color: Highcharts.getOptions().colors[1] */
 				/*  } */
 			},
-			plotLines: [{
-				value: 0,
-				width: 1,
-				color: '#999',
-				zIndex: 10
-			}],
+			/* zero cross */
+			plotLines: zero_x_arr,
 			title: {
 				text: chartOptions[id].yAxisTitle,
 				/*  style: { */
@@ -1472,19 +1489,20 @@ function create_timeline_chart(tabName, renderFlag) {
 
 	/* TX area*/
 	new_timeline_txJson.forEach(item => {
+		th = THRESHOLDS[item.NODE];
 		chartData.push({
 			type: 'area',
 			findNearestPointBy: 'xy',
 			data: [
-				[item.ts_txstart, 0],
-				[item.ts_txstart, 1],
+				[item.ts_txstart, 0 + th],
+				[item.ts_txstart, 1 + th],
 				{
 					x: item.ts_txstart + item.tx_dur / 2.0,
-					y: 1,
+					y: 1 + th,
 					/*  dataLabels: { enabled: true, format: '{x} x {y}' } */
 				},
-				[item.ts_txend, 1],
-				[item.ts_txend, 0],
+				[item.ts_txend, 1 + th],
+				[item.ts_txend, 0 + th],
 
 				/*  [item.ts_txend, 1], */
 
@@ -1494,9 +1512,10 @@ function create_timeline_chart(tabName, renderFlag) {
 					opacity: 0.8
 				}
 			},
+			threshold: th,
 
 			zIndex: 5,
-			name: "TX",
+			name: "Node " + item.NODE + "-TX",
 			showInLegend: false,
 			color: item.color,
 			tooltip: {
@@ -1512,22 +1531,26 @@ function create_timeline_chart(tabName, renderFlag) {
 
 	/* RX area */
 	new_timeline_rxJson.forEach(item => {
+		th = THRESHOLDS[item.NODE];
+
 		chartData.push({
 			type: 'area',
 			findNearestPointBy: 'xy',
 			data: [
-				[item.ts_rxstart, 0], [item.ts_rxstart, -1],
+				[item.ts_rxstart, 0 + th], [item.ts_rxstart, -1 + th],
 				{
 					x: item.ts_rxstart + item.rx_dur / 2.0,
-					y: -1,
+					y: -1 + th,
 					/*  dataLabels: { enabled: true, format: '{x} x {y}',}, */
 					toolTip: false
 				},
-				[item.ts_rxend, -1],
-				[item.ts_rxend, 0]
+				[item.ts_rxend, -1 + th],
+				[item.ts_rxend, 0 + th]
 				/*  [item.ts_rxend, -1], */
 
 			],
+			threshold: th,
+
 			turboThreshold: 0,
 
 			states: {
@@ -1537,7 +1560,7 @@ function create_timeline_chart(tabName, renderFlag) {
 			},
 			showInLegend: false,
 			zIndex: 5,
-			name: "RX",
+			name: "Node " + item.NODE + "-RX",
 			color: item.color,
 			tooltip: {
 				/*  followPointer: true, */
@@ -1549,30 +1572,34 @@ function create_timeline_chart(tabName, renderFlag) {
 	});
 	/* CL area */
 	new_timeline_clStartEndJson.forEach(item => {
+		th = THRESHOLDS[item.NODE];
+
 		chartData.push({
 			type: 'area',
 			/*  findNearestPointBy: 'xy', */
 			data: [
-				[item.clstart, 0], [item.clstart, 3],
+				[item.clstart, 0 + th], [item.clstart, 1.5 + th],
 				{
 					x: item.clstart + item.cldiff / 2.0,
-					y: 3,
+					y: 1.5 + th,
 					dataLabels: { enabled: true, format: item.hoverinfo }
 				},
-				[item.clend, 3],
-				[item.clend, -3], [item.clstart, -3],
-				[item.clstart, 0],
+				[item.clend, 1.5 + th],
+				[item.clend, -1.5 + th], [item.clstart, -1.5 + th],
+				[item.clstart, 0 + th],
 			],
 			states: {
 				inactive: {
 					opacity: 0.8
 				}
 			},
+			threshold: item.NODE,
+
 			/*  dataLabels: { enabled: true, format: item.hoverinfo, inside: true }, */
 			zIndex: 1,
 			showInLegend: false,
 			grouping: true,
-			name: "CL " + item.cl_id,
+			name: "Node " + item.NODE + "-CL " + item.cl_id,
 			fillColor: 'rgba(247, 228, 194,0.35)',
 			color: "rgba(247, 228, 194,1)",
 
@@ -1596,9 +1623,10 @@ function create_timeline_chart(tabName, renderFlag) {
 		}
 		return {
 			x: item.frt_dec,
-			y: -6,
+			y: -2 + THRESHOLDS[item.NODE],
 			color: item.color,
-			info: item.trace_info
+			info: item.trace_info,
+			node: item.NODE
 		};
 	});
 
@@ -1606,7 +1634,7 @@ function create_timeline_chart(tabName, renderFlag) {
 		type: "scatter",
 		findNearestPointBy: 'xy',
 		/*  axisYType: 'primary', */
-		name: "phyData Indications",
+		name: "phyInd",
 		showInLegend: true,
 		states: {
 			inactive: {
@@ -1616,8 +1644,9 @@ function create_timeline_chart(tabName, renderFlag) {
 		visible: false, /* ***hidden */
 		data: dataPoints,
 		tooltip: {
-			headerFormat: '<span style="font-size:10px">FRT: {point.key}</span><table>',
-			pointFormat: '<tr><td style="color:{series.color};padding:0">{point.info} </td></tr>',
+			headerFormat: '<span style="font-size:10px">{series.name} FRT: {point.key}</span><table>',
+			pointFormat: '<tr><td style="color:{series.color};padding:0">Node {point.node}-CL {point.clid} </td></tr>' +
+				'<tr><td style="color:{series.color};padding:0">{point.info} </td></tr>',
 			footerFormat: '</table>',
 			/*  shared: true, */
 			useHTML: true,
@@ -1637,12 +1666,14 @@ function create_timeline_chart(tabName, renderFlag) {
 	dataPoints = new_timeline_clTracesJson.map((item) => {
 		return {
 			x: item.frt_dec,
-			y: 6,
+			y: 2 + THRESHOLDS[item.NODE],
 			color: item.color,
 			info: item.trace_info,
-			clid: item.cl_id
+			clid: item.cl_id,
+			node: item.NODE
 		};
 	});
+
 	chartData.push({
 		type: "scatter",
 		findNearestPointBy: 'xy',
@@ -1661,8 +1692,9 @@ function create_timeline_chart(tabName, renderFlag) {
 		visible: false, /* ***hidden */
 		data: dataPoints,
 		tooltip: {
-			headerFormat: '<span style="font-size:10px">FRT: {point.key}, CL id {point.clid}</span><table>',
-			pointFormat: '<tr><td style="color:{series.color};padding:0">{point.info} </td></tr>',
+			headerFormat: '<span style="font-size:10px">FRT: {point.key}</span><table>',
+			pointFormat: '<tr> <td style="color:{series.color};padding:0">Node {point.node}-CL {point.clid} </td>\</tr>' +
+				'<tr> <td style="color:{series.color};padding:0">{point.info} </td>\</tr>',
 			footerFormat: '</table>',
 			/*  shared: true, */
 			useHTML: true,
