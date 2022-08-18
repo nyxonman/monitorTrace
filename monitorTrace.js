@@ -18,6 +18,8 @@ TXCALL2TX_CHART_ID = "txcall2tx";
 RXEND2TXCALL_CHART_ID = "rxend2txcall";
 RXCALL2AFTERRX_CHART_ID = "rxcall2afterrx";
 AFTERRX2RX_CHART_ID = "afterrx2rx"
+TXRXDRIFT_CHART_ID = "txrxdrift"
+RXTXDRIFT_CHART_ID = "rxtxdrift"
 CL_DUR_CHART_ID = "cl_dur";
 THRESHOLD_STEP = 4;
 THRESHOLD_GAP = 2;
@@ -211,6 +213,22 @@ chartOptions = {
 		"chartTitle": "After Rx to Rx Preamble",
 		"xAxisType": 'linear',
 		"xAxisTitle": "afterrx2rx in usecs",
+		"yAxisTitle": "Count",
+		"yAxisTitle2": "PDF/CDF",
+		"yAxis2Max": 1,
+	},
+	"txrxdrift": {
+		"chartTitle": "Tx to Rx Drift",
+		"xAxisType": 'linear',
+		"xAxisTitle": "txrxdrift in usecs",
+		"yAxisTitle": "Count",
+		"yAxisTitle2": "PDF/CDF",
+		"yAxis2Max": 1,
+	},
+	"rxtxdrift": {
+		"chartTitle": "Rx to Tx Drift",
+		"xAxisType": 'linear',
+		"xAxisTitle": "rxtxdrift in usecs",
 		"yAxisTitle": "Count",
 		"yAxisTitle2": "PDF/CDF",
 		"yAxis2Max": 1,

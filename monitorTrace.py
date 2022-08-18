@@ -1586,6 +1586,7 @@ def graph_fastlink():
 
 def graph_cl_timings():
     global timings_df
+    global timings_offset
 
     # target2tx: target to the start of preamble tx
     timings_df['dummy'] = timings_df.dc_col.shift(-2)
@@ -1770,6 +1771,62 @@ def graph_cl_timings():
     # drop values higher than 3sec
     timings_df.afterrx2rx = timings_df.apply(lambda x: np.nan if np.isnan(
         [x.afterrx2rx]) or x.afterrx2rx > 3000.0 else x.afterrx2rx, axis=1)
+
+    # calculation of drift
+
+    # filter rows that contain valid tx/rx seqctrl and tx/rx start
+    timing_drift_df = timings_df[((timings_df.tx_seq_ctrl != 'X') & (~timings_df.ts_txstart.isnull())) |
+                                 ((timings_df.rx_seq_ctrl != 'X') & (~timings_df.ts_rxstart.isnull()))]
+    # match the tx seq ctrl with that of rx seq cntrl
+    timing_drift_df['tx_seq_ctrl_adapted'] = timings_df.tx_seq_ctrl.str.split('|', 2, expand=True).drop([1], axis=1)
+
+    # split into multiple nodes
+    timings_node_dfs = []
+
+    merged_df = pd.DataFrame()
+
+    for i in range(0, len(args.file)):
+        tmp_df = timing_drift_df[timing_drift_df['NODE'] == i][['NODE', 'byte',
+                                                                'tx_seq_ctrl_adapted', 'ts_txstart', 'rx_seq_ctrl', 'ts_rxstart']]
+        # to avoid merging 'X'
+        tmp_df.tx_seq_ctrl_adapted = tmp_df.tx_seq_ctrl_adapted.str.replace(
+            'X', '{}X'.format(i), regex=False, case=True)
+        timings_node_dfs.append(tmp_df)
+
+    # merge the separated nodes based on tx/rx seq ctrl
+    for i in range(1, len(args.file)):
+        merged_df = merged_df.append(
+            timings_node_dfs[i-1].merge(timings_node_dfs[i], left_on='tx_seq_ctrl_adapted', right_on='rx_seq_ctrl',))
+        merged_df = merged_df.append(timings_node_dfs[0].merge(timings_node_dfs[1], left_on=[
+            'rx_seq_ctrl'], right_on='tx_seq_ctrl_adapted',))
+
+    # comput the txrx and rxtx drifts
+    merged_df['txrxdrift'] = merged_df['ts_txstart_x'] - merged_df['ts_rxstart_y']
+    merged_df['rxtxdrift'] = merged_df['ts_rxstart_x'] - merged_df['ts_txstart_y']
+    timing_drift_df = merged_df.dropna(how='all', subset=['txrxdrift', 'rxtxdrift'])[
+        ['byte_x', 'txrxdrift', 'rxtxdrift']]
+
+    # txrx drift
+    # freq
+    txrxdrift_df = timing_drift_df[['byte_x', 'txrxdrift']].groupby(
+        'txrxdrift').agg('count').rename(columns={'byte_x': 'freq'}).reset_index()
+    txrxdrift_df = txrxdrift_df.astype({'txrxdrift': int})
+    # PDF
+    txrxdrift_df['pdf'] = txrxdrift_df['freq'] / sum(txrxdrift_df['freq'])
+    # CDF
+    txrxdrift_df['cdf'] = txrxdrift_df['pdf'].cumsum()
+    txrxdrift_df = txrxdrift_df.reset_index()
+
+    # rxtx drift
+    # freq
+    rxtxdrift_df = timing_drift_df[['byte_x', 'rxtxdrift']].groupby(
+        'rxtxdrift').agg('count').rename(columns={'byte_x': 'freq'}).reset_index()
+    rxtxdrift_df = rxtxdrift_df.astype({'rxtxdrift': int})
+    # PDF
+    rxtxdrift_df['pdf'] = rxtxdrift_df['freq'] / sum(rxtxdrift_df['freq'])
+    # CDF
+    rxtxdrift_df['cdf'] = rxtxdrift_df['pdf'].cumsum()
+    rxtxdrift_df = rxtxdrift_df.reset_index()
 
     if not args.quiet:
         print("Done...Rendering/Preparing Graph...Report...", flush=True, end='')
@@ -2181,6 +2238,8 @@ def graph_cl_timings():
         write_df_to_json("cltimings_rxend2txcallJson", rxend2txcall_df)
         write_df_to_json("cltimings_rxcall2afterrxJson", rxcall2afterrx_df)
         write_df_to_json("cltimings_afterrx2rxJson", afterrx2rx_df)
+        write_df_to_json("cltimings_txrxdriftJson", txrxdrift_df)
+        write_df_to_json("cltimings_rxtxdriftJson", rxtxdrift_df)
         write_df_to_json("cltimings_cl_durJson", cl_dur_df)
 
     if not args.quiet:
@@ -2188,6 +2247,7 @@ def graph_cl_timings():
 
 
 def graph_timeline_visualiser():
+    global timing_offset
     timeline_tx_color = {
 
         "TOP": colors_list[0],
@@ -2242,38 +2302,6 @@ def graph_timeline_visualiser():
             ret = ret + str(x.nextcli) + "<br>"
         ret = ret + "<br><b>Start:</b>" + ts_start + "<br><b>End:</b>" + ts_end + "<br><b>dur: </b>" + dur + " msec"
         return ret
-    
-    # find the base frt for comparison. Here, txseqctrl is used to map between multiple nodes.
-    base_row_idx = timings_df[(timings_df.tx_seq_ctrl.ne('X')) & (
-        timings_df['NODE'] == 0) & (timings_df.ts_txstart != np.nan)].index[0]
-    base_row_seqctrl = timings_df.iloc[base_row_idx]['tx_seq_ctrl'].split('|', 2)[0]
-    base_row_tx_start_frt = timings_df.iloc[base_row_idx]['ts_txstart']
-
-    timing_offset = [0]
-    for i in range(1, len(args.file)):
-        matched_row = timings_df[(timings_df.rx_seq_ctrl == base_row_seqctrl) & (
-            timings_df['NODE'] == i) & (timings_df.ts_rxstart != np.nan)].iloc[0]
-
-        matched_row_rx_start_frt = matched_row['ts_rxstart']
-        matched_row_seqctrl = matched_row['rx_seq_ctrl']
-        timing_offset.append(matched_row_rx_start_frt - base_row_tx_start_frt)
-
-    with open('myJson.js', 'a') as f:
-        f.write('timing_offset:{},\n'.format(timing_offset))
-
-    # shift the timings by the offset
-    timings_df['frt_dec'] = timings_df[['frt_dec', 'NODE']].apply(
-        lambda row: row['frt_dec'] - timing_offset[row.NODE], axis=1)
-    timings_df['frt_val'] = timings_df[['frt_val', 'NODE']].apply(
-        lambda row: row['frt_val'] - timing_offset[row.NODE], axis=1)
-    timings_df['ts_rxstart'] = timings_df[['ts_rxstart', 'NODE']].apply(
-        lambda row: row['ts_rxstart'] - timing_offset[row.NODE], axis=1)
-    timings_df['ts_rxend'] = timings_df[['ts_rxend', 'NODE']].apply(
-        lambda row: row['ts_rxend'] - timing_offset[row.NODE], axis=1)
-    timings_df['ts_txstart'] = timings_df[['ts_txstart', 'NODE']].apply(
-        lambda row: row['ts_txstart'] - timing_offset[row.NODE], axis=1)
-    timings_df['ts_txend'] = timings_df[['ts_txend', 'NODE']].apply(
-        lambda row: row['ts_txend'] - timing_offset[row.NODE], axis=1)
 
     # rx
     timeline_rx_df = pd.DataFrame()
@@ -3147,6 +3175,38 @@ def graph_it():
                 (timings_df.tracecode_dec == tracing_events_str_num['FRT32_TX_END']), timings_df.frt_val, np.nan)
             # timings_df.drop(columns=['mode', 'shr_dur_us'], inplace=True)
 
+            # shift the time
+            # find the base frt for comparison. Here, txseqctrl is used to map between multiple nodes.
+            base_row_idx = timings_df[(timings_df.tx_seq_ctrl.ne('X')) & (
+                timings_df['NODE'] == 0) & (timings_df.ts_txstart != np.nan)].index[0]
+            base_row_seqctrl = timings_df.iloc[base_row_idx]['tx_seq_ctrl'].split('|', 2)[0]
+            base_row_tx_start_frt = timings_df.iloc[base_row_idx]['ts_txstart']
+
+            for i in range(1, len(args.file)):
+                matched_row = timings_df[(timings_df.rx_seq_ctrl == base_row_seqctrl) & (
+                    timings_df['NODE'] == i) & (~timings_df.ts_rxstart.isnull())].iloc[0]
+
+                matched_row_rx_start_frt = matched_row['ts_rxstart']
+                matched_row_seqctrl = matched_row['rx_seq_ctrl']
+                timing_offset.append(matched_row_rx_start_frt - base_row_tx_start_frt)
+
+            with open('myJson.js', 'a') as f:
+                f.write('timing_offset:{},\n'.format(timing_offset))
+
+            # shift the timings by the offset
+            timings_df['frt_dec'] = timings_df[['frt_dec', 'NODE']].apply(
+                lambda row: row['frt_dec'] - timing_offset[row.NODE], axis=1)
+            timings_df['frt_val'] = timings_df[['frt_val', 'NODE']].apply(
+                lambda row: row['frt_val'] - timing_offset[row.NODE], axis=1)
+            timings_df['ts_rxstart'] = timings_df[['ts_rxstart', 'NODE']].apply(
+                lambda row: row['ts_rxstart'] - timing_offset[row.NODE], axis=1)
+            timings_df['ts_rxend'] = timings_df[['ts_rxend', 'NODE']].apply(
+                lambda row: row['ts_rxend'] - timing_offset[row.NODE], axis=1)
+            timings_df['ts_txstart'] = timings_df[['ts_txstart', 'NODE']].apply(
+                lambda row: row['ts_txstart'] - timing_offset[row.NODE], axis=1)
+            timings_df['ts_txend'] = timings_df[['ts_txend', 'NODE']].apply(
+                lambda row: row['ts_txend'] - timing_offset[row.NODE], axis=1)
+
         # exit(0)
             if '0' in graph_ans_list or '2' in graph_ans_list:
                 if not args.quiet:
@@ -3222,6 +3282,7 @@ if __name__ == "__main__":
     date_today = get_datetime().split(' ')[0].split('-')
     date_today = date_today[2] + date_today[1] + date_today[0]
     graph_file = 'decoded.csv'
+    timing_offset = [0]
     graph_ans_list = []
     REACHABLE = False
     glob["QUIT"] = False
