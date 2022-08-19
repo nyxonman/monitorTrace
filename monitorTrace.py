@@ -1778,6 +1778,8 @@ def graph_cl_timings():
     timing_drift_df = timings_df[((timings_df.tx_seq_ctrl != 'X') & (~timings_df.ts_txstart.isnull())) |
                                  ((timings_df.rx_seq_ctrl != 'X') & (~timings_df.ts_rxstart.isnull()))]
     # match the tx seq ctrl with that of rx seq cntrl
+    timing_drift_df = timing_drift_df.assign(tx_seq_ctrl_adapted=pd.Series(np.nan))
+
     timing_drift_df['tx_seq_ctrl_adapted'] = timings_df.tx_seq_ctrl.str.split('|', 2, expand=True).drop([1], axis=1)
 
     # split into multiple nodes
