@@ -33,6 +33,7 @@ OUTPUT_FILE_EXT = ".log"
 FILE_HTML = "monitorTrace_v" + __VERSION__ + ".html"
 HEX_TRACE_DIR = "/media/mmcblk0p1/"
 DEBUG_LOG_FILE = 'debug.log'
+DUT_LIST = []
 
 # pings
 if os.name == OS_POSIX:
@@ -1772,63 +1773,67 @@ def graph_cl_timings():
     timings_df.afterrx2rx = timings_df.apply(lambda x: np.nan if np.isnan(
         [x.afterrx2rx]) or x.afterrx2rx > 3000.0 else x.afterrx2rx, axis=1)
 
-    # calculation of drift
+    # calculation of drift only if there are multiple DUTs
+    txrxdrift_df = pd.DataFrame()
+    rxtxdrift_df = pd.DataFrame()
 
-    # filter rows that contain valid tx/rx seqctrl and tx/rx start
-    timing_drift_df = timings_df[((timings_df.tx_seq_ctrl != 'X') & (~timings_df.ts_txstart.isnull())) |
-                                 ((timings_df.rx_seq_ctrl != 'X') & (~timings_df.ts_rxstart.isnull()))]
-    # match the tx seq ctrl with that of rx seq cntrl
-    timing_drift_df = timing_drift_df.assign(tx_seq_ctrl_adapted=pd.Series(np.nan))
+    if len(DUT_LIST) > 1:
 
-    timing_drift_df['tx_seq_ctrl_adapted'] = timings_df.tx_seq_ctrl.str.split('|', 2, expand=True).drop([1], axis=1)
+        # filter rows that contain valid tx/rx seqctrl and tx/rx start
+        timing_drift_df = timings_df[((timings_df.tx_seq_ctrl != 'X') & (~timings_df.ts_txstart.isnull())) |
+                                     ((timings_df.rx_seq_ctrl != 'X') & (~timings_df.ts_rxstart.isnull()))]
+        # match the tx seq ctrl with that of rx seq cntrl
+        timing_drift_df = timing_drift_df.assign(tx_seq_ctrl_adapted=pd.Series(np.nan))
 
-    # split into multiple nodes
-    timings_node_dfs = []
+        timing_drift_df['tx_seq_ctrl_adapted'] = timings_df.tx_seq_ctrl.str.split('|', 2, expand=True).drop([1], axis=1)
 
-    merged_df = pd.DataFrame()
+        # split into multiple nodes
+        timings_node_dfs = []
 
-    for i in range(0, len(args.file)):
-        tmp_df = timing_drift_df[timing_drift_df['NODE'] == i][['NODE', 'byte',
-                                                                'tx_seq_ctrl_adapted', 'ts_txstart', 'rx_seq_ctrl', 'ts_rxstart']]
-        # to avoid merging 'X'
-        tmp_df.tx_seq_ctrl_adapted = tmp_df.tx_seq_ctrl_adapted.str.replace(
-            'X', '{}X'.format(i), regex=False, case=True)
-        timings_node_dfs.append(tmp_df)
+        merged_df = pd.DataFrame()
 
-    # merge the separated nodes based on tx/rx seq ctrl
-    for i in range(1, len(args.file)):
-        merged_df = merged_df.append(
-            timings_node_dfs[i-1].merge(timings_node_dfs[i], left_on='tx_seq_ctrl_adapted', right_on='rx_seq_ctrl',))
-        merged_df = merged_df.append(timings_node_dfs[0].merge(timings_node_dfs[1], left_on=[
-            'rx_seq_ctrl'], right_on='tx_seq_ctrl_adapted',))
+        for i in range(0, len(DUT_LIST)):
+            tmp_df = timing_drift_df[timing_drift_df['NODE'] == i][['NODE', 'byte',
+                                                                    'tx_seq_ctrl_adapted', 'ts_txstart', 'rx_seq_ctrl', 'ts_rxstart']]
+            # to avoid merging 'X'
+            tmp_df.tx_seq_ctrl_adapted = tmp_df.tx_seq_ctrl_adapted.str.replace(
+                'X', '{}X'.format(i), regex=False, case=True)
+            timings_node_dfs.append(tmp_df)
 
-    # comput the txrx and rxtx drifts
-    merged_df['txrxdrift'] = merged_df['ts_txstart_x'] - merged_df['ts_rxstart_y']
-    merged_df['rxtxdrift'] = merged_df['ts_rxstart_x'] - merged_df['ts_txstart_y']
-    timing_drift_df = merged_df.dropna(how='all', subset=['txrxdrift', 'rxtxdrift'])[
-        ['byte_x', 'txrxdrift', 'rxtxdrift']]
+        # merge the separated nodes based on tx/rx seq ctrl
+        for i in range(1, len(DUT_LIST)):
+            merged_df = merged_df.append(
+                timings_node_dfs[i-1].merge(timings_node_dfs[i], left_on='tx_seq_ctrl_adapted', right_on='rx_seq_ctrl',))
+            merged_df = merged_df.append(timings_node_dfs[0].merge(timings_node_dfs[1], left_on=[
+                'rx_seq_ctrl'], right_on='tx_seq_ctrl_adapted',))
 
-    # txrx drift
-    # freq
-    txrxdrift_df = timing_drift_df[['byte_x', 'txrxdrift']].groupby(
-        'txrxdrift').agg('count').rename(columns={'byte_x': 'freq'}).reset_index()
-    txrxdrift_df = txrxdrift_df.astype({'txrxdrift': int})
-    # PDF
-    txrxdrift_df['pdf'] = txrxdrift_df['freq'] / sum(txrxdrift_df['freq'])
-    # CDF
-    txrxdrift_df['cdf'] = txrxdrift_df['pdf'].cumsum()
-    txrxdrift_df = txrxdrift_df.reset_index()
+        # compute the txrx and rxtx drifts
+        merged_df['txrxdrift'] = merged_df['ts_txstart_x'] - merged_df['ts_rxstart_y']
+        merged_df['rxtxdrift'] = merged_df['ts_rxstart_x'] - merged_df['ts_txstart_y']
+        timing_drift_df = merged_df.dropna(how='all', subset=['txrxdrift', 'rxtxdrift'])[
+            ['byte_x', 'txrxdrift', 'rxtxdrift']]
 
-    # rxtx drift
-    # freq
-    rxtxdrift_df = timing_drift_df[['byte_x', 'rxtxdrift']].groupby(
-        'rxtxdrift').agg('count').rename(columns={'byte_x': 'freq'}).reset_index()
-    rxtxdrift_df = rxtxdrift_df.astype({'rxtxdrift': int})
-    # PDF
-    rxtxdrift_df['pdf'] = rxtxdrift_df['freq'] / sum(rxtxdrift_df['freq'])
-    # CDF
-    rxtxdrift_df['cdf'] = rxtxdrift_df['pdf'].cumsum()
-    rxtxdrift_df = rxtxdrift_df.reset_index()
+        # txrx drift
+        # freq
+        txrxdrift_df = timing_drift_df[['byte_x', 'txrxdrift']].groupby(
+            'txrxdrift').agg('count').rename(columns={'byte_x': 'freq'}).reset_index()
+        txrxdrift_df = txrxdrift_df.astype({'txrxdrift': int})
+        # PDF
+        txrxdrift_df['pdf'] = txrxdrift_df['freq'] / sum(txrxdrift_df['freq'])
+        # CDF
+        txrxdrift_df['cdf'] = txrxdrift_df['pdf'].cumsum()
+        txrxdrift_df = txrxdrift_df.reset_index()
+
+        # rxtx drift
+        # freq
+        rxtxdrift_df = timing_drift_df[['byte_x', 'rxtxdrift']].groupby(
+            'rxtxdrift').agg('count').rename(columns={'byte_x': 'freq'}).reset_index()
+        rxtxdrift_df = rxtxdrift_df.astype({'rxtxdrift': int})
+        # PDF
+        rxtxdrift_df['pdf'] = rxtxdrift_df['freq'] / sum(rxtxdrift_df['freq'])
+        # CDF
+        rxtxdrift_df['cdf'] = rxtxdrift_df['pdf'].cumsum()
+        rxtxdrift_df = rxtxdrift_df.reset_index()
 
     if not args.quiet:
         print("Done...Rendering/Preparing Graph...Report...", flush=True, end='')
@@ -3077,7 +3082,7 @@ def graph_it():
             f.write('// data logged at {}.\n\n'.format(get_datetime()))
             f.write('const nodeip="{}";\n'.format(args.ip))
             f.write('const nodefile="{}";\n'.format(args.file))
-            f.write('const TOTAL_NODES={};\n'.format(len(args.file) if args.file else 1))
+            f.write('const TOTAL_NODES={};\n'.format(len(DUT_LIST)))
             f.write('const jsonData={\n')
         write_df_to_json('clstatsJson', dd_cl_stats, isdict=True)
 
@@ -3184,7 +3189,7 @@ def graph_it():
             base_row_seqctrl = timings_df.iloc[base_row_idx]['tx_seq_ctrl'].split('|', 2)[0]
             base_row_tx_start_frt = timings_df.iloc[base_row_idx]['ts_txstart']
 
-            for i in range(1, len(args.file)):
+            for i in range(1, len(DUT_LIST)):
                 matched_row = timings_df[(timings_df.rx_seq_ctrl == base_row_seqctrl) & (
                     timings_df['NODE'] == i) & (~timings_df.ts_rxstart.isnull())].iloc[0]
 
@@ -3422,10 +3427,12 @@ if __name__ == "__main__":
     csvfileArr = []
     if args.ip:
         csvfile = ["decoded_{}.csv".format(args.ip)]
+        DUT_LIST.append(args.ip)
     elif args.file:
         for key, file in enumerate(args.file):
             fullfilepath = os.path.basename(file).rsplit('.', 1)[0]
             csvfileArr.insert(key, "decoded_{}.csv".format(fullfilepath))
+            DUT_LIST.append(file)
         csvfile = csvfileArr
 
     graph_file = csvfile
