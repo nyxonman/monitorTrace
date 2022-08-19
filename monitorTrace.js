@@ -17,9 +17,9 @@ TXCALL2AFTERTX_CHART_ID = "txcall2aftertx";
 TXCALL2TX_CHART_ID = "txcall2tx";
 RXEND2TXCALL_CHART_ID = "rxend2txcall";
 RXCALL2AFTERRX_CHART_ID = "rxcall2afterrx";
-AFTERRX2RX_CHART_ID = "afterrx2rx"
-TXRXDRIFT_CHART_ID = "txrxdrift"
-RXTXDRIFT_CHART_ID = "rxtxdrift"
+AFTERRX2RX_CHART_ID = "afterrx2rx";
+TXRXDRIFT_CHART_ID = "txrxdrift";
+RXTXDRIFT_CHART_ID = "rxtxdrift";
 CL_DUR_CHART_ID = "cl_dur";
 THRESHOLD_STEP = 4;
 THRESHOLD_GAP = 2;
@@ -1703,7 +1703,6 @@ function create_timeline_chart(tabName, renderFlag) {
 			node: item.NODE
 		};
 	});
-
 	chartData.push({
 		type: "scatter",
 		findNearestPointBy: 'xy',
