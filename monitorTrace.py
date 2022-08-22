@@ -3182,37 +3182,61 @@ def graph_it():
                 (timings_df.tracecode_dec == tracing_events_str_num['FRT32_TX_END']), timings_df.frt_val, np.nan)
             # timings_df.drop(columns=['mode', 'shr_dur_us'], inplace=True)
 
-            # shift the time
+            # shift the time only if we are working with multiple nodes
             # find the base frt for comparison. Here, txseqctrl is used to map between multiple nodes.
-            base_row_idx = timings_df[(timings_df.tx_seq_ctrl.ne('X')) & (
-                timings_df['NODE'] == 0) & (timings_df.ts_txstart != np.nan)].index[0]
-            base_row_seqctrl = timings_df.iloc[base_row_idx]['tx_seq_ctrl'].split('|', 2)[0]
-            base_row_tx_start_frt = timings_df.iloc[base_row_idx]['ts_txstart']
+            # there are 25 retries to find a common seqctrl to multiple nodes
+            if len(DUT_LIST) > 1:
+                find_seqctrl_retries = 25
+                seqctrl_not_found_list = []
+                match_found = False
+                while find_seqctrl_retries:
+                    base_row = timings_df[(timings_df.tx_seq_ctrl.ne('X')) &  # seqctrl is not X AND
+                                          # seqctrl is not in not found list
+                                          (~timings_df.tx_seq_ctrl.isin(seqctrl_not_found_list)) &
+                                          (timings_df['NODE'] == 0) &  # using first node AND
+                                          (~timings_df.ts_txstart.isnull())].iloc[0]  # txstart is not null
+                    base_row_seqctrl_raw = base_row['tx_seq_ctrl']
+                    base_row_seqctrl = base_row_seqctrl_raw.split('|', 2)[0]
+                    base_row_tx_start_frt = base_row['ts_txstart']
 
-            for i in range(1, len(DUT_LIST)):
-                matched_row = timings_df[(timings_df.rx_seq_ctrl == base_row_seqctrl) & (
-                    timings_df['NODE'] == i) & (~timings_df.ts_rxstart.isnull())].iloc[0]
+                    base_row_seqctrl = "123" if find_seqctrl_retries == 5 else base_row_seqctrl
+                    for i in range(1, len(DUT_LIST)):
+                        matched_rows = timings_df[(timings_df.rx_seq_ctrl == base_row_seqctrl) & (
+                            timings_df['NODE'] == i) & (~timings_df.ts_rxstart.isnull())]
+                        # matched_row = pd.DataFrame()
+                        if matched_rows.size < 1:
+                            find_seqctrl_retries -= 1
+                            seqctrl_not_found_list.append(base_row_seqctrl_raw)
+                            LOG_ERR("`{}` not matched. Retries left={}".format(base_row_seqctrl, find_seqctrl_retries))
+                            break
 
-                matched_row_rx_start_frt = matched_row['ts_rxstart']
-                matched_row_seqctrl = matched_row['rx_seq_ctrl']
-                timing_offset.append(matched_row_rx_start_frt - base_row_tx_start_frt)
+                        matched_row = matched_rows.iloc[0]
+                        match_found = True
+
+                        matched_row_rx_start_frt = matched_row['ts_rxstart']
+                        matched_row_seqctrl = matched_row['rx_seq_ctrl']
+                        timing_offset.append(matched_row_rx_start_frt - base_row_tx_start_frt)
+                    if match_found:
+                        break
+                if not match_found:
+                    LOG_ERR("====== No Matching Seq Ctrl found between nodes. Continuing with original timestamp.....")
+
+                # shift the timings by the offset
+                timings_df['frt_dec'] = timings_df[['frt_dec', 'NODE']].apply(
+                    lambda row: row['frt_dec'] - timing_offset[row.NODE], axis=1)
+                timings_df['frt_val'] = timings_df[['frt_val', 'NODE']].apply(
+                    lambda row: row['frt_val'] - timing_offset[row.NODE], axis=1)
+                timings_df['ts_rxstart'] = timings_df[['ts_rxstart', 'NODE']].apply(
+                    lambda row: row['ts_rxstart'] - timing_offset[row.NODE], axis=1)
+                timings_df['ts_rxend'] = timings_df[['ts_rxend', 'NODE']].apply(
+                    lambda row: row['ts_rxend'] - timing_offset[row.NODE], axis=1)
+                timings_df['ts_txstart'] = timings_df[['ts_txstart', 'NODE']].apply(
+                    lambda row: row['ts_txstart'] - timing_offset[row.NODE], axis=1)
+                timings_df['ts_txend'] = timings_df[['ts_txend', 'NODE']].apply(
+                    lambda row: row['ts_txend'] - timing_offset[row.NODE], axis=1)
 
             with open('myJson.js', 'a') as f:
                 f.write('timing_offset:{},\n'.format(timing_offset))
-
-            # shift the timings by the offset
-            timings_df['frt_dec'] = timings_df[['frt_dec', 'NODE']].apply(
-                lambda row: row['frt_dec'] - timing_offset[row.NODE], axis=1)
-            timings_df['frt_val'] = timings_df[['frt_val', 'NODE']].apply(
-                lambda row: row['frt_val'] - timing_offset[row.NODE], axis=1)
-            timings_df['ts_rxstart'] = timings_df[['ts_rxstart', 'NODE']].apply(
-                lambda row: row['ts_rxstart'] - timing_offset[row.NODE], axis=1)
-            timings_df['ts_rxend'] = timings_df[['ts_rxend', 'NODE']].apply(
-                lambda row: row['ts_rxend'] - timing_offset[row.NODE], axis=1)
-            timings_df['ts_txstart'] = timings_df[['ts_txstart', 'NODE']].apply(
-                lambda row: row['ts_txstart'] - timing_offset[row.NODE], axis=1)
-            timings_df['ts_txend'] = timings_df[['ts_txend', 'NODE']].apply(
-                lambda row: row['ts_txend'] - timing_offset[row.NODE], axis=1)
 
         # exit(0)
             if '0' in graph_ans_list or '2' in graph_ans_list:
