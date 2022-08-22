@@ -250,6 +250,29 @@ for (i = 0; i < (TOTAL_NODES); i++) {
 	THRESHOLDS.push(THRESHOLD_GAP + i * THRESHOLD_STEP + THRESHOLD_GAP * i);
 }
 
+function format_timestamp(ts_us) {
+	let usec = msec = hh = mm = ss = 0;
+	/* usec */
+	usec = ts_us % 1000;
+	ts_ms = parseInt(ts_us / 1000);
+
+	/* msec */
+	msec = ts_ms % 1000;
+	ts_ss = parseInt(ts_ms / 1000);
+
+	/* sec */
+	ss = ts_ss % 60;
+	ts_mm = parseInt(ts_ss / 60);
+
+	/* min */
+	mm = ts_mm % 60;
+
+	/* hour */
+	hh = parseInt(ts_mm / 60);
+
+	return `${hh}:${mm}:${ss} ${msec}.${usec}`;
+}
+
 
 function drawChart(chartId, tabName, renderFlag) {
 
@@ -1497,21 +1520,22 @@ function create_timeline_chart(tabName, renderFlag) {
 	console.log('creating timeline chart');
 	let chartData = [];
 	let dataPoints = [];
+	const MARGIN = 100000;
 
 	new_timeline_txJson = jsonData.timeline_txJson.filter((item) => {
-		return ((parseInt(item.cl_id) >= new_start_cl_id) && ((parseInt(item.cl_id) <= new_end_cl_id)));
+		return ((parseInt(item.ts_txstart) >= new_start_cl_id - MARGIN) && ((parseInt(item.ts_txend) <= new_end_cl_id + MARGIN)));
 	});
 	new_timeline_rxJson = jsonData.timeline_rxJson.filter((item) => {
-		return ((parseInt(item.cl_id) >= new_start_cl_id) && (parseInt(item.cl_id) <= new_end_cl_id));
+		return ((parseInt(item.ts_rxstart) >= new_start_cl_id - MARGIN) && (parseInt(item.ts_rxend) <= new_end_cl_id + MARGIN));
 	});
 	new_timeline_clStartEndJson = jsonData.timeline_clStartEndJson.filter((item) => {
-		return ((parseInt(item.cl_id) >= new_start_cl_id) && (parseInt(item.cl_id) <= new_end_cl_id));
+		return ((parseInt(item.clstart) >= new_start_cl_id - MARGIN) && (parseInt(item.clend) <= new_end_cl_id + MARGIN));
 	});
 	new_timeline_phyIndJson = jsonData.timeline_phyIndJson.filter((item) => {
-		return ((parseInt(item.cl_id) >= new_start_cl_id) && (parseInt(item.cl_id) <= new_end_cl_id));
+		return ((parseInt(item.frt_dec) >= new_start_cl_id - MARGIN) && (parseInt(item.frt_dec) <= new_end_cl_id + MARGIN));
 	});
 	new_timeline_clTracesJson = jsonData.timeline_clTracesJson.filter((item) => {
-		return ((parseInt(item.cl_id) >= new_start_cl_id) && (parseInt(item.cl_id) <= new_end_cl_id));
+		return ((parseInt(item.frt_dec) >= new_start_cl_id - MARGIN) && (parseInt(item.frt_dec) <= new_end_cl_id + MARGIN));
 	});
 
 
@@ -1761,15 +1785,17 @@ function openGraph(evt, tabName) {
 
 function init_timeline_cl_filter() {
 	if (!jsonData.hasOwnProperty('timeline_clStartEndJson')) return;
-	orig_start_cl_id = Math.min(parseInt(jsonData.timeline_txJson[0].cl_id), parseInt(jsonData.timeline_rxJson[0].cl_id));
-	orig_end_cl_id = Math.max(jsonData.timeline_txJson[jsonData.timeline_txJson.length - 1].cl_id, jsonData.timeline_rxJson[jsonData.timeline_rxJson.length - 1].cl_id);
+	/*  orig_start_cl_id = Math.min(parseInt(jsonData.timeline_txJson[0].cl_id), parseInt(jsonData.timeline_rxJson[0].cl_id));
+	orig_end_cl_id = Math.max(jsonData.timeline_txJson[jsonData.timeline_txJson.length - 1].cl_id, jsonData.timeline_rxJson[jsonData.timeline_rxJson.length - 1].cl_id); */
+	orig_start_cl_id = parseInt(jsonData.timeline_clStartEndJson[0].clstart);
+	orig_end_cl_id = jsonData.timeline_clStartEndJson[jsonData.timeline_clStartEndJson.length - 1].clend;
 	$('#timelineStartClId').val(orig_start_cl_id);
 	$('#timelineEndClId').val(orig_end_cl_id);
 	old_start_cl_id = orig_start_cl_id;
 	old_end_cl_id = orig_end_cl_id;
 	new_start_cl_id = orig_start_cl_id;
 	new_end_cl_id = orig_end_cl_id;
-	$('.clFilter .totalCls').html((new_end_cl_id - new_start_cl_id + 1) + " CL(s)");
+	$('.clFilter .totalCls').html(format_timestamp(new_end_cl_id - new_start_cl_id));
 	console.log("total CLs", new_end_cl_id - new_start_cl_id);
 	console.log("Filter init ", { new_start_cl_id, new_end_cl_id });
 
@@ -1784,8 +1810,10 @@ var diff = 0;
 function prepare_timeline_cl_filter(evt = false) {
 
 	if (evt.target.id == "timelineResetBtn") {
-		new_start_cl_id = Math.min(parseInt(jsonData.timeline_txJson[0].cl_id), parseInt(jsonData.timeline_rxJson[0].cl_id));
-		new_end_cl_id = Math.max(jsonData.timeline_txJson[jsonData.timeline_txJson.length - 1].cl_id, jsonData.timeline_rxJson[jsonData.timeline_rxJson.length - 1].cl_id);
+		/* new_start_cl_id = Math.min(parseInt(jsonData.timeline_txJson[0].cl_id), parseInt(jsonData.timeline_rxJson[0].cl_id));
+		new_end_cl_id = Math.max(jsonData.timeline_txJson[jsonData.timeline_txJson.length - 1].cl_id, jsonData.timeline_rxJson[jsonData.timeline_rxJson.length - 1].cl_id); */
+		new_start_cl_id = jsonData.timeline_clStartEndJson[0].clstart;
+		new_end_cl_id = jsonData.timeline_clStartEndJson[jsonData.timeline_clStartEndJson.length - 1].clend;
 		$('#timelineStartClId').val(new_start_cl_id);
 		$('#timelineEndClId').val(new_end_cl_id);
 		$(".alert").alert('close');
@@ -1819,7 +1847,7 @@ function prepare_timeline_cl_filter(evt = false) {
 		$('#timelineEndClId').val(new_end_cl_id);
 	}
 	/* console.log("Filtered ", { new_start_cl_id, new_end_cl_id }); */
-	$('.clFilter .totalCls').html((new_end_cl_id - new_start_cl_id + 1) + " CL(s)");
+	$('.clFilter .totalCls').html(format_timestamp(new_end_cl_id - new_start_cl_id));
 	drawChart(TIMELINE_CHART_ID, "timelineTab", true);
 	old_start_cl_id = new_start_cl_id;
 	old_end_cl_id = new_end_cl_id;
