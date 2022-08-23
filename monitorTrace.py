@@ -2869,6 +2869,7 @@ def graph_it():
 
     # csv_df = csv_df.assign(cl_id=pd.Series(np.nan))
 
+    # add cl_id
     # csv_df['cl_id'] = csv_df["trace_info"].apply(lambda x: x.split(' ', 5)[4] if "CL_OUT_CNF" in x or "CL_START" in x else np.nan)
     cl_id_df = csv_df[(csv_df.tracecode_dec == 134) | (csv_df.tracecode_dec == 136)][['NODE', 'byte', 'trace_info']]
     if cl_id_df.empty:
@@ -2879,6 +2880,7 @@ def graph_it():
         csv_df = csv_df.merge(cl_id_df, on=['NODE', 'byte'], how='left')
 
     # csv_df['cl_mac'] = csv_df.apply(lambda x: x.trace_info.split('>', 2)[1].strip() if x.tracecode_dec == 147 else np.nan, axis=1)
+    # add cl_mac
     cl_mac_df = csv_df[csv_df.tracecode_dec == 147][['NODE', 'byte', 'trace_info']]
     if cl_mac_df.empty:
         csv_df = csv_df.assign(cl_mac=pd.Series(np.nan))
@@ -2888,6 +2890,7 @@ def graph_it():
         csv_df = csv_df.merge(cl_mac_df, on=['NODE', 'byte'], how='left')
 
     # csv_df['txrx_param'] = csv_df.apply(lambda x: x.trace_info.split(')', 2)[1].strip() if x.tracecode_dec == 140 else np.nan, axis=1)
+    # add txrx_param
     tx_param = csv_df[csv_df.tracecode_dec == 140][['NODE', 'byte', 'trace_info']]
     rx_param = csv_df[csv_df.tracecode_dec == 141][['NODE', 'byte', 'trace_info']]
     txrx_param_df = pd.concat([tx_param, rx_param]).sort_values(
@@ -2897,7 +2900,11 @@ def graph_it():
     else:
         txrx_param_df.txrx_param = txrx_param_df.txrx_param.str.split(')', 2, expand=True).drop([0], axis=1)
         csv_df = csv_df.merge(txrx_param_df, on=['NODE', 'byte'], how='left')
+        
+    # maintain same mode info upto certain point
+    csv_df.txrx_param = np.where((csv_df.tracecode_dec == tracing_events_str_num['CL_PDLL_FLAGS']), 'X', csv_df.txrx_param)
 
+    
     traceCodeMap_df = pd.DataFrame(tracing_events_num_str.items(), columns=['tracecode_dec', 'trace_str'])
 
     # add owner id
@@ -2912,6 +2919,7 @@ def graph_it():
 
     # forward fill the data
     csv_df = csv_df.ffill()
+    
 
     # filter for clId Ranges
     max_cl_val = str(int(csv_df.cl_id.astype(float).max())) if not math.isnan(csv_df.cl_id.astype(float).max()) else "0"
@@ -2947,6 +2955,9 @@ def graph_it():
         (csv_df.tracecode_dec == tracing_events_str_num['LMMGR_PHR_IND']), 'X', csv_df.rx_seq_ctrl)
 
     csv_df = csv_df.bfill()
+    
+    print(csv_df.tail(100))
+    # exit(0)
 
     # FRT_trace_val
     # csv_df['frt32_val'] = csv_df.apply(lambda x: (x.trace_info[-8:]) if x.tracecode_dec in [6, 121, 122, 123, 124, 129, 130] else np.nan, axis=1)
@@ -3169,7 +3180,13 @@ def graph_it():
             timings_df.drop(columns=['frt_hex'], inplace=True)
 
             timings_df['mode'] = timings_df['txrx_param'].str.split().str[1]
-            timings_df['shr_dur_us'] = timings_df['mode'].apply(lambda x: shr_dur_usec[int(x)] if x else np.nan)
+            timings_df['shr_dur_us'] = timings_df['mode'].apply(lambda x: shr_dur_usec[int(x)] if not pd.isnull(x) else np.nan)
+
+            cols = ["byte", "frt_dec", "trace_info", "NODE", "txrx_param",
+                    "tx_seq_ctrl", "rx_seq_ctrl", "mode", "shr_dur_us", ]
+            print(timings_df[cols])
+            print(timings_df.info())
+            # exit(0)
 
             # timestamps for tx rx start and end
             timings_df['ts_rxstart'] = np.where(
