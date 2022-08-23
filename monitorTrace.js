@@ -218,7 +218,7 @@ chartOptions = {
 		"yAxis2Max": 1,
 	},
 	"txrxdrift": {
-		"chartTitle": "Tx to Rx Drift",
+		"chartTitle": "Tx to Rx Drift (tx_frt - rx_frt_other)",
 		"xAxisType": 'linear',
 		"xAxisTitle": "txrxdrift in usecs",
 		"yAxisTitle": "Count",
@@ -226,7 +226,7 @@ chartOptions = {
 		"yAxis2Max": 1,
 	},
 	"rxtxdrift": {
-		"chartTitle": "Rx to Tx Drift",
+		"chartTitle": "Rx to Tx Drift (rx_frt - tx_frt_other)",
 		"xAxisType": 'linear',
 		"xAxisTitle": "rxtxdrift in usecs",
 		"yAxisTitle": "Count",
