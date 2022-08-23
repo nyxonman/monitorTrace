@@ -2902,7 +2902,11 @@ def graph_it():
     else:
         txrx_param_df.txrx_param = txrx_param_df.txrx_param.str.split(')', 2, expand=True).drop([0], axis=1)
         csv_df = csv_df.merge(txrx_param_df, on=['NODE', 'byte'], how='left')
+        
+    # maintain same mode info upto certain point
+    csv_df.txrx_param = np.where((csv_df.tracecode_dec == tracing_events_str_num['CL_PDLL_FLAGS']), 'X', csv_df.txrx_param)
 
+    
     traceCodeMap_df = pd.DataFrame(tracing_events_num_str.items(), columns=['tracecode_dec', 'trace_str'])
 
     # add owner id
@@ -2917,6 +2921,7 @@ def graph_it():
 
     # forward fill the data
     csv_df = csv_df.ffill()
+    
 
     # filter for clId Ranges
     max_cl_val = str(int(csv_df.cl_id.astype(float).max())) if not math.isnan(csv_df.cl_id.astype(float).max()) else "0"
@@ -2952,6 +2957,9 @@ def graph_it():
         (csv_df.tracecode_dec == tracing_events_str_num['LMMGR_PHR_IND']), 'X', csv_df.rx_seq_ctrl)
 
     csv_df = csv_df.bfill()
+    
+    print(csv_df.tail(100))
+    # exit(0)
 
     # FRT_trace_val
     # csv_df['frt32_val'] = csv_df.apply(lambda x: (x.trace_info[-8:]) if x.tracecode_dec in [6, 121, 122, 123, 124, 129, 130] else np.nan, axis=1)
