@@ -3206,11 +3206,24 @@ def graph_it():
                 seqctrl_not_found_list = []
                 match_found = False
                 while find_seqctrl_retries:
-                    base_row = timings_df[(timings_df.tx_seq_ctrl.ne('X')) &  # seqctrl is not X AND
-                                          # seqctrl is not in not found list
-                                          (~timings_df.tx_seq_ctrl.isin(seqctrl_not_found_list)) &
-                                          (timings_df['NODE'] == 0) &  # using first node AND
-                                          (~timings_df.ts_txstart.isnull())].iloc[0]  # txstart is not null
+                    base_rows = timings_df[(timings_df.tx_seq_ctrl.ne('X')) &  # seqctrl is not X AND
+                                           # seqctrl is not in not found list
+                                           (~timings_df.tx_seq_ctrl.isin(seqctrl_not_found_list)) &
+                                           (timings_df['NODE'] == 0) &  # using first node AND
+                                           (~timings_df.ts_txstart.isnull())]  # txstart is not null
+                    if base_rows.size < 1:
+                        LOG_ERR("Cannot find any valid seq ctrl for offsetting")
+                        print(timings_df[timings_df.tx_seq_ctrl.ne('X')][["byte", "frt_dec", "trace_info", "NODE", "cl_id",
+                              "owner", "tx_seq_ctrl", "dc_col", "mode", "shr_dur_us", "ts_txstart", "ts_txend"]].head(50))
+
+                        ans = input("Continue without offsetting? (y/n) ? ")
+                        if (ans.lower() == 'y'):
+                            timing_offset.append(0)
+                            match_found = True
+                            break
+                        else:
+                            exit(1)
+
                     base_row_seqctrl_raw = base_row['tx_seq_ctrl']
                     base_row_seqctrl = base_row_seqctrl_raw.split('|', 2)[0]
                     base_row_tx_start_frt = base_row['ts_txstart']
@@ -3654,10 +3667,10 @@ if __name__ == "__main__":
         exit(1)
 
     print("{} ... SUCCESS".format((output)))
-    
+
     # clear the tracing pipe
     LOG_INFO(" - Clearing /dev/dsp_rf_tracing in the target", True)
-    
+
     ret, output = test_ssh(args.ip, "echo "" > /dev/dsp_rf_tracing")
 
     if ret != RET_SUCC:
