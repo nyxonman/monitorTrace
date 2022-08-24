@@ -1,3 +1,4 @@
+
 console.log("Monitoring on Node IP ", nodeip);
 console.log("Monitoring on Node File ", nodefile);
 console.log("jsonData", jsonData);
@@ -157,7 +158,7 @@ chartOptions = {
 
 	},
 	"rxend2txtime": {
-		"chartTitle": "RX end to TX PHR time",
+		"chartTitle": "RX end to TX time",
 		"xAxisType": 'linear',
 		"xAxisTitle": "rxend2txtime in usecs",
 		"yAxisTitle": "Count",
