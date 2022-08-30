@@ -2852,12 +2852,17 @@ def graph_it():
 
     # loop over each file and concat the final df
     for key, file in enumerate(graph_file):
-        tmp_df = pd.read_csv(sep=',', skiprows=1,
-                             names=['byte', "frt_dec", 'frt_hex', 'trace_code', 'trace_info'],
-                             dtype={'byte': str, "frt_dec": 'Int64', 'frt_hex': str,
-                                    'trace_code': str, 'trace_info': str},
-                             filepath_or_buffer=file)
-        tmp_df['NODE'] = key
+        tmp_df = pd.DataFrame()
+        try:
+            tmp_df = pd.read_csv(sep=',', skiprows=1,
+                                 names=['byte', "frt_dec", 'frt_hex', 'trace_code', 'trace_info'],
+                                 dtype={'byte': str, "frt_dec": 'Int64', 'frt_hex': str,
+                                        'trace_code': str, 'trace_info': str},
+                                 filepath_or_buffer=file)
+            tmp_df['NODE'] = key
+        except:
+            LOG_ERR("Failed to Parse `{}`. Verify if the raw trace data is ok.".format(file))
+            exit(1)
         dfs.append(tmp_df)
     csv_df = pd.concat(dfs, ignore_index=True).reset_index()
 
@@ -3223,6 +3228,8 @@ def graph_it():
                             break
                         else:
                             exit(1)
+                            
+                    base_row = base_rows.iloc[0]
 
                     base_row_seqctrl_raw = base_row['tx_seq_ctrl']
                     base_row_seqctrl = base_row_seqctrl_raw.split('|', 2)[0]
