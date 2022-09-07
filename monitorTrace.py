@@ -3228,7 +3228,7 @@ def graph_it():
                             break
                         else:
                             exit(1)
-                            
+
                     base_row = base_rows.iloc[0]
 
                     base_row_seqctrl_raw = base_row['tx_seq_ctrl']
@@ -3676,9 +3676,9 @@ if __name__ == "__main__":
     print("{} ... SUCCESS".format((output)))
 
     # clear the tracing pipe
-    LOG_INFO(" - Clearing /dev/dsp_rf_tracing in the target", True)
+    # LOG_INFO(" - Clearing /dev/dsp_rf_tracing in the target", True)
 
-    ret, output = test_ssh(args.ip, "echo "" > /dev/dsp_rf_tracing")
+    # ret, output = test_ssh(args.ip, "echo "" > /dev/dsp_rf_tracing")
 
     if ret != RET_SUCC:
         LOG_ERR("error {}".format(ret))
