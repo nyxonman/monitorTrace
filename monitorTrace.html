@@ -62,7 +62,7 @@
 
 		.modal-tip {
 			cursor: pointer;
-			margin-left:5px;
+			margin-left: 5px;
 		}
 
 		.modal-tip:hover {
@@ -414,6 +414,9 @@
 							<div id="txrxdrift" class="col-md-4 col-sm-6 chartContainer underCLTimings"></div>
 							<div id="rxtxdrift" class="col-md-4 col-sm-6 chartContainer underCLTimings"></div>
 							<div id="cl_dur" class="col-md-4 col-sm-6 chartContainer underCLTimings"></div>
+							<div id="signing_dur" class="col-md-4 col-sm-6 chartContainer underCLTimings"></div>
+							<div id="encryption_dur" class="col-md-4 col-sm-6 chartContainer underCLTimings"></div>
+							<div id="frame_creation_dur" class="col-md-4 col-sm-6 chartContainer underCLTimings"></div>
 						</div>
 					</div>
 				</div>
@@ -442,7 +445,9 @@
 	<script src="http://code.highcharts.com/modules/drilldown.js"></script>
 
 	<script type="text/javascript" src="./myJson.js"></script>
-	<script type="text/javascript" src="./monitorTrace.js" >
+	<script type="text/javascript">
+
+
 		console.log("Monitoring on Node IP ", nodeip);
 		console.log("Monitoring on Node File ", nodefile);
 		console.log("jsonData", jsonData);
@@ -466,9 +471,12 @@
 		TXRXDRIFT_CHART_ID = "txrxdrift";
 		RXTXDRIFT_CHART_ID = "rxtxdrift";
 		CL_DUR_CHART_ID = "cl_dur";
+		SIGNING_DUR_CHART_ID = "signing_dur";
+		ENCRYPTION_DUR_CHART_ID = "encryption_dur";
+		FRAME_CREATION_DUR_CHART_ID = "frame_creation_dur";
 		THRESHOLD_STEP = 4;
 		THRESHOLD_GAP = 2;
-		
+
 		/*  types of charts */
 		charts = {
 			"rtt": {},
@@ -479,7 +487,7 @@
 			'chan': {},
 			'mode': {}
 		};
-		
+
 		/*  datasets for different charts */
 		datasets = {
 			"rtt": [],
@@ -489,7 +497,7 @@
 			"buffer": [],
 			'modechan': [],
 		};
-		
+
 		/*  chart options for different charts */
 		chartOptions = {
 			'rtt': {
@@ -501,7 +509,7 @@
 				"yAxis2Max": 1,
 				/*  "thTitle"    : "Max Power", */
 				/*  "thValue"    : "13" */
-		
+
 			},
 			'mode': {
 				"chartTitle": "Mode Usage",
@@ -512,7 +520,7 @@
 				/*  "yAxis2Max": 1, */
 				/*  "thTitle"    : "Max Power", */
 				/*  "thValue"    : "13" */
-		
+
 			},
 			'chan': {
 				"chartTitle": "Channel Usage",
@@ -523,7 +531,7 @@
 				/*  "yAxis2Max": 1, */
 				/*  "thTitle"    : "Max Power", */
 				/*  "thValue"    : "13" */
-		
+
 			},
 			'buffer': {
 				"chartTitle": "Buffer Stats",
@@ -534,7 +542,7 @@
 				/*  "yAxis2Max": 1, */
 				/*  "thTitle"    : "Max Power", */
 				/*  "thValue"    : "13" */
-		
+
 			},
 			'buffer2': {
 				"chartTitle": "Buffer Management",
@@ -545,7 +553,7 @@
 				/*  "yAxis2Max": 1, */
 				/*  "thTitle"    : "Max Power", */
 				/*  "thValue"    : "13" */
-		
+
 			},
 			'timeline': {
 				"chartTitle": "Timeline Visualiser (TimeOffset=" + jsonData['timing_offset'] + ")",
@@ -558,7 +566,7 @@
 				/*  "yAxis2Max": , */
 				/*  "thTitle"    : "Max Power", */
 				/*  "thValue"    : "13" */
-		
+
 			},
 			'cltiming': {
 				"chartTitle": "CL Timing Summary Report",
@@ -571,9 +579,35 @@
 				/*  "yAxis2Max": , */
 				/*  "thTitle"    : "Max Power", */
 				/*  "thValue"    : "13" */
-		
+
 			},
-		
+			"signing_dur": {
+				"chartTitle": "Frame Signing Duration",
+				"xAxisType": 'linear',
+				"xAxisTitle": "signing duration in usecs",
+				"yAxisTitle": "Count",
+				"yAxisTitle2": "PDF/CDF",
+				"yAxis2Max": 1,
+
+			},
+			"encryption_dur": {
+				"chartTitle": "Frame Encryption Duration",
+				"xAxisType": 'linear',
+				"xAxisTitle": "Encryption dur in usecs",
+				"yAxisTitle": "Count",
+				"yAxisTitle2": "PDF/CDF",
+				"yAxis2Max": 1,
+			},
+
+			"frame_creation_dur": {
+				"chartTitle": "Frame Creation Duration",
+				"xAxisType": 'linear',
+				"xAxisTitle": "frameCreation dur in usecs",
+				"yAxisTitle": "Count",
+				"yAxisTitle2": "PDF/CDF",
+				"yAxis2Max": 1,
+			},
+
 			"target2tx": {
 				"chartTitle": "Target Time to TX preamble",
 				"xAxisType": 'linear',
@@ -581,7 +615,7 @@
 				"yAxisTitle": "Count",
 				"yAxisTitle2": "PDF/CDF",
 				"yAxis2Max": 1,
-		
+
 			},
 			"txend2rxstart": {
 				"chartTitle": "txend to RX start Call",
@@ -590,7 +624,7 @@
 				"yAxisTitle": "Count",
 				"yAxisTitle2": "PDF/CDF",
 				"yAxis2Max": 1,
-		
+
 			},
 			"rxend2targettime": {
 				"chartTitle": "RX end to Target Tx Time",
@@ -599,7 +633,7 @@
 				"yAxisTitle": "Count",
 				"yAxisTitle2": "PDF/CDF",
 				"yAxis2Max": 1,
-		
+
 			},
 			"rxend2txtime": {
 				"chartTitle": "RX end to TX time",
@@ -608,7 +642,7 @@
 				"yAxisTitle": "Count",
 				"yAxisTitle2": "PDF/CDF",
 				"yAxis2Max": 1,
-		
+
 			},
 			"txcall2targettime": {
 				"chartTitle": "TX Wrapper call to Target Time",
@@ -617,7 +651,7 @@
 				"yAxisTitle": "Count",
 				"yAxisTitle2": "PDF/CDF",
 				"yAxis2Max": 1,
-		
+
 			},
 			"txcall2aftertx": {
 				"chartTitle": "TX Wrapper call to Wrapper Return",
@@ -635,7 +669,7 @@
 				"yAxisTitle2": "PDF/CDF",
 				"yAxis2Max": 1,
 			},
-		
+
 			"rxend2txcall": {
 				"chartTitle": "RX End to TX Call",
 				"xAxisType": 'linear',
@@ -643,7 +677,7 @@
 				"yAxisTitle": "Count",
 				"yAxisTitle2": "PDF/CDF",
 				"yAxis2Max": 1,
-		
+
 			},
 			"rxcall2afterrx": {
 				"chartTitle": "RX CAL duration",
@@ -652,7 +686,7 @@
 				"yAxisTitle": "Count",
 				"yAxisTitle2": "PDF/CDF",
 				"yAxis2Max": 1,
-		
+
 			},
 			"afterrx2rx": {
 				"chartTitle": "After Rx to Rx Preamble",
@@ -685,42 +719,42 @@
 				"yAxisTitle": "Count",
 				"yAxisTitle2": "PDF/CDF",
 				"yAxis2Max": 1,
-		
+
 			},
-		
+
 		};
-		
+
 		THRESHOLDS = [];
 		for (i = 0; i < (TOTAL_NODES); i++) {
 			THRESHOLDS.push(THRESHOLD_GAP + i * THRESHOLD_STEP + THRESHOLD_GAP * i);
 		}
-		
+
 		function format_timestamp(ts_us) {
 			let usec = msec = hh = mm = ss = 0;
 			/* usec */
 			usec = ts_us % 1000;
 			ts_ms = parseInt(ts_us / 1000);
-		
+
 			/* msec */
 			msec = ts_ms % 1000;
 			ts_ss = parseInt(ts_ms / 1000);
-		
+
 			/* sec */
 			ss = ts_ss % 60;
 			ts_mm = parseInt(ts_ss / 60);
-		
+
 			/* min */
 			mm = ts_mm % 60;
-		
+
 			/* hour */
 			hh = parseInt(ts_mm / 60);
-		
+
 			return `${hh}:${mm}:${ss} ${msec}.${usec}`;
 		}
-		
-		
+
+
 		function drawChart(chartId, tabName, renderFlag) {
-		
+
 			switch (chartId) {
 				case RTT_CHART_ID:
 					create_rtt_chart(tabName, renderFlag);
@@ -746,46 +780,46 @@
 				default:
 					alert("Improper chart type " + chartId + " for ");
 			}
-		
+
 		}
-		
+
 		function display_alert(type = 'warning', msg = "") {
 			var alertDivStr = '<div class="alert alert-' + type + ' alert-dismissible fade show" role="alert">' + msg + '<button type = "button" class="close" data-dismiss="alert" aria- label="Close" ><span aria-hidden="true">&times;</span></button ></div>';
 			$('#alertDiv').html(alertDivStr);
 		}
-		
+
 		var markerCnt = 0;
-		
+
 		function create_marker_line(tabName, markerNum, frt, markerColor, id) {
-		
+
 			var markerListDiv = document.getElementById('markersList' + '-' + tabName);
 			var firstMarkerNum = 0;
 			var secondMarkerNum = 0;
 			var firstMarkerElem, secondMarkerElem;
 			var firstMarkerVal = 0, secondMarkerVal = 0;
-		
+
 			/* create the marker div */
 			if (markerNum % 2 != 0) {
 				firstMarkerNum = markerNum;
 				secondMarkerNum = markerNum + 1;
 				lineHtml = `<div class="marker col-sm-6 " style="border:2px solid ${markerColor}"id="divMarkerVal-${firstMarkerNum}-${secondMarkerNum}">
-					<div class="row">
-						<div class="col-sm-3"> M${firstMarkerNum}: <span name="marker1" class="markerVal" id="marker${firstMarkerNum}Val"> </span></div>
-						<div class="col-sm-3"> M${secondMarkerNum}: <span name="marker2" class="markerVal" id="marker${secondMarkerNum}Val"> </span></div>
-						<div class="col-sm-6"> Delta: <span class= "deltaVal" id="deltaVal${firstMarkerNum}${secondMarkerNum}"> </span>
-						<i style="color:${markerColor};" class="fas fa-backspace fs-lg removeMkrBtnClass float-right" id="removeMkrBtn${firstMarkerNum}${secondMarkerNum}"></i></div>
-					</div>
-				</div>`;
-		
+			<div class="row">
+				<div class="col-sm-3"> M${firstMarkerNum}: <span name="marker1" class="markerVal" id="marker${firstMarkerNum}Val"> </span></div>
+				<div class="col-sm-3"> M${secondMarkerNum}: <span name="marker2" class="markerVal" id="marker${secondMarkerNum}Val"> </span></div>
+				<div class="col-sm-6"> Delta: <span class= "deltaVal" id="deltaVal${firstMarkerNum}${secondMarkerNum}"> </span>
+				<i style="color:${markerColor};" class="fas fa-backspace fs-lg removeMkrBtnClass float-right" id="removeMkrBtn${firstMarkerNum}${secondMarkerNum}"></i></div>
+			</div>
+		</div>`;
+
 				markerListDiv.innerHTML = markerListDiv.innerHTML + lineHtml;
 			} else {
 				firstMarkerNum = markerNum - 1;
 				secondMarkerNum = markerNum;
 			}
-		
+
 			firstMarkerElem = document.getElementById(`marker${firstMarkerNum}Val`);
 			secondMarkerElem = document.getElementById(`marker${secondMarkerNum}Val`);
-		
+
 			if (markerNum % 2 != 0) {
 				firstMarkerVal = parseInt(frt, 10);
 				firstMarkerElem.innerHTML = firstMarkerVal;
@@ -795,7 +829,7 @@
 				secondMarkerVal = parseInt(frt, 10);
 				secondMarkerElem.innerHTML = secondMarkerVal;
 			}
-		
+
 			if (firstMarkerVal != 0 && secondMarkerVal != 0) {
 				var delta = parseInt(secondMarkerVal) - parseInt(firstMarkerVal);
 				var signStr = Math.sign(delta) == -1 ? "-" : "";
@@ -808,7 +842,7 @@
 				var deltaSecStr = '';
 				var deltaUsStr = delta + 'usec ';
 				var extra = 0;
-		
+
 				delta = Math.abs(delta);
 				if (delta > 1000) {
 					deltaMs = parseInt(delta / 1000, 10);
@@ -816,7 +850,7 @@
 					deltaMsStr = deltaMs + "ms ";
 					extra = 1;
 				}
-		
+
 				if (deltaMs > 1000) {
 					deltaSec = parseInt(deltaMs / 1000, 10);
 					deltaMs = deltaMs % 1000;
@@ -829,24 +863,24 @@
 				} else {
 					deltaUsStr = deltaUs + "us";
 				}
-		
+
 				deltaStr = extra ? delta + " ( " + deltaSecStr + deltaMsStr + deltaUsStr + " )" : delta;
 				deltaElem.innerHTML = signStr + deltaStr;
 			}
-		
+
 		}
 		var redrawEnabled = true;
-		
+
 		function create_pie_highchart(id, chartData, dd_data = [], containerDiv = 'container', annotations_arr = []) {
 			console.log(id, chartData, dd_data);
 			var pie_colors = ["#44A9A8", "#F7A35C", "#90ed7d", "#f7a35c", "#e4d354", "#f45b5b", "#91e8e1"];
-		
+
 			chart = Highcharts.chart(containerDiv, {
 				credits: {
 					enabled: false
 				},
-		
-		
+
+
 				plotOptions: {
 					pie: {
 						/*    showInLegend: true, */
@@ -862,7 +896,7 @@
 					}
 				},
 				exporting: false,
-		
+
 				chart: {
 					height: 150,
 					backgroundColor: "transparent"
@@ -870,9 +904,9 @@
 				dataLabels: {
 					/*  enabled: false */
 				},
-		
+
 				title: false,
-		
+
 				legend: {
 					verticalAlign: 'top',
 				},
@@ -880,38 +914,38 @@
 					headerFormat: '<span style="font-size:11px">{series.name}</span><br>',
 					pointFormat: '<span style="color:{point.color}">{point.name}</span>: <b>{point.y:.2f}</b>'
 				},
-		
-		
-		
+
+
+
 				series: chartData,
 				drilldown: {
 					series: dd_data,
 				},
 				/*  annotations: annotations_arr */
-		
+
 			});
-		
+
 		}
-		
-		
+
+
 		function create_highchart(id, tabName, chartData, containerDiv = 'container', annotations_arr = []) {
 			console.log(id, tabName, chartData);
 			var zoomRatio = 1;
-		
+
 			zero_x_arr = [];
-		
+
 			/* define multiple offsets for timeline graph and 0s for others */
 			for (i = 0; i < TOTAL_NODES; i++) {
 				zero_x_arr.push(
 					{
-		
+
 						value: id == "timeline" ? THRESHOLDS[i] : 0,
 						width: 1,
 						color: '#999',
 						zIndex: 10
 					});
 			}
-		
+
 			chart = Highcharts.chart(containerDiv, {
 				credits: {
 					enabled: false
@@ -928,19 +962,19 @@
 					sourceWidth: 1920,
 					sourceHeight: 920,
 				},
-		
+
 				chart: {
 					/*  type: 'bar' */
 					/*  zoomKey:'alt', */
 					zoomType: 'x',
 					panKey: 'ctrl',
-		
+
 					panning: true,
-		
+
 					events: {
 						load: function (event) {
 							const myChart = this;
-		
+
 							myChart.renderer.button('+', 30, 10)
 								.attr({
 									zIndex: 99,
@@ -971,24 +1005,24 @@
 									chart.zoomOut();
 								})
 								.add();
-		
+
 						},
 						/*  render: function () { */
 						/*  	 console.log("rendered") */
 						/*  	const myChart = this; */
-		
+
 						/*  }, */
 						redraw: function (event) {
 							var extremes = this.xAxis[0].getExtremes();
 							var border = 35942400000;
 							var border = 60000000;
 							var boostEnabled;
-		
+
 							var diff = extremes.userMax - extremes.userMin;
 							if (Number.isNaN(diff))
 								diff = extremes.max - extremes.min;
 							boostEnabled = diff < border ? 0 : 1;
-		
+
 							if (redrawEnabled) {
 								redrawEnabled = false;
 								this.update({
@@ -1009,7 +1043,7 @@
 							let chart = this;
 							let xAxis = chart.xAxis[0];
 							let xValue = xAxis.toValue(this.mouseDownX);
-		
+
 							let clickX = 0;
 							if (markerCnt % 2 == 0)
 								colorCnt = markerCnt % 10;
@@ -1018,7 +1052,7 @@
 							markerColor = Highcharts.getOptions().colors[colorCnt];
 							markerCnt++;
 							create_marker_line(tabName, markerCnt, xValue, markerColor, id);
-		
+
 							xAxis.addPlotLine({
 								value: xValue,
 								cursor: 'pointer',
@@ -1039,12 +1073,12 @@
 									}
 								}
 							});
-		
+
 						}
 					}
-		
+
 				},
-		
+
 				title: {
 					text: chartOptions[id].chartTitle
 				},
@@ -1057,10 +1091,10 @@
 							}
 						},
 					},
-		
+
 				},
 				legend: {
-		
+
 					verticalAlign: 'top',
 				},
 				tooltip: {
@@ -1085,7 +1119,7 @@
 						snap: chartOptions[id].xAxisType == 'category' ? true : false,
 					},
 				},
-		
+
 				yAxis: [{ /*  Primary yAxis */
 					/*  visible:id==TIMELINE_CHART_ID? false:trues, */
 					labels: {
@@ -1106,36 +1140,36 @@
 					/*  max:  null, */
 					max: chartOptions[id].yAxisMax ? chartOptions[id].yAxisMax : null,
 					min: chartOptions[id].yAxisMin ? chartOptions[id].yAxisMin : null,
-		
+
 				}, { /*  Secondary yAxis */
 					title: {
 						text: chartOptions[id].yAxisTitle2 ? chartOptions[id].yAxisTitle2 : null,
-		
-		
+
+
 					},
 					max: chartOptions[id].yAxis2Max ? chartOptions[id].yAxis2Max : null,
 					/*  const a = { ...(condition && {b: 1})  if condition is true 'b' will be added. } */
-		
+
 					opposite: true
 				}],
-		
+
 				series: chartData,
 				annotations: annotations_arr
-		
+
 			});
-		
+
 			charts[id] = chart;
-		
+
 		}
-		
+
 		function drawPieChart_cl_newend() {
-		
-		
+
+
 			if (!jsonData.clstatsJson.hasOwnProperty('CL_NEW_END')) return;
-		
+
 			jsonData_clnewend = jsonData.clstatsJson.CL_NEW_END;
 			if (Object.keys(jsonData_clnewend).length == 0) return;
-		
+
 			dd_clouts_data = [];
 			for (const [key, value] of Object.entries(jsonData_clnewend.CL_NEW.drilldown.CL_OUT.drilldown)) {
 				dd_clouts_data.push({
@@ -1150,7 +1184,7 @@
 					y: value
 				});
 			}
-		
+
 			/*  create CL PIE CHART */
 			chartData = [
 				/* count */
@@ -1158,7 +1192,7 @@
 					type: "pie",
 					name: "CL",
 					/*  colorByPoint: true, */
-		
+
 					data: [
 						{
 							name: "CL NEW",
@@ -1173,7 +1207,7 @@
 						},
 					],
 				},
-		
+
 			];
 			dd_data = [
 				{
@@ -1190,34 +1224,34 @@
 							name: "CL_IN",
 							y: jsonData_clnewend.CL_NEW.drilldown.CL_IN
 						},
-		
+
 					]
 				}, {
 					name: "CL_OUT",
 					type: 'pie',
 					id: 'dd_cl_out',
 					data: dd_clouts_data
-		
+
 				},
 				{
 					name: "CL_END",
 					type: 'pie',
 					id: 'dd_cl_end',
 					data: dd_clends_data
-		
+
 				}
 			];
 			create_pie_highchart("clpietotal", chartData, dd_data, 'clpietotal');
-		
+
 		}
-		
+
 		function drawPieChart_cl_data_reqresp() {
-		
+
 			if (!jsonData.clstatsJson.hasOwnProperty('CL_DATA_REQ_RESP')) return;
-		
+
 			cl_data_reqresp_stats = jsonData.clstatsJson.CL_DATA_REQ_RESP;
 			if (Object.keys(cl_data_reqresp_stats).length == 0) return;
-		
+
 			dd_cldata_reqresp_data = [];
 			for (const [key, value] of Object.entries(cl_data_reqresp_stats.CL_DATA_RESP.drilldown)) {
 				dd_cldata_reqresp_data.push({
@@ -1225,7 +1259,7 @@
 					y: value
 				});
 			}
-		
+
 			/*  create CL PIE CHART */
 			chartData = [
 				/* count */
@@ -1237,7 +1271,7 @@
 						{
 							name: "DATAREQ",
 							y: cl_data_reqresp_stats.CL_DATA_REQ.val,
-		
+
 						},
 						{
 							name: "DATARESP",
@@ -1246,7 +1280,7 @@
 						},
 					],
 				},
-		
+
 			];
 			dd_data = [
 				{
@@ -1257,15 +1291,15 @@
 				}
 			];
 			create_pie_highchart("clpiedatareqresp", chartData, dd_data, 'clpiedatareqresp');
-		
+
 		}
 		function drawPieChart_cl_tx_rx() {
-		
+
 			if (!jsonData.clstatsJson.hasOwnProperty('CL_TX_RX')) return;
-		
+
 			jsonData_cltxrx = jsonData.clstatsJson.CL_TX_RX;
 			if (Object.keys(jsonData_cltxrx).length == 0) return;
-		
+
 			dd_cltx_data = [];
 			for (const [key, value] of Object.entries(jsonData_cltxrx.CL_TX.drilldown)) {
 				dd_cltx_data.push({
@@ -1280,7 +1314,7 @@
 					y: value
 				});
 			}
-		
+
 			/*  create CL PIE CHART */
 			chartData = [
 				/* count */
@@ -1293,7 +1327,7 @@
 							name: "TX",
 							y: jsonData_cltxrx.CL_TX.val,
 							drilldown: "dd_cl_tx"
-		
+
 						},
 						{
 							name: "RX",
@@ -1302,7 +1336,7 @@
 						},
 					],
 				},
-		
+
 			];
 			dd_data = [
 				{
@@ -1320,13 +1354,13 @@
 			create_pie_highchart("clpietxrx", chartData, dd_data, 'clpietxrx');
 		}
 		function drawPieChart_cl_txdone() {
-		
+
 			if (!jsonData.clstatsJson.hasOwnProperty('CL_TXDONE')) return;
-		
+
 			jsonData_cltxdone = jsonData.clstatsJson.CL_TXDONE;
 			if (Object.keys(jsonData_cltxdone).length == 0) return;
-		
-		
+
+
 			dd_cltx_done = [];
 			for (const [key, value] of Object.entries(jsonData_cltxdone.drilldown)) {
 				dd_cltx_done.push({
@@ -1334,8 +1368,8 @@
 					y: value
 				});
 			}
-		
-		
+
+
 			/*  create CL PIE CHART */
 			chartData = [
 				/* count */
@@ -1348,12 +1382,12 @@
 							name: "TXDONE",
 							y: jsonData_cltxdone.val,
 							drilldown: "dd_cl_txdone"
-		
+
 						},
-		
+
 					],
 				},
-		
+
 			];
 			dd_data = [
 				{
@@ -1364,35 +1398,35 @@
 				}
 			];
 			create_pie_highchart("clpietxdone", chartData, dd_data, 'clpietxdone');
-		
+
 		}
-		
+
 		function drawPieChart() {
 			if (!jsonData.hasOwnProperty('clstatsJson')) return;
-		
+
 			clstats = jsonData.clstatsJson;
 			console.log('clstats ', clstats);
-		
+
 			/*  CL NEW END */
 			drawPieChart_cl_newend();
-		
+
 			/*  CL DATA REQ RESP */
 			drawPieChart_cl_data_reqresp();
-		
+
 			/* CL TX RX */
 			drawPieChart_cl_tx_rx();
-		
+
 			/* CL TXDONE */
 			drawPieChart_cl_txdone();
-		
+
 		}
-		
-		
-		
+
+
+
 		function create_rtt_chart(tabName, renderFlag) {
-		
+
 			if (!jsonData.hasOwnProperty('rttJson')) return;
-		
+
 			console.log('creating RTT');
 			let freqData = [];
 			let pdfData = [];
@@ -1403,7 +1437,7 @@
 				pdfData.push({ x: item.diff, y: item.pdf });
 				cdfData.push({ x: item.diff, y: item.cdf });
 			});
-		
+
 			chartData = [
 				/* count */
 				{
@@ -1435,23 +1469,23 @@
 					data: cdfData,
 					color: Highcharts.getOptions().colors[2]
 				},
-		
+
 			];
 			create_highchart(RTT_CHART_ID, tabName, chartData, RTT_CHART_ID);
-		
-		
-		
+
+
+
 			return;
-		
+
 		}
-		
+
 		function create_mode_chart(tabName, renderFlag) {
 			if (!jsonData.hasOwnProperty('modeTxJson')) return;
-		
+
 			console.log('creating modechanchart');
 			let modeRxData = [];
 			let modeTxData = [];
-		
+
 			jsonData.modeRxJson.forEach(item => {
 				;
 				modeRxData.push({ name: item.mode, y: item.count })
@@ -1459,7 +1493,7 @@
 			jsonData.modeTxJson.forEach(item => {
 				modeTxData.push({ name: item.mode, y: item.count });
 			});
-		
+
 			chartData = [
 				/* Mode Rx */
 				{
@@ -1481,18 +1515,18 @@
 					},
 					color: Highcharts.getOptions().colors[3]
 				},
-		
+
 			];
 			create_highchart(MODE_CHART_ID, tabName, chartData, MODE_CHART_ID);
-		
+
 		}
 		function create_chan_chart(tabName, renderFlag) {
 			if (!jsonData.hasOwnProperty('chanTxJson')) return;
-		
+
 			console.log('creating chanchanchart');
 			let chanRxData = [];
 			let chanTxData = [];
-		
+
 			jsonData.chanRxJson.forEach(item => {
 				chanRxData.push({ name: item.chan, y: item.count });
 			});
@@ -1526,27 +1560,27 @@
 					},
 					color: Highcharts.getOptions().colors[3],
 				},
-		
+
 			];
 			create_highchart(CHAN_CHART_ID, tabName, chartData, CHAN_CHART_ID);
-		
+
 		}
-		
+
 		function create_buffer_chart(tabName, renderFlag) {
 			if (!jsonData.hasOwnProperty('buffer_Json')) return;
-		
+
 			console.log('creating buffer summary chart');
 			let bufClaimData = [];
 			let bufRelData = [];
 			let bufLeakData = [];
 			let chartData = [];
-		
+
 			jsonData.buffer_summaryJson.forEach(item => {
 				bufClaimData.push({ name: item.owner, y: item.buf_claim });
 				bufRelData.push({ name: item.owner, y: item.buf_release });
 				bufLeakData.push({ name: item.owner, y: item.buf_leak });
 			});
-		
+
 			chartData = [
 				/* claims */
 				{
@@ -1581,10 +1615,10 @@
 					data: bufLeakData,
 					color: Highcharts.getOptions().colors[5]
 				},
-		
+
 			];
 			create_highchart(BUFFER_CHART_ID, tabName, chartData, BUFFER_CHART_ID);
-		
+
 			console.log('creating buffer alloc');
 			chartData = [];
 			buf_colors = {
@@ -1599,17 +1633,17 @@
 				"ELG": "#ff6e54",
 				"TXBCAST": "#ffa600",
 			};
-		
+
 			if (!jsonData.hasOwnProperty('buffer_Json')) {
 				return;
 			}
-		
+
 			/* Buffer allocated area*/
 			jsonData.buffer_Json.forEach(item => {
 				chartData.push({
 					type: 'area',
 					findNearestPointBy: 'xy',
-		
+
 					data: [
 						[item.frt_dec, 0],
 						[item.frt_dec, item.buffer_dec],
@@ -1620,19 +1654,19 @@
 						},
 						[item.rel_frt, item.buffer_dec],
 						[item.rel_frt, 0],
-		
+
 						/*  [item.ts_txend, 1], */
-		
+
 					],
 					states: {
 						inactive: {
 							opacity: 0.6
 						}
 					},
-		
+
 					zIndex: 5,
 					name: item.owner,
-		
+
 					showInLegend: false,
 					color: buf_colors[item.owner],
 					lineWidth: 0.25,
@@ -1646,36 +1680,36 @@
 					},
 				})
 			});
-		
+
 			create_highchart(BUFFER_CHART_ID + "2", tabName, chartData, BUFFER_CHART_ID + "2");
-		
+
 		}
-		
+
 		function create_cltimings_chart(tabName, renderFlag) {
 			let freqData = [];
 			let pdfData = [];
 			let cdfData = [];
 			let chartData = [];
 			console.log('creating cltimings');
-		
+
 			for (const [key, value] of Object.entries(jsonData)) {
 				freqData = [];
 				pdfData = [];
 				cdfData = [];
 				chartData = [];
 				let id = '';
-		
+
 				if (!key.startsWith('cltimings_'))
 					continue;
-		
+
 				id = key.slice(10, -4);
-		
+
 				jsonData[key].forEach(item => {
 					freqData.push({ x: item[id], y: item.freq });
 					pdfData.push({ x: item[id], y: item.pdf });
 					cdfData.push({ x: item[id], y: item.cdf });
 				});
-		
+
 				chartData = [
 					/* count */
 					{
@@ -1701,19 +1735,19 @@
 						color: Highcharts.getOptions().colors[2]
 					},
 				];
-		
+
 				create_highchart(id, tabName, chartData, id);
-		
+
 			}
 		}
-		
+
 		function create_cltiming_chart(tabName, renderFlag) {
 			if (!jsonData.hasOwnProperty('cltimingJson')) return;
-		
+
 			console.log("cltiming", jsonData.cltimingJson);
 			let chartData = [];
 			tx_dur = 2000;
-		
+
 			points_dic = jsonData.cltimingJson.points_dic;
 			rx_dur = points_dic['rxEnd'] - (points_dic['rx']);
 			txdiff = points_dic['Tx1'] - points_dic['TargetTx1'];
@@ -1730,7 +1764,7 @@
 						dataLabels: {
 							enabled: true,
 							format: "Transmission e.g. POLL",
-		
+
 						}
 					},
 					[points_dic.Tx1 + tx_dur, 0.5],
@@ -1767,19 +1801,19 @@
 						}
 					},
 					[points_dic.rx + rx_dur, -0.5],
-		
+
 					[points_dic.rx + rx_dur, 0],
 				],
 				name: "ACK",
 				enableMouseTracking: false,
-		
+
 				zIndex: 5,
 				states: {
 					inactive: {
 						opacity: 1
 					}
 				},
-		
+
 				showInLegend: false,
 				color: '#8FBC8F',
 				lineWidth: 2,
@@ -1787,7 +1821,7 @@
 				tooltip: {
 					enabled: false
 				},
-		
+
 			}, {
 				type: 'area',
 				findNearestPointBy: 'xy',
@@ -1800,14 +1834,14 @@
 						dataLabels: {
 							enabled: true,
 							format: "Transmission e.g. DATA",
-		
+
 						}
 					},
 					[points_dic.Tx2 + tx_dur + 500, 0.5],
 					[points_dic.Tx2 + tx_dur + 500, 0],
 				],
 				enableMouseTracking: false,
-		
+
 				zIndex: 5,
 				states: {
 					inactive: {
@@ -1823,11 +1857,11 @@
 					enabled: false
 				},
 			});
-		
+
 			/* lollipop */
 			let lollipopData = [];
 			let annotations = [];
-		
+
 			value_levels = {
 				"WrapperCall1": -2,
 				"WrapperReturn": 2,
@@ -1842,7 +1876,7 @@
 				"TargetTx2": -2,
 				"Tx2": -2,
 			};
-		
+
 			cnt = 0;
 			for (const [key, value] of Object.entries(jsonData.cltimingJson.points_dic)) {
 				/*  push lollipops data */
@@ -1853,7 +1887,7 @@
 					id: key,
 					name: jsonData.cltimingJson.names_label_dic[key],
 				});
-		
+
 				/*  push annotations for lollipop labels */
 				annotations.push({
 					labelOptions: {
@@ -1870,7 +1904,7 @@
 				/*  push annotations for arrows and its labels */
 				annotations.push({
 					draggable: '',
-		
+
 					shapes: [{
 						fill: 'none',
 						stroke: 'red',
@@ -1891,7 +1925,7 @@
 							}],
 						/*  markerEnd: 'arrow', */
 						/*  markerStart:'diamond', */
-		
+
 					}],
 					labelOptions: {
 						backgroundColor: 'rgba(255,255,255,0.4)',
@@ -1914,7 +1948,7 @@
 						padding: 2
 					}]
 				});
-		
+
 				cnt++;
 			}
 			/* for min/max/avg */
@@ -1930,20 +1964,20 @@
 					text: "min/max/avg"
 				}]
 			});
-		
-		
+
+
 			chartData.push({
 				type: 'lollipop',
 				findNearestPointBy: 'xy',
 				data: lollipopData,
-		
+
 				zIndex: 7,
 				states: {
 					inactive: {
 						opacity: 1
 					}
 				},
-		
+
 				showInLegend: false,
 				/*  color: '#8FBC8F', */
 				connectorWidth: 2,
@@ -1952,21 +1986,21 @@
 					enabled: false
 				},
 				enableMouseTracking: false,
-		
+
 			});
-		
+
 			create_highchart(CLTIMING_CHART_ID, tabName, chartData, CLTIMING_CHART_ID, annotations_arr = annotations);
-		
+
 		}
-		
+
 		function create_timeline_chart(tabName, renderFlag) {
 			if (!jsonData.hasOwnProperty('timeline_clStartEndJson')) return;
-		
+
 			console.log('creating timeline chart');
 			let chartData = [];
 			let dataPoints = [];
 			const MARGIN = 100000;
-		
+
 			new_timeline_txJson = jsonData.timeline_txJson.filter((item) => {
 				return ((parseInt(item.ts_txstart) >= new_start_cl_id - MARGIN) && ((parseInt(item.ts_txend) <= new_end_cl_id + MARGIN)));
 			});
@@ -1982,8 +2016,8 @@
 			new_timeline_clTracesJson = jsonData.timeline_clTracesJson.filter((item) => {
 				return ((parseInt(item.frt_dec) >= new_start_cl_id - MARGIN) && (parseInt(item.frt_dec) <= new_end_cl_id + MARGIN));
 			});
-		
-		
+
+
 			/* TX area*/
 			new_timeline_txJson.forEach(item => {
 				th = THRESHOLDS[item.NODE];
@@ -2000,9 +2034,9 @@
 						},
 						[item.ts_txend, 1 + th],
 						[item.ts_txend, 0 + th],
-		
+
 						/*  [item.ts_txend, 1], */
-		
+
 					],
 					states: {
 						inactive: {
@@ -2010,7 +2044,7 @@
 						}
 					},
 					threshold: th,
-		
+
 					zIndex: 5,
 					name: "Node " + item.NODE + "-TX",
 					showInLegend: false,
@@ -2022,14 +2056,14 @@
 						pointFormat: '<span>FRT: {point.x}</span><br>' + item.hoverinfo
 					},
 					turboThreshold: 0,
-		
+
 				})
 			});
-		
+
 			/* RX area */
 			new_timeline_rxJson.forEach(item => {
 				th = THRESHOLDS[item.NODE];
-		
+
 				chartData.push({
 					type: 'area',
 					findNearestPointBy: 'xy',
@@ -2044,12 +2078,12 @@
 						[item.ts_rxend, -1 + th],
 						[item.ts_rxend, 0 + th]
 						/*  [item.ts_rxend, -1], */
-		
+
 					],
 					threshold: th,
-		
+
 					turboThreshold: 0,
-		
+
 					states: {
 						inactive: {
 							opacity: 0.8
@@ -2071,7 +2105,7 @@
 			/* CL area */
 			new_timeline_clStartEndJson.forEach(item => {
 				th = THRESHOLDS[item.NODE];
-		
+
 				chartData.push({
 					type: 'area',
 					/*  findNearestPointBy: 'xy', */
@@ -2092,7 +2126,7 @@
 						}
 					},
 					threshold: item.NODE,
-		
+
 					/*  dataLabels: { enabled: true, format: item.hoverinfo, inside: true }, */
 					zIndex: 1,
 					showInLegend: false,
@@ -2100,9 +2134,9 @@
 					name: "Node " + item.NODE + "-CL " + item.cl_id,
 					fillColor: 'rgba(247, 228, 194,0.35)',
 					color: "rgba(247, 228, 194,1)",
-		
+
 					turboThreshold: 0,
-		
+
 					/*  tooltip:null */
 					tooltip: {
 						/*  followPointer: true, */
@@ -2113,7 +2147,7 @@
 					},
 				})
 			});
-		
+
 			/* Phy Data Indications */
 			dataPoints = [];
 			dataPoints = new_timeline_phyIndJson.map((item) => {
@@ -2128,7 +2162,7 @@
 					node: item.NODE
 				};
 			});
-		
+
 			chartData.push({
 				type: "scatter",
 				findNearestPointBy: 'xy',
@@ -2156,10 +2190,10 @@
 					symbol: "triangle"
 				},
 				turboThreshold: 0,
-		
-		
+
+
 			});
-		
+
 			/* CL Traces */
 			dataPoints = [];
 			dataPoints = new_timeline_clTracesJson.map((item) => {
@@ -2200,14 +2234,14 @@
 					/*  outside: true */
 				},
 				turboThreshold: 0,
-		
+
 			});
-		
+
 			create_highchart(TIMELINE_CHART_ID, tabName, chartData, TIMELINE_CHART_ID);
-		
-		
+
+
 		}
-		
+
 		/* function trigerred when clicked on the tab */
 		function openGraph(evt, tabName) {
 			var i, tabcontent, tablinks;
@@ -2222,12 +2256,12 @@
 			document.getElementById(tabName).style.display = "block";
 			evt.currentTarget.className += " active";
 			graphId = evt.currentTarget.attributes.graphId.value;
-		
+
 			if (Object.keys(charts[graphId]).length == 0)
 				drawChart(graphId, tabName, true);
-		
+
 		}
-		
+
 		function init_timeline_cl_filter() {
 			if (!jsonData.hasOwnProperty('timeline_clStartEndJson')) return;
 			/*  orig_start_cl_id = Math.min(parseInt(jsonData.timeline_txJson[0].cl_id), parseInt(jsonData.timeline_rxJson[0].cl_id));
@@ -2243,7 +2277,7 @@
 			$('.clFilter .totalCls').html(format_timestamp(new_end_cl_id - new_start_cl_id));
 			console.log("total CLs", new_end_cl_id - new_start_cl_id);
 			console.log("Filter init ", { new_start_cl_id, new_end_cl_id });
-		
+
 		}
 		var new_start_cl_id = 0;
 		var new_end_cl_id = 0;
@@ -2253,7 +2287,7 @@
 		var orig_end_cl_id = 0;
 		var diff = 0;
 		function prepare_timeline_cl_filter(evt = false) {
-		
+
 			if (evt.target.id == "timelineResetBtn") {
 				/* new_start_cl_id = Math.min(parseInt(jsonData.timeline_txJson[0].cl_id), parseInt(jsonData.timeline_rxJson[0].cl_id));
 				new_end_cl_id = Math.max(jsonData.timeline_txJson[jsonData.timeline_txJson.length - 1].cl_id, jsonData.timeline_rxJson[jsonData.timeline_rxJson.length - 1].cl_id); */
@@ -2262,13 +2296,13 @@
 				$('#timelineStartClId').val(new_start_cl_id);
 				$('#timelineEndClId').val(new_end_cl_id);
 				$(".alert").alert('close');
-		
+
 			} else {
 				new_start_cl_id = parseInt($('#timelineStartClId').val());
 				new_end_cl_id = parseInt($('#timelineEndClId').val());
 			}
-		
-		
+
+
 			if (new_start_cl_id < orig_start_cl_id || new_start_cl_id > orig_end_cl_id) {
 				display_alert('warning', `<b>Start CL Id ${new_start_cl_id}&nbsp;is out of range [${orig_start_cl_id},${orig_end_cl_id}].</b> Resetting to the min possible value.`);
 				new_start_cl_id = orig_start_cl_id;
@@ -2279,10 +2313,10 @@
 				new_end_cl_id = orig_end_cl_id;
 				$('#timelineEndClId').val(new_end_cl_id);
 			}
-		
+
 			/* do nothing if filters has not changed */
 			if (new_start_cl_id == old_start_cl_id && new_end_cl_id == old_end_cl_id) return;
-		
+
 			diff = new_end_cl_id - new_start_cl_id;
 			if (diff < 0) {
 				display_alert('warning', `<b> End CL id ${new_end_cl_id}&nbsp;> Start CL id ${new_start_cl_id}</b>. Resetting to the range [${orig_start_cl_id}, ${orig_end_cl_id}] `);
@@ -2297,22 +2331,22 @@
 			old_start_cl_id = new_start_cl_id;
 			old_end_cl_id = new_end_cl_id;
 		}
-		
+
 		/* when everything is loaded */
 		window.onload = function () {
-		
+
 			if (nodeip != 'None' || nodeip.length != 4) {
 				$('#nodeip').html(nodeip);
 			} else if (nodefile != 'None') {
 				$('#nodeip').html(nodefile);
 			}
-		
+
 			/* pie charts */
 			drawPieChart();
-		
+
 			/* prepare timeline cl_id filters */
 			init_timeline_cl_filter();
-		
+
 			$(document).on("click", ".filterBtn", prepare_timeline_cl_filter);
 			$('.filterInput').keypress(function (event) {
 				var keycode = (event.keyCode ? event.keyCode : event.which);
@@ -2320,10 +2354,10 @@
 					prepare_timeline_cl_filter(event);
 				}
 			});
-		
+
 			/* trigger a click on the first tab to show*/
 			document.getElementById("firstTab").click();
-		
+
 			/* remove marker handler */
 			$(document).on("click", ".removeMkrBtnClass", function (event) {
 				parentRow = $(this).parent().parent().parent();
@@ -2333,16 +2367,16 @@
 				$(`.markerLabel${id[1]}`).remove();
 				$(`.markerLabel${id[2]}`).remove();
 				parentRow.remove();
-		
+
 			});
-		
+
 			/* remove all markers handler */
 			$(document).on("click", "#removeAllMarkers", function (event) {
 				$('.marker').remove();
 				$('.markerLabel').remove();
 				markerCnt = 0;
 			});
-		
+
 			/* refreshing the page */
 			refreshIntv = $('#refreshIntvDur').val() * $('#refreshIntUnit').val() * 1000;
 			var seconds = refreshIntv / 1000;
@@ -2356,7 +2390,7 @@
 					$('.countdownString').html(`<i class="fas fa-sync"></i>&nbsp;in ${seconds--}...`);
 				}, 1000);
 			}
-		
+
 			/* handle change in the refresh interval */
 			$(document).on("change", "#refreshIntvDur,#refreshIntUnit", function (event) {
 				refreshIntv = $('#refreshIntvDur').val() * $('#refreshIntUnit').val() * 1000;
@@ -2372,14 +2406,15 @@
 					}, 1000);
 				} else {
 					$('.countdownString').html('');
-		
+
 				}
 			});
-		
-		
+
+
 		}
-		
-		</script>
+
+
+	</script>
 
 
 </body>

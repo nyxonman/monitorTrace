@@ -22,6 +22,9 @@ AFTERRX2RX_CHART_ID = "afterrx2rx";
 TXRXDRIFT_CHART_ID = "txrxdrift";
 RXTXDRIFT_CHART_ID = "rxtxdrift";
 CL_DUR_CHART_ID = "cl_dur";
+SIGNING_DUR_CHART_ID = "signing_dur";
+ENCRYPTION_DUR_CHART_ID = "encryption_dur";
+FRAME_CREATION_DUR_CHART_ID = "frame_creation_dur";
 THRESHOLD_STEP = 4;
 THRESHOLD_GAP = 2;
 
@@ -128,6 +131,32 @@ chartOptions = {
 		/*  "thTitle"    : "Max Power", */
 		/*  "thValue"    : "13" */
 
+	},
+	"signing_dur": {
+		"chartTitle": "Frame Signing Duration",
+		"xAxisType": 'linear',
+		"xAxisTitle": "signing duration in usecs",
+		"yAxisTitle": "Count",
+		"yAxisTitle2": "PDF/CDF",
+		"yAxis2Max": 1,
+
+	},
+	"encryption_dur": {
+		"chartTitle": "Frame Encryption Duration",
+		"xAxisType": 'linear',
+		"xAxisTitle": "Encryption dur in usecs",
+		"yAxisTitle": "Count",
+		"yAxisTitle2": "PDF/CDF",
+		"yAxis2Max": 1,
+	},
+
+	"frame_creation_dur": {
+		"chartTitle": "Frame Creation Duration",
+		"xAxisType": 'linear',
+		"xAxisTitle": "frameCreation dur in usecs",
+		"yAxisTitle": "Count",
+		"yAxisTitle2": "PDF/CDF",
+		"yAxis2Max": 1,
 	},
 
 	"target2tx": {
