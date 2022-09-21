@@ -1590,69 +1590,74 @@ def graph_cl_timings():
     global timings_offset
     global debug_csv_df
 
-    # debug CL CLogs calculation
-    fields_of_interest = [
-        "byte",
-        "frt_dec",
-        "trace_info",
-        "NODE",
-    ]
-    debug_timings_df = debug_csv_df[fields_of_interest]
-    debug_timings_df = debug_timings_df.assign(delete=np.nan)
-    debug_timings_df = debug_timings_df.assign(traceinfo_val=np.nan)
+    debug_timings_df = pd.DataFrame()
 
-    debug_timings_df[['delete', 'traceinfo_val']] = debug_timings_df['trace_info'].str.split("0x", expand=True)
-    debug_timings_df = debug_timings_df.assign(debug_code=debug_timings_df["traceinfo_val"].str[0:4].astype(int))
-    debug_timings_df = debug_timings_df.assign(debug_val=debug_timings_df["traceinfo_val"].str[4:-1])
-    debug_timings_df['debug_val'] = debug_timings_df.debug_val.apply(lambda x: int(x, 16) if type(x) == str else np.nan)
-    debug_timings_df.drop(columns=['delete', 'traceinfo_val'], inplace=True)
+    if not debug_csv_df.empty:
+        # debug CL CLogs calculation
+        fields_of_interest = [
+            "byte",
+            "frt_dec",
+            "trace_info",
+            "NODE",
+        ]
+        debug_timings_df = debug_csv_df[fields_of_interest]
+        debug_timings_df = debug_timings_df.assign(delete=np.nan)
+        debug_timings_df = debug_timings_df.assign(traceinfo_val=np.nan)
 
-    print("signing")
-    debug_timings_df['dummy'] = debug_timings_df.debug_code.shift(-1)
-    debug_timings_df['dummy_frt'] = debug_timings_df.frt_dec.shift(-1)
-    # signing duration debug_code 2,3
-    debug_timings_df['signing_dur'] = np.where((debug_timings_df.debug_code == 2) & (
-        debug_timings_df.dummy == 3), debug_timings_df.dummy_frt-debug_timings_df.frt_dec, np.nan)
-    # encryption duration debug_code 3,4
-    debug_timings_df['encryption_dur'] = np.where((debug_timings_df.debug_code == 3) & (
-        debug_timings_df.dummy == 4), debug_timings_df.dummy_frt-debug_timings_df.frt_dec, np.nan)
-    debug_timings_df.drop(columns=['dummy', 'dummy_frt'], inplace=True)
+        debug_timings_df[['delete', 'traceinfo_val']] = debug_timings_df['trace_info'].str.split("0x", expand=True)
+        debug_timings_df = debug_timings_df.assign(debug_code=debug_timings_df["traceinfo_val"].str[0:4].astype(int))
+        debug_timings_df = debug_timings_df.assign(debug_val=debug_timings_df["traceinfo_val"].str[4:-1])
+        debug_timings_df['debug_val'] = debug_timings_df.debug_val.apply(lambda x: int(x, 16) if type(x) == str else np.nan)
+        debug_timings_df.drop(columns=['delete', 'traceinfo_val'], inplace=True)
 
-    # cl create frame duration 0, 5
-    debug_timings_df['dummy'] = debug_timings_df.debug_code.shift(-5)
-    debug_timings_df['dummy_frt'] = debug_timings_df.frt_dec.shift(-5)
-    debug_timings_df['frame_creation_dur'] = np.where((debug_timings_df.debug_code == 0) & (
-        debug_timings_df.dummy == 5), debug_timings_df.dummy_frt-debug_timings_df.frt_dec, np.nan)
+        debug_timings_df['dummy'] = debug_timings_df.debug_code.shift(-1)
+        debug_timings_df['dummy_frt'] = debug_timings_df.frt_dec.shift(-1)
+        # signing duration debug_code 2,3
+        debug_timings_df['signing_dur'] = np.where((debug_timings_df.debug_code == 2) & (
+            debug_timings_df.dummy == 3), debug_timings_df.dummy_frt-debug_timings_df.frt_dec, np.nan)
+        # encryption duration debug_code 3,4
+        debug_timings_df['encryption_dur'] = np.where((debug_timings_df.debug_code == 3) & (
+            debug_timings_df.dummy == 4), debug_timings_df.dummy_frt-debug_timings_df.frt_dec, np.nan)
+        debug_timings_df.drop(columns=['dummy', 'dummy_frt'], inplace=True)
 
-    # freq
-    signing_df = debug_timings_df[['byte', 'signing_dur']].groupby(
-        'signing_dur').agg('count').rename(columns={'byte': 'freq'}).reset_index()
-    signing_df = signing_df.astype({'signing_dur': int})
-    # PDF
-    signing_df['pdf'] = signing_df['freq'] / sum(signing_df['freq'])
-    # CDF
-    signing_df['cdf'] = signing_df['pdf'].cumsum()
-    signing_df = signing_df.reset_index()
+        # cl create frame duration 0, 5
+        debug_timings_df.reset_index(inplace=True)
+        offset_0_5 =debug_timings_df.index[(debug_timings_df.debug_code == 0)].tolist()[0] - debug_timings_df.index[(debug_timings_df.debug_code == 5)].tolist()[0]
 
-    # freq
-    encryption_df = debug_timings_df[['byte', 'encryption_dur']].groupby(
-        'encryption_dur').agg('count').rename(columns={'byte': 'freq'}).reset_index()
-    encryption_df = encryption_df.astype({'encryption_dur': int})
-    # PDF
-    encryption_df['pdf'] = encryption_df['freq'] / sum(encryption_df['freq'])
-    # CDF
-    encryption_df['cdf'] = encryption_df['pdf'].cumsum()
-    encryption_df = encryption_df.reset_index()
+        debug_timings_df['dummy'] = debug_timings_df.debug_code.shift(offset_0_5)
+        debug_timings_df['dummy_frt'] = debug_timings_df.frt_dec.shift(offset_0_5)
+        debug_timings_df['frame_creation_dur'] = np.where((debug_timings_df.debug_code == 0) & (
+            debug_timings_df.dummy == 5), debug_timings_df.dummy_frt-debug_timings_df.frt_dec, np.nan)
 
-    # freq
-    frame_creation_df = debug_timings_df[['byte', 'frame_creation_dur']].groupby(
-        'frame_creation_dur').agg('count').rename(columns={'byte': 'freq'}).reset_index()
-    frame_creation_df = frame_creation_df.astype({'frame_creation_dur': int})
-    # PDF
-    frame_creation_df['pdf'] = frame_creation_df['freq'] / sum(frame_creation_df['freq'])
-    # CDF
-    frame_creation_df['cdf'] = frame_creation_df['pdf'].cumsum()
-    frame_creation_df = frame_creation_df.reset_index()
+        # freq
+        signing_df = debug_timings_df[['byte', 'signing_dur']].groupby(
+            'signing_dur').agg('count').rename(columns={'byte': 'freq'}).reset_index()
+        signing_df = signing_df.astype({'signing_dur': int})
+        # PDF
+        signing_df['pdf'] = signing_df['freq'] / sum(signing_df['freq'])
+        # CDF
+        signing_df['cdf'] = signing_df['pdf'].cumsum()
+        signing_df = signing_df.reset_index()
+
+        # freq
+        encryption_df = debug_timings_df[['byte', 'encryption_dur']].groupby(
+            'encryption_dur').agg('count').rename(columns={'byte': 'freq'}).reset_index()
+        encryption_df = encryption_df.astype({'encryption_dur': int})
+        # PDF
+        encryption_df['pdf'] = encryption_df['freq'] / sum(encryption_df['freq'])
+        # CDF
+        encryption_df['cdf'] = encryption_df['pdf'].cumsum()
+        encryption_df = encryption_df.reset_index()
+
+        # freq
+        frame_creation_df = debug_timings_df[['byte', 'frame_creation_dur']].groupby(
+            'frame_creation_dur').agg('count').rename(columns={'byte': 'freq'}).reset_index()
+        frame_creation_df = frame_creation_df.astype({'frame_creation_dur': int})
+        # PDF
+        frame_creation_df['pdf'] = frame_creation_df['freq'] / sum(frame_creation_df['freq'])
+        # CDF
+        frame_creation_df['cdf'] = frame_creation_df['pdf'].cumsum()
+        frame_creation_df = frame_creation_df.reset_index()
 
     # target2tx: target to the start of preamble tx
     timings_df['dummy'] = timings_df.dc_col.shift(-2)
