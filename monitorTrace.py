@@ -1247,11 +1247,13 @@ def process_one_trace(code, infoArr):
 
 outputList = []
 csvList = []
+old_timestamp = 0
 
 
 def process_hexdump(hexdump, startLine=-1, showFirstLine=False):
     # print(hexdump)
     global cl_id
+    global old_timestamp
     output = ''
     nlines = startLine
     firstLine = ' BYTENUM:   FRT_DEC   (0xFRT_HEXAD)  [TRACECODE]:       TRACE INFO '
@@ -1277,6 +1279,9 @@ def process_hexdump(hexdump, startLine=-1, showFirstLine=False):
         timestamp = int(byteArr[8] + byteArr[7] + byteArr[6] + byteArr[5] +
                         byteArr[4] + byteArr[3] + byteArr[2] + byteArr[1], 16)
 
+        if old_timestamp == 0:
+            old_timestamp = timestamp
+
         # get trace code
         tracecode = int(byteArr[12] + byteArr[11] +
                         byteArr[10] + byteArr[9], 16)
@@ -1287,12 +1292,13 @@ def process_hexdump(hexdump, startLine=-1, showFirstLine=False):
 
         info = process_one_trace(tracecode, byteArr)
 
-        output = "{:s}: {:d} (0x{:X}) [{:03d},0x{:04X}]: {:s} {:s}".format(
+        output = "{:s}: {:d} (0x{:X}) (+{:<5d}) [{:03d},0x{:04X}]: {:s} {:s}".format(
             byteArr[0],
-            timestamp, timestamp,
+            timestamp, timestamp,timestamp - old_timestamp,
             tracecode, tracecode, tracing_events_num_str[tracecode],
             info)
 
+        old_timestamp = timestamp
         outputList.extend(output + "\n")
         csvList.append([byteArr[0], timestamp, hex(timestamp), str(
             tracecode) + " (" + str(hex(tracecode)) + ")", tracing_events_num_str[tracecode]+" " + info])
